@@ -23,7 +23,7 @@ function catTileImage(cat: any): string {
     <nav class="breadcrumb" style="margin-bottom:16px;"><a href="/">Home</a><span>/</span><span style="color:#fff;">Shop All</span></nav>
     <h1 class="section-heading">Shop All</h1>
     <p style="margin:8px 0 28px;color:#888;font-size:0.9rem;">Browse by series — each tile is a Medusa category, not a product.</p>
-    <div class="shopby-grid" style="display:grid;">
+    <div class="shopby-grid" style="display:grid;" data-hydrate-cats>
       {ipCats.map((cat: any) => (
         <CollectionCard
           name={cat.name}

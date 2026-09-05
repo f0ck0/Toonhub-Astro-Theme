@@ -4,11 +4,13 @@ import CartDrawer from "../components/CartDrawer.astro"
 import SearchOverlay from "../components/SearchOverlay.astro"
 import QuickView from "../components/QuickView.astro"
 import { SITE } from "../lib/site"
+import { medusaConfig } from "../lib/medusa-config"
 
 const {
   title = `${SITE.name}: Shop Premium Anime Figures`,
   description = SITE.description,
 } = Astro.props
+const medusa = medusaConfig()
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -29,8 +31,12 @@ const {
   <CartDrawer />
   <SearchOverlay />
   <QuickView />
+  <script define:vars={{ baseUrl: medusa.baseUrl, publishableKey: medusa.publishableKey }}>
+    ;(window as any).toonhubMedusa = { baseUrl, publishableKey }
+  </script>
   <script>
     import "../scripts/storefront"
+    import "../scripts/catalog"
   </script>
 </body>
 </html>

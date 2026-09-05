@@ -68,7 +68,7 @@ const reviewTotal = Math.max(1200, totalCount * 3 + 857)
   <main id="MainContent">
     <section class="page-width" style="padding:48px 0 8px;">
       <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
-      <div class="shopby-grid">
+      <div class="shopby-grid" data-hydrate-cats>
         {featuredCols.map((sec) => (
           <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} />
         ))}
@@ -107,14 +107,11 @@ const reviewTotal = Math.max(1200, totalCount * 3 + 857)
         </div>
       </div>
       <div class="product-drag-slider">
-        <div class="slider-track">
+        <div class="slider-track" data-hydrate-products>
           {products.length > 0 ? (
             products.map((product: any) => <ProductCard product={product} />)
           ) : (
-            <div style="text-align:center;padding:60px 0;width:100%;">
-              <div style="font-size:48px;">📦</div>
-              <h3 style="font-size:20px;font-weight:700;margin-top:16px;color:#fff;">No products yet</h3>
-            </div>
+            <div style="text-align:center;padding:60px 0;width:100%;color:#888;">Loading products…</div>
           )}
         </div>
       </div>

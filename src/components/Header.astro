@@ -54,18 +54,16 @@ const currency = currencyFromCookies(Astro.cookies)
         <span>Anime List (A-Z)</span>
         <svg class="icon-caret" width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"></path></svg>
       </summary>
-      {azGroups.length > 0 && (
-        <div class="az-dropdown">
-          {azGroups.map((g) => (
-            <div class="az-group">
-              <div class="az-letter">{g.letter}</div>
-              {g.items.map((child) => (
-                <a href={`/collections/${child.handle}`}>{child.name}</a>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+      <div class="az-dropdown">
+        {azGroups.map((g) => (
+          <div class="az-group">
+            <div class="az-letter">{g.letter}</div>
+            {g.items.map((child) => (
+              <a href={`/collections/${child.handle}`}>{child.name}</a>
+            ))}
+          </div>
+        ))}
+      </div>
     </details>
   </nav>
 
@@ -88,14 +86,16 @@ const currency = currencyFromCookies(Astro.cookies)
     <a href="/track-order" class="nav-link" style="padding:12px 0;">Track Order</a>
     <a href="/collections" class="nav-link" style="padding:12px 0;">Shop All</a>
     <div class="nav-link" style="padding:12px 0;cursor:default;">Anime List (A-Z)</div>
-    {azGroups.map((g) => (
-      <>
-        <div class="az-letter" style="padding:8px 8px 2px;">{g.letter}</div>
-        {g.items.map((child) => (
-          <a href={`/collections/${child.handle}`} style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">{child.name}</a>
-        ))}
-      </>
-    ))}
+    <div id="azMobile">
+      {azGroups.map((g) => (
+        <>
+          <div class="az-letter" style="padding:8px 8px 2px;">{g.letter}</div>
+          {g.items.map((child) => (
+            <a href={`/collections/${child.handle}`} style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">{child.name}</a>
+          ))}
+        </>
+      ))}
+    </div>
     <a href="/account" class="nav-link" style="padding:12px 0;">Account</a>
     <a href="/search" class="nav-link" style="padding:12px 0;">Search</a>
   </nav>
