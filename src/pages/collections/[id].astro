@@ -48,8 +48,6 @@ initialProducts = sortProducts(initialProducts)
 
 const title = special ? "New Designs" : (category?.name || id)
 const heading = special ? title : `Collection: ${title}`
-const catId = category?.id || ""
-const hasMoreInitial = initialProducts.length < totalCount
 ---
 <Base title={`${title || "Collection"} — TOONHUB`}>
   <Header />
@@ -86,7 +84,7 @@ const hasMoreInitial = initialProducts.length < totalCount
 
       <section class="page-width" style="padding:24px 0 48px;">
         <div class="toolbar">
-          <p style="font-size:0.85rem;color:#888;">{totalCount} products</p>
+          <p style="font-size:0.85rem;color:#888;" data-product-count>{totalCount} products</p>
           <form method="get">
             <label style="font-size:0.8rem;color:#888;margin-right:8px;">Sort by</label>
             <select name="sort" onchange="this.form.submit()">
@@ -101,67 +99,14 @@ const hasMoreInitial = initialProducts.length < totalCount
         <div class="product-grid" id="productGrid" data-hydrate-products>
           {initialProducts.map((product: any) => <ProductCard product={product} />)}
         </div>
-        {hasMoreInitial && (
-          <div id="loadMoreSentinel" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 0;">
-            <div style="width:28px;height:28px;border:2px solid #333;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-            <div id="loadMoreStatus" style="font-size:0.82rem;color:#888;">Loading more products...</div>
+        <div id="loadMoreWrap" class="load-more" hidden>
+          <button id="loadMoreBtn" class="btn btn-outline" type="button">Load more</button>
+          <div id="loadMoreStatus" class="load-more-status" hidden>
+            <div class="spinner"></div>
+            <span>Loading next page…</span>
           </div>
-        )}
-        <div id="allLoaded" style="display:none;text-align:center;padding:24px 0;font-size:0.82rem;color:#999;">All {totalCount} products loaded</div>
+        </div>
       </section>
     </main>
   <Footer />
 </Base>
-
-<script define:vars={{ catId, PAGE_SIZE, hasMoreInitial }}>
-  const grid = document.getElementById("productGrid")
-  const sentinel = document.getElementById("loadMoreSentinel")
-  const allLoaded = document.getElementById("allLoaded")
-  const statusEl = document.getElementById("loadMoreStatus")
-  let offset = PAGE_SIZE
-  let loading = false
-  let done = !hasMoreInitial
-
-  if (sentinel && grid) {
-    const io = new IntersectionObserver(async (entries) => {
-      if (entries[0].isIntersecting && !loading && !done) {
-        loading = true
-        if (statusEl) statusEl.textContent = "Loading more products..."
-        try {
-          const qs = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) })
-          if (catId) qs.set("categoryId", catId)
-          const res = await fetch(`/api/products?${qs}`)
-          const data = await res.json()
-          if (data.products?.length) {
-            const wrap = document.createElement("div")
-            wrap.innerHTML = data.products.map((item: any) => {
-              const img = item.thumbnail || ""
-              return `<a href="/products/${encodeURIComponent(item.handle)}" class="product-card card">
-                <div class="pc-media">
-                  ${img ? `<img src="${img}" alt="" loading="lazy" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
-                  <span class="sale-badge">Sale</span>
-                  <button class="choose-options" type="button">View</button>
-                </div>
-                <div class="pc-info">
-                  <div class="pc-title">${item.title}</div>
-                  <div class="pc-price-row"><span class="pc-price">${item.price || ""}</span></div>
-                </div>
-              </a>`
-            }).join("")
-            while (wrap.firstChild) grid.appendChild(wrap.firstChild)
-            offset += data.products.length
-          }
-          if (!data.hasMore) {
-            done = true
-            if (sentinel) sentinel.style.display = "none"
-            if (allLoaded) allLoaded.style.display = "block"
-          }
-        } catch (e) {
-          if (statusEl) statusEl.textContent = "Failed to load more. Retry on scroll."
-        }
-        loading = false
-      }
-    }, { rootMargin: "200px" })
-    io.observe(sentinel)
-  }
-</script>

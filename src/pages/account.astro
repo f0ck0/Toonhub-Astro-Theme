@@ -7,97 +7,216 @@ import Footer from "../components/Footer.astro"
   <Header />
   <main id="MainContent" class="page-width" style="display:flex;justify-content:center;padding:48px 0 80px;">
     <div style="width:100%;max-width:460px;">
-      <h1 class="account-title" style="font-size:1.5rem;margin-bottom:12px;">Your account for everything Toonhub</h1>
-      <p class="account-sub" style="font-size:0.85rem;color:#888;margin-bottom:24px;">Sign in to access your orders, wishlist and member benefits.</p>
+      <div id="accountGuest">
+        <h1 class="account-title" style="font-size:1.5rem;margin-bottom:12px;">Login</h1>
+        <p class="account-sub" style="font-size:0.85rem;color:#888;margin-bottom:24px;">Sign in to access your orders and member benefits.</p>
 
-      <form id="loginForm" style="display:flex;flex-direction:column;gap:16px;">
-        <input type="email" id="loginEmail" class="field" placeholder="Email address" required autocomplete="email" />
-        <input type="password" id="loginPassword" class="field" placeholder="Password" required autocomplete="current-password" />
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:#999;cursor:pointer;">
-            <input type="checkbox" id="rememberMe" style="width:16px;height:16px;accent-color:#fff;" /> Keep me signed in
-          </label>
-          <a href="/contact" style="font-size:0.82rem;color:#999;text-decoration:underline;">Forgot Password?</a>
+        <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--color-border);">
+          <button type="button" class="account-tab is-on" data-mode="login">Login</button>
+          <button type="button" class="account-tab" data-mode="register">Create account</button>
         </div>
-        <div id="loginError" style="display:none;font-size:0.82rem;color:#e53935;"></div>
-        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Continue</button>
-      </form>
 
-      <div style="display:flex;align-items:center;gap:16px;margin:24px 0;color:#666;font-size:0.82rem;">
-        <span style="flex:1;height:1px;background:var(--color-border);"></span><span>or</span><span style="flex:1;height:1px;background:var(--color-border);"></span>
+        <form id="accountForm" style="display:flex;flex-direction:column;gap:16px;">
+          <div id="registerNames" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <input class="field" id="firstName" placeholder="First name" autocomplete="given-name" />
+            <input class="field" id="lastName" placeholder="Last name" autocomplete="family-name" />
+          </div>
+          <input type="email" id="loginEmail" class="field" placeholder="Email address" required autocomplete="email" />
+          <input type="password" id="loginPassword" class="field" placeholder="Password" required autocomplete="current-password" minlength="8" />
+          <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" hidden autocomplete="new-password" minlength="8" />
+          <div id="loginError" style="display:none;font-size:0.82rem;color:#e53935;"></div>
+          <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
+        </form>
+
+        <p style="font-size:0.72rem;color:#666;text-align:center;margin-top:20px;line-height:18px;">
+          By continuing, you agree to Toonhub's <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms of Use</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
+        </p>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <button class="social-btn" id="googleBtn" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          <span>Continue with Google</span>
-        </button>
-        <button class="social-btn" id="appleBtn" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M16.36 12.76c0-2.28 1.86-3.37 1.94-3.43-1.06-1.55-2.7-1.76-3.29-1.79-1.4-.14-2.73.82-3.44.82-.71 0-1.81-.8-2.97-.78-1.53.02-2.94.89-3.72 2.26-1.59 2.76-.41 6.84 1.14 9.08.76 1.1 1.66 2.33 2.84 2.29 1.14-.05 1.57-.74 2.95-.74 1.38 0 1.76.74 2.97.72 1.23-.02 2.01-1.12 2.76-2.22.87-1.27 1.23-2.5 1.25-2.57-.03-.01-2.41-.92-2.43-3.66z"/><path d="M14.06 4.8c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.68-1.09 1.76-.95 2.8 1.01.08 2.04-.51 2.67-1.28z"/></svg>
-          <span>Continue with Apple</span>
-        </button>
+      <div id="accountHome" hidden>
+        <h1 style="font-size:1.5rem;margin-bottom:8px;">Your account</h1>
+        <p id="accountEmail" style="color:#888;font-size:0.9rem;margin-bottom:24px;"></p>
+        <div id="accountOrders" class="rte" style="margin-bottom:24px;"></div>
+        <button type="button" id="logoutBtn" class="btn btn-outline btn-block">Log out</button>
       </div>
-
-      <p style="font-size:0.82rem;color:#999;text-align:center;margin-top:24px;">Not a Member? <a href="/account?mode=register" style="text-decoration:underline;color:#fff;">Join Us</a></p>
-      <p style="font-size:0.72rem;color:#666;text-align:center;margin-top:16px;line-height:18px;">
-        By signing in, you agree to Toonhub's <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms of Use</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
-      </p>
     </div>
   </main>
   <Footer />
 </Base>
+<style>
+  .account-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #888;
+    padding: 12px 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .account-tab.is-on { color: #fff; border-bottom-color: #fff; }
+</style>
 <script>
-  const loginForm = document.getElementById("loginForm") as HTMLFormElement
+  const TOKEN_KEY = "toonhub_token"
+  const EMAIL_KEY = "toonhub_email"
+  const form = document.getElementById("accountForm") as HTMLFormElement
   const loginBtn = document.getElementById("loginBtn") as HTMLButtonElement
   const loginError = document.getElementById("loginError") as HTMLElement
-  const params = new URLSearchParams(location.search)
-  const mode = params.get("mode") || "login"
-  if (mode === "register") {
-    (document.querySelector(".account-title") as HTMLElement).innerText = "Become a member"
-    ;(document.querySelector(".account-sub") as HTMLElement).innerText = "Create your Toonhub account and get access to exclusive figures."
-    loginBtn.innerText = "Create Account"
+  const guest = document.getElementById("accountGuest")!
+  const home = document.getElementById("accountHome")!
+  const names = document.getElementById("registerNames") as HTMLElement
+  const pass2 = document.getElementById("loginPassword2") as HTMLInputElement
+  const title = document.querySelector(".account-title") as HTMLElement
+  const sub = document.querySelector(".account-sub") as HTMLElement
+  let mode = new URLSearchParams(location.search).get("mode") === "register" ? "register" : "login"
+
+  function cfg() {
+    const w = (window as any).toonhubMedusa
+    return {
+      baseUrl: String(w?.baseUrl || "https://medusa.toonhubshop.com").replace(/\/$/, ""),
+      publishableKey: String(w?.publishableKey || ""),
+    }
   }
-  loginForm.onsubmit = async (e) => {
-    e.preventDefault()
-    const email = (document.getElementById("loginEmail") as HTMLInputElement).value
-    const password = (document.getElementById("loginPassword") as HTMLInputElement).value
-    loginError.style.display = "none"
-    loginBtn.disabled = true
-    loginBtn.innerText = "Loading..."
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, mode }),
-      })
-      const data = await res.json()
-      if (res.ok && data.token) {
-        localStorage.setItem("toonhub_token", data.token)
-        localStorage.setItem("toonhub_email", email)
-        window.location.href = "/"
-      } else {
-        loginError.innerText = data.error || "Invalid email or password"
-        loginError.style.display = "block"
+
+  function tokenOf(data: any): string {
+    if (!data) return ""
+    if (typeof data === "string") return data
+    return data.token || data.access_token || (typeof data.raw === "string" ? data.raw : "")
+  }
+
+  async function postJson(url: string, body: any, headers: Record<string, string> = {}) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(12000),
+    })
+    const text = await res.text()
+    let data: any = {}
+    try { data = text ? JSON.parse(text) : {} } catch { data = { raw: text } }
+    return { ok: res.ok, status: res.status, data }
+  }
+
+  function showError(msg: string) {
+    loginError.style.display = "block"
+    loginError.textContent = msg
+  }
+
+  function setMode(next: string) {
+    mode = next
+    document.querySelectorAll(".account-tab").forEach((t) => t.classList.toggle("is-on", t.getAttribute("data-mode") === mode))
+    const isReg = mode === "register"
+    names.hidden = !isReg
+    names.style.display = isReg ? "grid" : "none"
+    pass2.hidden = !isReg
+    pass2.required = isReg
+    title.textContent = isReg ? "Create account" : "Login"
+    sub.textContent = isReg
+      ? "Create your Toonhub account to track orders and member benefits."
+      : "Sign in to access your orders and member benefits."
+    loginBtn.textContent = isReg ? "Create account" : "Sign in"
+    history.replaceState(null, "", isReg ? "/account?mode=register" : "/account")
+  }
+
+  document.querySelectorAll(".account-tab").forEach((t) => {
+    t.addEventListener("click", () => setMode(t.getAttribute("data-mode") || "login"))
+  })
+  setMode(mode)
+
+  async function authViaApi(payload: any) {
+    const res = await postJson("/api/auth/login", payload)
+    if (!res.ok || !tokenOf(res.data)) throw new Error(res.data.error || "Invalid email or password")
+    return { token: tokenOf(res.data), email: payload.email, customer: res.data.customer }
+  }
+
+  async function authDirect(payload: any) {
+    const { baseUrl, publishableKey } = cfg()
+    const headers = { "x-publishable-api-key": publishableKey }
+    if (payload.mode === "register") {
+      const reg = await postJson(`${baseUrl}/auth/customer/emailpass/register`, { email: payload.email, password: payload.password }, headers)
+      const t = tokenOf(reg.data)
+      if (reg.ok && t) {
+        await postJson(`${baseUrl}/store/customers`, {
+          email: payload.email,
+          first_name: payload.first_name || "",
+          last_name: payload.last_name || "",
+        }, { ...headers, Authorization: `Bearer ${t}` })
       }
-    } catch (err) {
-      loginError.innerText = "Network error, please try again"
-      loginError.style.display = "block"
+    }
+    const login = await postJson(`${baseUrl}/auth/customer/emailpass`, { email: payload.email, password: payload.password }, headers)
+    const token = tokenOf(login.data)
+    if (!login.ok || !token) throw new Error(login.data.message || login.data.error || "Invalid email or password")
+    return { token, email: payload.email, customer: null }
+  }
+
+  function signedIn(email: string) {
+    guest.hidden = true
+    home.hidden = false
+    document.getElementById("accountEmail")!.textContent = `Signed in as ${email}`
+  }
+
+  async function boot() {
+    const token = localStorage.getItem(TOKEN_KEY)
+    const email = localStorage.getItem(EMAIL_KEY)
+    if (!token || !email) return
+    signedIn(email)
+    try {
+      const { baseUrl, publishableKey } = cfg()
+      const res = await fetch(`${baseUrl}/store/customers/me`, {
+        headers: { accept: "application/json", "x-publishable-api-key": publishableKey, Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) {
+        const proxy = await fetch("/api/auth/login", { headers: { Authorization: `Bearer ${token}` } })
+        if (!proxy.ok) throw new Error("expired")
+      }
+    } catch {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(EMAIL_KEY)
+      guest.hidden = false
+      home.hidden = true
+    }
+  }
+
+  form.onsubmit = async (e) => {
+    e.preventDefault()
+    const email = (document.getElementById("loginEmail") as HTMLInputElement).value.trim()
+    const password = (document.getElementById("loginPassword") as HTMLInputElement).value
+    const first_name = (document.getElementById("firstName") as HTMLInputElement).value.trim()
+    const last_name = (document.getElementById("lastName") as HTMLInputElement).value.trim()
+    loginError.style.display = "none"
+    if (mode === "register" && password !== pass2.value) {
+      showError("Passwords do not match")
+      return
+    }
+    loginBtn.disabled = true
+    loginBtn.textContent = "Loading..."
+    const payload = { email, password, mode, first_name, last_name }
+    try {
+      let result: any
+      try {
+        result = await authDirect(payload)
+      } catch {
+        result = await authViaApi(payload)
+      }
+      localStorage.setItem(TOKEN_KEY, result.token)
+      localStorage.setItem(EMAIL_KEY, result.email)
+      signedIn(result.email)
+    } catch (err: any) {
+      showError(err.message || "Could not sign in. Check your email and password.")
     }
     loginBtn.disabled = false
-    loginBtn.innerText = mode === "register" ? "Create Account" : "Continue"
+    loginBtn.textContent = mode === "register" ? "Create account" : "Sign in"
   }
-  const social = (name: string) => {
-    loginError.innerText = name + " is not configured yet. Use email to sign in."
-    loginError.style.display = "block"
+
+  document.getElementById("logoutBtn")!.onclick = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(EMAIL_KEY)
+    location.href = "/account"
   }
-  document.getElementById("googleBtn")!.onclick = () => social("Google")
-  document.getElementById("appleBtn")!.onclick = () => social("Apple")
+
+  boot()
 </script>
-<style>
-  .social-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: 0.3rem;
-    background: transparent; font-size: 0.9rem; font-weight: 700; color: #fff; font-family: inherit;
-  }
-  .social-btn:hover { background: #111; border-color: #666; }
-</style>

@@ -28,10 +28,18 @@ const currency = currencyFromCookies(Astro.cookies)
     <a href="/" class="logo-text" style="justify-self:center;">{SITE.name}</a>
 
     <div class="header-icons">
-      <button id="currencyBtn" class="icon-btn wide icon-hide-mobile" type="button" aria-label="Currency">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        <span id="currencyLabel">{currencyLabel(currency)}</span>
-      </button>
+      <div class="currency-wrap icon-hide-mobile">
+        <button id="currencyBtn" class="icon-btn wide" type="button" aria-label="Currency" aria-haspopup="listbox" aria-expanded="false">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="currencyLabel">{currencyLabel(currency)}</span>
+        </button>
+        <div id="currencyMenu" class="currency-menu" role="listbox">
+          <div style="padding:6px 10px;font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">Country / currency</div>
+          {CURRENCY_OPTIONS.map((opt) => (
+            <button data-currency={opt.code} class="currency-option" type="button">{opt.flag} {opt.label}</button>
+          ))}
+        </div>
+      </div>
       <button class="icon-btn" type="button" data-open-search aria-label="Search">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </button>
@@ -67,12 +75,6 @@ const currency = currencyFromCookies(Astro.cookies)
     </details>
   </nav>
 
-  <div id="currencyMenu" class="currency-menu">
-    <div style="padding:6px 10px;font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">Select currency</div>
-    {CURRENCY_OPTIONS.map((opt) => (
-      <button data-currency={opt.code} class="currency-option" type="button">{opt.flag} {opt.label}</button>
-    ))}
-  </div>
 </header>
 
 <div id="navOverlay" class="overlay"></div>
@@ -104,13 +106,17 @@ const currency = currencyFromCookies(Astro.cookies)
 <script>
   const currencyBtn = document.getElementById("currencyBtn")
   const currencyMenu = document.getElementById("currencyMenu")
+  const currencyWrap = currencyBtn?.closest(".currency-wrap")
   if (currencyBtn && currencyMenu) {
     currencyBtn.onclick = (e) => {
       e.stopPropagation()
-      currencyMenu.classList.toggle("open")
+      const open = currencyMenu.classList.toggle("open")
+      currencyBtn.setAttribute("aria-expanded", open ? "true" : "false")
     }
     document.addEventListener("click", (e) => {
-      if (!currencyMenu.contains(e.target as Node) && e.target !== currencyBtn) currencyMenu.classList.remove("open")
+      if (currencyWrap?.contains(e.target as Node)) return
+      currencyMenu.classList.remove("open")
+      currencyBtn.setAttribute("aria-expanded", "false")
     })
     currencyMenu.querySelectorAll<HTMLElement>(".currency-option").forEach((opt) => {
       opt.onclick = () => {

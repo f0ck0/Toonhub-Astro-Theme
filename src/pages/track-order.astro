@@ -5,15 +5,15 @@ import Footer from "../components/Footer.astro"
 ---
 <Base title="Track Order — TOONHUB">
   <Header />
-  <main id="MainContent" class="page-width policy-page">
+  <main id="MainContent" class="page-width track-page">
     <h1>Track Order</h1>
     <p class="rte">Enter your order number and email to look up status. You can also track parcels at your carrier once a tracking number is emailed to you.</p>
-    <form id="trackForm" style="display:flex;flex-direction:column;gap:14px;max-width:480px;margin-top:24px;">
+    <form id="trackForm">
       <input class="field" name="order" placeholder="Order number" required />
       <input class="field" type="email" name="email" placeholder="Email" required />
       <button class="btn btn-primary" type="submit">Track</button>
     </form>
-    <div id="trackResult" class="rte" style="margin-top:28px;"></div>
+    <div id="trackResult" class="rte" style="margin-top:28px;max-width:520px;margin-left:auto;margin-right:auto;"></div>
   </main>
   <Footer />
 </Base>

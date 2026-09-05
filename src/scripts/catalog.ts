@@ -73,7 +73,7 @@ function catTile(cat: any, img = "") {
   return `<a href="/collections/${esc(cat.handle)}" class="shopby-tile card">
     <div class="shopby-media">${src ? `<img src="${esc(src)}" alt="${esc(cat.name)}" loading="lazy" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
     <div class="shopby-heading"><h3>${esc(cat.name)}</h3></div>
-    <p style="margin-top:6px;font-size:0.8rem;color:#999;">Shop our exclusive ${esc(cat.name)} figures.</p>
+    <p style="margin-top:6px;font-size:0.88rem;color:#999;line-height:1.5;">Shop our exclusive ${esc(cat.name)} figures.</p>
   </a>`
 }
 
@@ -133,6 +133,67 @@ function fillProductGrids(products: any[]) {
   })
 }
 
+function setupLoadMore(qsBase: URLSearchParams, offset: number, total: number) {
+  const wrap = document.getElementById("loadMoreWrap")
+  const btn = document.getElementById("loadMoreBtn") as HTMLButtonElement | null
+  const statusEl = document.getElementById("loadMoreStatus")
+  const grid = document.getElementById("productGrid") || document.querySelector("[data-hydrate-products]")
+  if (!wrap || !btn || !grid) return
+
+  let loading = false
+  const sync = () => {
+    wrap.hidden = offset >= total
+    if (statusEl) statusEl.hidden = true
+    btn.hidden = offset >= total
+    btn.disabled = false
+    btn.textContent = "Load more"
+  }
+  sync()
+
+  async function next() {
+    if (loading || offset >= total) return
+    loading = true
+    btn.hidden = true
+    if (statusEl) {
+      statusEl.hidden = false
+      statusEl.innerHTML = `<div class="spinner"></div><span>Loading next page…</span>`
+    }
+    try {
+      const qs = new URLSearchParams(qsBase)
+      qs.set("offset", String(offset))
+      qs.set("limit", "24")
+      const data = await medusaGet(`/store/products?${qs}`)
+      const list = data.products || []
+      if (list.length) {
+        grid!.insertAdjacentHTML("beforeend", list.map(productCard).join(""))
+        document.dispatchEvent(new Event("toonhub:catalog"))
+      }
+      offset += list.length
+      total = Number(data.count ?? total) || total
+      const countEl = document.querySelector("[data-product-count]")
+      if (countEl) countEl.textContent = `${total} products`
+      if (!list.length) offset = total
+    } catch (e: any) {
+      if (statusEl) {
+        statusEl.hidden = false
+        statusEl.innerHTML = `<span>Could not load the next page. ${e.message || ""}</span>`
+      }
+      btn.hidden = false
+      btn.textContent = "Retry"
+      loading = false
+      return
+    }
+    loading = false
+    sync()
+  }
+
+  btn.onclick = () => next()
+  const io = new IntersectionObserver((entries) => {
+    if (entries[0]?.isIntersecting && !wrap.hidden) next()
+  }, { rootMargin: "320px" })
+  io.observe(wrap)
+}
+
 async function load() {
   status("Loading products from Medusa…")
   try {
@@ -142,6 +203,7 @@ async function load() {
 
     const handle = document.querySelector("[data-collection-handle]")?.getAttribute("data-collection-handle")
     const special = handle === "new-arrivals"
+    const onCollection = Boolean(handle)
     let regionId = ""
     try {
       const regions = await medusaGet("/store/regions?limit=5")
@@ -149,7 +211,7 @@ async function load() {
     } catch { /* optional */ }
 
     const qs = new URLSearchParams({
-      limit: "48",
+      limit: onCollection ? "24" : "48",
       fields: "*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,*categories,+handle,+title",
     })
     if (regionId) qs.set("region_id", regionId)
@@ -166,8 +228,13 @@ async function load() {
     const products = prodData.products || []
     fillCatGrids(categories, products)
     fillProductGrids(products)
+    const total = Number(prodData.count ?? products.length) || products.length
     const countEl = document.querySelector("[data-product-count]")
-    if (countEl) countEl.textContent = `${prodData.count ?? products.length} products`
+    if (countEl) countEl.textContent = `${total} products`
+    if (onCollection) {
+      const existing = document.querySelectorAll("#productGrid .product-card, [data-hydrate-products] .product-card").length
+      setupLoadMore(qs, existing || products.length, total)
+    }
     document.dispatchEvent(new Event("toonhub:catalog"))
   } catch (e: any) {
     status(`Could not load Medusa products: ${e.message || e}. If this is CORS, set STORE_CORS=* (or this preview origin) on the Medusa server.`)

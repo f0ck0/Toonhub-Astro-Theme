@@ -1,58 +1,79 @@
 ---
 import { SITE } from "../lib/site"
+import { currencyFromCookies, currencyLabel, CURRENCY_OPTIONS } from "../lib/currency"
+
+const currency = currencyFromCookies(Astro.cookies)
 ---
-<footer style="background:#000;color:#fff;margin-top:80px;border-top:1px solid var(--color-border);">
-  <div class="page-width" style="padding:56px 0 0;">
-    <div class="footer-grid">
+<section class="footer-newsletter">
+  <h2>Subscribe to our emails</h2>
+  <p>Subscribe to our mailing list for insider news, product launches, and more.</p>
+  <form id="newsletterForm" class="newsletter-form">
+    <input type="email" name="email" required placeholder="Email" autocomplete="email" aria-label="Email" />
+    <button type="submit" aria-label="Subscribe">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </form>
+  <p id="newsletterMsg" class="hidden" style="margin-top:12px;font-size:0.85rem;color:#8bc34a;"></p>
+  <div class="footer-social">
+    <a href={SITE.instagram} aria-label="Instagram">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+    </a>
+    <a href={SITE.tiktok} aria-label="TikTok">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+    </a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="page-width">
+    <div class="footer-menus">
       <div>
-        <h3 style="font-size:1.05rem;letter-spacing:0.08em;">Subscribe to our emails</h3>
-        <p style="margin-top:10px;font-size:14px;color:#888;max-width:340px;">Subscribe to our mailing list for insider news, product launches, and more.</p>
-        <form id="newsletterForm" style="display:flex;gap:8px;margin-top:16px;">
-          <input class="field" type="email" name="email" required placeholder="Email" style="flex:1;" />
-          <button class="btn btn-primary" type="submit" style="padding:0.9rem 1.2rem;">Join</button>
-        </form>
-        <p id="newsletterMsg" class="hidden" style="margin-top:8px;font-size:0.82rem;color:#8bc34a;">Thanks — you're on the list.</p>
-        <div style="margin-top:20px;display:flex;gap:14px;">
-          <a href={SITE.instagram} aria-label="Instagram" style="color:#fff;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg></a>
-          <a href={SITE.tiktok} aria-label="TikTok" style="color:#fff;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg></a>
-        </div>
-      </div>
-      <div>
-        <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:16px;">Shop</h4>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;">
-          <li><a href="/collections" style="font-size:14px;">Shop All</a></li>
-          <li><a href="/collections" style="font-size:14px;">Anime List (A-Z)</a></li>
-          <li><a href="/collections/new-arrivals" style="font-size:14px;">New Designs</a></li>
-          <li><a href="/search" style="font-size:14px;">Search</a></li>
-          <li><a href="/track-order" style="font-size:14px;">Track Order</a></li>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="/collections">Shop All</a></li>
+          <li><a href="/collections">Anime List (A–Z)</a></li>
+          <li><a href="/collections/new-arrivals">New Designs</a></li>
+          <li><a href="/search">Search</a></li>
         </ul>
       </div>
       <div>
-        <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:16px;">Help</h4>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;">
-          <li><a href="/about" style="font-size:14px;">About Us</a></li>
-          <li><a href="/contact" style="font-size:14px;">Contact Us</a></li>
-          <li><a href="/care-guide" style="font-size:14px;">Figure Care Guide</a></li>
-          <li><a href="/affiliate" style="font-size:14px;">Affiliate Program</a></li>
-          <li><a href="/blog" style="font-size:14px;">Blog</a></li>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="/track-order">Track Order</a></li>
+          <li><a href="/about">About Us</a></li>
+          <li><a href="/contact">Contact Us</a></li>
+          <li><a href="/care-guide">Figure Care Guide</a></li>
+          <li><a href="/affiliate">Affiliate Program</a></li>
         </ul>
       </div>
       <div>
-        <h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:16px;">Policies</h4>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;">
-          <li><a href="/policies/refund-policy" style="font-size:14px;">Refund Policy</a></li>
-          <li><a href="/policies/shipping-policy" style="font-size:14px;">Shipping Policy</a></li>
-          <li><a href="/policies/terms-of-service" style="font-size:14px;">Terms of Service</a></li>
-          <li><a href="/policies/privacy-policy" style="font-size:14px;">Privacy Policy</a></li>
-          <li><a href="/policies/cancellation-policy" style="font-size:14px;">Cancellation Policy</a></li>
+        <h4>Policies</h4>
+        <ul>
+          <li><a href="/policies/refund-policy">Refund Policy</a></li>
+          <li><a href="/policies/shipping-policy">Shipping Policy</a></li>
+          <li><a href="/policies/terms-of-service">Terms of Service</a></li>
+          <li><a href="/policies/privacy-policy">Privacy Policy</a></li>
+          <li><a href="/policies/cancellation-policy">Cancellation Policy</a></li>
         </ul>
       </div>
     </div>
-    <div style="margin-top:48px;padding:20px 0;border-top:1px solid var(--color-border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:#888;">
-      <span>© {new Date().getFullYear()} {SITE.name}. All rights reserved.</span>
-      <div class="pay-row" style="margin:0;">
-        <span>VISA</span><span>MASTERCARD</span><span>AMEX</span><span>PAYPAL</span><span>APPLE PAY</span><span>GOOGLE PAY</span>
+    <div class="footer-bottom">
+      <div class="footer-locale currency-wrap">
+        <button id="footerCurrencyBtn" class="footer-locale-btn" type="button" aria-haspopup="listbox">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          {currencyLabel(currency)}
+        </button>
+        <div id="footerCurrencyMenu" class="currency-menu">
+          <div style="padding:6px 10px;font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">Country / currency</div>
+          {CURRENCY_OPTIONS.map((opt) => (
+            <button data-currency={opt.code} class="currency-option" type="button">{opt.flag} {opt.label}</button>
+          ))}
+        </div>
       </div>
+      <div class="pay-row" aria-label="Payment methods">
+        <span>Visa</span><span>Mastercard</span><span>Amex</span><span>PayPal</span><span>Apple Pay</span><span>Google Pay</span>
+      </div>
+      <span class="footer-copy">© {new Date().getFullYear()}, {SITE.name}</span>
     </div>
   </div>
 </footer>
@@ -79,4 +100,24 @@ import { SITE } from "../lib/site"
       }
     }
   })
+
+  const footerBtn = document.getElementById("footerCurrencyBtn")
+  const footerMenu = document.getElementById("footerCurrencyMenu")
+  const wrap = footerBtn?.closest(".currency-wrap")
+  if (footerBtn && footerMenu) {
+    footerBtn.onclick = (e) => {
+      e.stopPropagation()
+      footerMenu.classList.toggle("open")
+    }
+    document.addEventListener("click", (e) => {
+      if (!wrap?.contains(e.target as Node)) footerMenu.classList.remove("open")
+    })
+    footerMenu.querySelectorAll<HTMLElement>(".currency-option").forEach((opt) => {
+      opt.onclick = () => {
+        const code = opt.getAttribute("data-currency")
+        document.cookie = `toonhub_currency=${code}; path=/; max-age=31536000; samesite=lax`
+        window.location.reload()
+      }
+    })
+  }
 </script>
