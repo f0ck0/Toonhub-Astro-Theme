@@ -20,6 +20,22 @@ export const GET: APIRoute = async ({ url }) => {
       const found = data.order || data.orders?.[0]
       if (!found) continue
       if (found.email && String(found.email).toLowerCase() !== email.toLowerCase()) continue
+      const tracking: { tracking_number?: string; url?: string }[] = []
+      const pushTrack = (t: any) => {
+        if (!t) return
+        if (typeof t === "string") {
+          if (t) tracking.push({ tracking_number: t })
+          return
+        }
+        const num = t.tracking_number || t.number || t.tracking_numbers?.[0] || ""
+        const href = t.url || t.tracking_url || ""
+        if (num || href) tracking.push({ tracking_number: num, url: href })
+      }
+      for (const f of found.fulfillments || []) {
+        for (const t of f.tracking_links || []) pushTrack(t)
+        for (const t of f.labels || []) pushTrack(t)
+        for (const n of f.tracking_numbers || []) pushTrack(n)
+      }
       return json({
         order: {
           id: found.id,
@@ -27,7 +43,7 @@ export const GET: APIRoute = async ({ url }) => {
           email: found.email,
           status: found.status || found.fulfillment_status || "processing",
           created_at: found.created_at,
-          tracking: found.fulfillments?.flatMap((f: any) => f.tracking_links || f.labels || []) || [],
+          tracking,
         },
       })
     } catch { /* next */ }

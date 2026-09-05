@@ -85,16 +85,15 @@ const heading = special ? title : `Collection: ${title}`
       <section class="page-width" style="padding:24px 0 48px;">
         <div class="toolbar">
           <p style="font-size:0.85rem;color:#888;" data-product-count>{totalCount} products</p>
-          <form method="get">
-            <label style="font-size:0.8rem;color:#888;margin-right:8px;">Sort by</label>
-            <select name="sort" onchange="this.form.submit()">
+          <label style="font-size:0.8rem;color:#888;">Sort by
+            <select id="collectionSort" name="sort" style="margin-left:8px;">
               <option value="featured" selected={sort === "featured"}>Featured</option>
               <option value="az" selected={sort === "az"}>Alphabetically, A–Z</option>
               <option value="za" selected={sort === "za"}>Alphabetically, Z–A</option>
               <option value="price-asc" selected={sort === "price-asc"}>Price, low to high</option>
               <option value="price-desc" selected={sort === "price-desc"}>Price, high to low</option>
             </select>
-          </form>
+          </label>
         </div>
         <div class="product-grid" id="productGrid" data-hydrate-products>
           {initialProducts.map((product: any) => <ProductCard product={product} />)}

@@ -34,7 +34,24 @@ const parentCat = product?.categories?.find((c: any) => c.parent_category_id) ||
 const { rating, count } = productReviews(product)
 const options = product?.options || []
 ---
-<Base title={product ? `${product.title} — TOONHUB` : "Product — TOONHUB"} description={product?.subtitle || SITE.description}>
+<Base title={product ? `${product.title} — TOONHUB` : "Product — TOONHUB"} description={product?.subtitle || SITE.description} image={productImageUrl(allImages[0] || "")}>
+  {product && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.title,
+      image: allImages.map((i: string) => productImageUrl(i)).filter(Boolean),
+      description: product.subtitle || product.description || SITE.description,
+      sku: product.id,
+      offers: {
+        "@type": "Offer",
+        priceCurrency: currency.toUpperCase(),
+        price: (sale / 100).toFixed(2),
+        availability: "https://schema.org/InStock",
+        url: `https://toonhubshop.com/products/${product.handle}`,
+      },
+    })} />
+  )}
   <Header />
   {product ? (
     <main id="MainContent" data-pdp-product={product.id}>
@@ -51,13 +68,13 @@ const options = product?.options || []
         <div class="pdp-grid">
           <div>
             <div style="position:relative;background:#111;overflow:hidden;border-radius:var(--radius-card);">
-              <img id="mainImage" src={productImageUrl(allImages[0] || "")} alt={product.title} style="width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:zoom-in;" />
+              <img id="mainImage" src={productImageUrl(allImages[0] || "")} alt={product.title} decoding="async" width="1000" height="1000" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:zoom-in;" />
               <span class="sale-badge">Sale</span>
             </div>
             {allImages.length > 1 && (
               <div class="thumb-row">
                 {allImages.map((img: string, idx: number) => (
-                  <img src={productImageUrl(img)} alt={`Image ${idx + 1}`} data-idx={idx} class:list={["thumb-img", idx === 0 && "is-on"]} loading="lazy" />
+                  <img src={productImageUrl(img)} alt={`Image ${idx + 1}`} data-idx={idx} class:list={["thumb-img", idx === 0 && "is-on"]} loading="lazy" decoding="async" />
                 ))}
               </div>
             )}
@@ -121,6 +138,17 @@ const options = product?.options || []
                 data-qty="1"
                 style="flex:1;"
               >Add to cart</button>
+              <button
+                class="pdp-wish"
+                type="button"
+                data-wish
+                data-wish-id={product.id}
+                data-wish-handle={product.handle}
+                data-wish-title={product.title}
+                data-wish-img={productImageUrl(allImages[0] || "")}
+                data-wish-price={usdPrice}
+                aria-label="Add to wishlist"
+              >♡</button>
             </div>
             <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px;font-size:0.85rem;color:#999;">
               <div>🚚 Worldwide shipping · Trackable delivery</div>

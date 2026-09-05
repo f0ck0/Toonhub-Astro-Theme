@@ -34,6 +34,7 @@ const currency = currencyFromCookies(Astro.cookies)
           <li><a href="/collections">Anime List (A–Z)</a></li>
           <li><a href="/collections/new-arrivals">New Designs</a></li>
           <li><a href="/search">Search</a></li>
+          <li><a href="/wishlist">Wishlist</a></li>
         </ul>
       </div>
       <div>
@@ -81,23 +82,48 @@ const currency = currencyFromCookies(Astro.cookies)
   const form = document.getElementById("newsletterForm") as HTMLFormElement | null
   form?.addEventListener("submit", async (e) => {
     e.preventDefault()
-    const email = (form.querySelector('[name="email"]') as HTMLInputElement)?.value
+    const email = (form.querySelector('[name="email"]') as HTMLInputElement)?.value?.trim()
     const msg = document.getElementById("newsletterMsg")
+    const show = (ok: boolean, text: string) => {
+      if (!msg) return
+      msg.classList.remove("hidden")
+      msg.style.color = ok ? "#8bc34a" : "#e53935"
+      msg.textContent = text
+    }
+    if (!email || !email.includes("@")) {
+      show(false, "Please enter a valid email.")
+      return
+    }
     try {
+      const w = (window as any).toonhubMedusa
+      const base = String(w?.baseUrl || "").replace(/\/$/, "")
+      const pk = String(w?.publishableKey || "")
+      if (base) {
+        const paths = ["/store/newsletter-subscribers", "/store/subscribers", "/store/newsletter"]
+        for (const path of paths) {
+          try {
+            const res = await fetch(base + path, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", accept: "application/json", "x-publishable-api-key": pk },
+              body: JSON.stringify({ email }),
+              signal: AbortSignal.timeout(6000),
+            })
+            if (res.ok || res.status === 409) {
+              show(true, "Thanks — you're on the list.")
+              form.reset()
+              return
+            }
+          } catch { /* next */ }
+        }
+      }
       const res = await fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
       const data = await res.json()
-      if (msg) {
-        msg.classList.remove("hidden")
-        msg.style.color = res.ok ? "#8bc34a" : "#e53935"
-        msg.textContent = res.ok ? "Thanks — you're on the list." : (data.error || "Could not subscribe. Try again.")
-      }
-      if (res.ok) form.reset()
+      if (res.ok) {
+        show(true, "Thanks — you're on the list.")
+        form.reset()
+      } else show(false, data.error || "Could not subscribe. Try again.")
     } catch {
-      if (msg) {
-        msg.classList.remove("hidden")
-        msg.style.color = "#e53935"
-        msg.textContent = "Network error. Please try again."
-      }
+      show(false, "Network error. Please try again.")
     }
   })
 

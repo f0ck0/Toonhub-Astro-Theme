@@ -366,9 +366,24 @@ async function runSearch(q: string) {
   }
   box.innerHTML = `<p style="padding:24px 20px;color:#888;font-size:0.9rem;">Searching…</p>`
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
-    const data = await res.json()
-    const list = data.products || []
+    let list: any[] = []
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      list = data.products || []
+    } catch { /* client Medusa next */ }
+    if (!list.length) {
+      try {
+        const { medusaGet } = await import("./medusa-client")
+        const data = await medusaGet(`/store/products?q=${encodeURIComponent(q)}&limit=12&fields=+thumbnail,+handle,+title,*variants,*variants.prices`)
+        list = (data.products || []).map((p: any) => ({
+          handle: p.handle,
+          title: p.title,
+          thumbnail: p.thumbnail || p.images?.[0]?.url || "",
+          price: "",
+        }))
+      } catch { /* empty */ }
+    }
     if (!list.length) {
       box.innerHTML = `<p style="padding:24px 20px;color:#888;">No results for “${escapeHtml(q)}”.</p>`
       return
@@ -633,6 +648,54 @@ function bind() {
   })
 
   refresh()
+  bindWishlist()
+}
+
+const WISH_KEY = "toonhub_wishlist"
+
+function readWish(): any[] {
+  try { return JSON.parse(localStorage.getItem(WISH_KEY) || "[]") } catch { return [] }
+}
+function writeWish(list: any[]) {
+  localStorage.setItem(WISH_KEY, JSON.stringify(list))
+  syncWishUI()
+}
+function syncWishUI() {
+  const list = readWish()
+  const ids = new Set(list.map((i) => i.id))
+  document.querySelectorAll<HTMLElement>("[data-wish]").forEach((btn) => {
+    const on = ids.has(btn.getAttribute("data-wish-id") || "")
+    btn.classList.toggle("is-on", on)
+    btn.textContent = on ? "♥" : "♡"
+    btn.setAttribute("aria-label", on ? "Remove from wishlist" : "Add to wishlist")
+  })
+  document.querySelectorAll<HTMLElement>("[data-wish-count]").forEach((el) => {
+    el.textContent = String(list.length)
+    el.hidden = list.length === 0
+  })
+}
+function bindWishlist() {
+  syncWishUI()
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-wish]")
+    if (!btn) return
+    e.preventDefault()
+    e.stopPropagation()
+    const id = btn.getAttribute("data-wish-id") || ""
+    if (!id) return
+    const list = readWish()
+    const i = list.findIndex((x) => x.id === id)
+    if (i >= 0) list.splice(i, 1)
+    else list.unshift({
+      id,
+      handle: btn.getAttribute("data-wish-handle"),
+      title: btn.getAttribute("data-wish-title"),
+      thumbnail: btn.getAttribute("data-wish-img"),
+      unit_price: Number(btn.getAttribute("data-wish-price") || 0),
+    })
+    writeWish(list.slice(0, 100))
+  })
+  document.addEventListener("toonhub:catalog", syncWishUI)
 }
 
 declare global {

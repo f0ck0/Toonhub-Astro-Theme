@@ -30,7 +30,15 @@ import Footer from "../components/Footer.astro"
       const data = await res.json()
       if (res.ok && data.order) {
         const o = data.order
-        box.innerHTML = `<h2>Order ${o.display_id || o.id}</h2><p>Status: <strong>${o.status}</strong></p><p>Placed ${o.created_at ? new Date(o.created_at).toLocaleString() : ""}.</p><p>Updates will be emailed to ${o.email}.</p>`
+        const tracks = (o.tracking || []).map((t: any) => {
+          const num = t.tracking_number || t.number || t.id || ""
+          const href = t.url || t.tracking_url || ""
+          if (!num && !href) return ""
+          return href
+            ? `<p>Tracking: <a href="${href}" target="_blank" rel="noopener">${num || href}</a></p>`
+            : `<p>Tracking: <strong>${num}</strong></p>`
+        }).join("")
+        box.innerHTML = `<h2>Order ${o.display_id || o.id}</h2><p>Status: <strong>${o.status}</strong></p><p>Placed ${o.created_at ? new Date(o.created_at).toLocaleString() : ""}.</p>${tracks || "<p>No carrier tracking number yet — it will appear here when your order ships.</p>"}<p>Updates will be emailed to ${o.email}.</p>`
         return
       }
     } catch {}

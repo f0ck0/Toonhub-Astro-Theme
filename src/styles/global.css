@@ -1035,4 +1035,72 @@ input, select, textarea { font-family: inherit; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #444; }
 
+.wish-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 4;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.05rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.wish-btn.is-on { color: #e53935; }
+.wish-btn:hover { background: rgba(0, 0, 0, 0.78); }
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 24px;
+  align-items: flex-end;
+}
+.search-filters[hidden] { display: none; }
+.search-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+}
+.search-filters select {
+  background: #000;
+  color: #fff;
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+  min-width: 160px;
+}
+
+.mobile-currency {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+.mobile-currency .currency-option {
+  padding: 10px 8px;
+}
+
+.pdp-wish {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: #111;
+  color: #fff;
+  font-size: 1.2rem;
+}
+.pdp-wish.is-on { color: #e53935; border-color: #e53935; }
+
 .hidden { display: none !important; }

@@ -46,3 +46,23 @@ export async function medusaGet(path: string): Promise<any> {
   }
   throw new Error(last)
 }
+
+export async function medusaSend(path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: any }> {
+  const { baseUrl, publishableKey } = cfg()
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    "content-type": "application/json",
+    "x-publishable-api-key": publishableKey,
+    ...(init.headers as any),
+  }
+  const raw = `${baseUrl}${path}`
+  try {
+    const res = await fetch(raw, { ...init, headers, mode: "cors", credentials: "omit", signal: init.signal || AbortSignal.timeout(8000) })
+    const text = await res.text()
+    let data: any = {}
+    try { data = text ? JSON.parse(text) : {} } catch { data = { raw: text } }
+    return { ok: res.ok, status: res.status, data }
+  } catch (e: any) {
+    return { ok: false, status: 0, data: { error: e.message } }
+  }
+}

@@ -52,16 +52,26 @@ function money(amount: number | null | undefined) {
   }
 }
 
-function productPrice(p: any) {
+function productUsdMinor(p: any) {
   const v = p?.variants?.[0]
   const raw = v?.calculated_price?.calculated_amount ?? v?.prices?.[0]?.amount
-  if (raw == null) return ""
+  if (raw == null) return 0
   const n = Number(typeof raw === "object" ? raw.amount : raw)
-  return "From " + money(n)
+  if (!Number.isFinite(n)) return 0
+  return n > 0 && n < 1000 ? Math.round(n * 100) : Math.round(n)
+}
+
+function productPrice(p: any) {
+  const n = productUsdMinor(p)
+  return n ? "From " + money(n) : ""
 }
 
 function imgOf(p: any) {
   return p?.thumbnail || p?.images?.[0]?.url || ""
+}
+
+function hoverOf(p: any, img: string) {
+  return (p?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img) || ""
 }
 
 function esc(s: string) {
@@ -71,7 +81,7 @@ function esc(s: string) {
 function catTile(cat: any, img = "") {
   const src = img || cat.products?.find((p: any) => p.thumbnail)?.thumbnail || ""
   return `<a href="/collections/${esc(cat.handle)}" class="shopby-tile card">
-    <div class="shopby-media">${src ? `<img src="${esc(src)}" alt="${esc(cat.name)}" loading="lazy" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
+    <div class="shopby-media">${src ? `<img src="${esc(src)}" alt="${esc(cat.name)}" loading="lazy" decoding="async" width="800" height="800" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
     <div class="shopby-heading"><h3>${esc(cat.name)}</h3></div>
     <p style="margin-top:6px;font-size:0.88rem;color:#999;line-height:1.5;">Shop our exclusive ${esc(cat.name)} figures.</p>
   </a>`
@@ -79,12 +89,17 @@ function catTile(cat: any, img = "") {
 
 function productCard(p: any) {
   const img = imgOf(p)
-  const price = productPrice(p)
-  return `<article class="product-card card">
+  const hover = hoverOf(p, img)
+  const usd = productUsdMinor(p)
+  const price = usd ? "From " + money(usd) : ""
+  const cats = (p.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
+  return `<article class="product-card card" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
     <div class="pc-media">
       <a href="/products/${esc(p.handle)}" aria-label="${esc(p.title)}" style="position:absolute;inset:0;z-index:1;">
-        ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
+        ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
+        ${hover ? `<img class="pc-hover" src="${esc(hover)}" alt="" loading="lazy" decoding="async" width="600" height="600" />` : ""}
       </a>
+      <button class="wish-btn" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${usd}" aria-label="Add to wishlist">♡</button>
       <span class="sale-badge">Sale</span>
       <a class="choose-options" href="/products/${esc(p.handle)}">View</a>
     </div>
@@ -131,6 +146,28 @@ function fillProductGrids(products: any[]) {
     }
     el.innerHTML = products.map(productCard).join("")
   })
+}
+
+function setupCollectionSort() {
+  const sel = document.getElementById("collectionSort") as HTMLSelectElement | null
+  const grid = document.getElementById("productGrid")
+  if (!sel || !grid) return
+  sel.onchange = () => {
+    const cards = [...grid.querySelectorAll<HTMLElement>(".product-card")]
+    const mode = sel.value
+    cards.sort((a, b) => {
+      const ta = a.getAttribute("data-title") || ""
+      const tb = b.getAttribute("data-title") || ""
+      const pa = Number(a.getAttribute("data-price-usd") || 0)
+      const pb = Number(b.getAttribute("data-price-usd") || 0)
+      if (mode === "az") return ta.localeCompare(tb)
+      if (mode === "za") return tb.localeCompare(ta)
+      if (mode === "price-asc") return pa - pb
+      if (mode === "price-desc") return pb - pa
+      return 0
+    })
+    cards.forEach((c) => grid.appendChild(c))
+  }
 }
 
 function setupLoadMore(qsBase: URLSearchParams, offset: number, total: number) {
@@ -234,6 +271,7 @@ async function load() {
     if (onCollection) {
       const existing = document.querySelectorAll("#productGrid .product-card, [data-hydrate-products] .product-card").length
       setupLoadMore(qs, existing || products.length, total)
+      setupCollectionSort()
     }
     document.dispatchEvent(new Event("toonhub:catalog"))
   } catch (e: any) {
