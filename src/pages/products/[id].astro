@@ -1,0 +1,315 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import { getProduct, getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
+import { salePrice, formatPriceFrom, formatCurrency, readCurrencyCookie } from "../../lib/currency"
+
+const { id } = Astro.params
+let product: any = null
+let relatedProducts: any[] = []
+
+try {
+    product = await getProduct(id || "")
+    if (product) {
+        const result = await getProducts(5, 0)
+        relatedProducts = result.products.filter((p: any) => p.id !== product.id).slice(0, 4)
+    }
+} catch (e) { console.error("Failed:", e) }
+
+const images = product?.images || []
+const allImages = [product?.thumbnail, ...images.map((i: any) => i.url)].filter(Boolean).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
+const usdPrice = getProductUsdPrice(product)
+const currency = readCurrencyCookie() || "usd"
+const { original, sale } = salePrice(usdPrice || 0, currency)
+const priceFrom = formatPriceFrom(sale, currency)
+const originalFmt = formatCurrency(original, currency)
+const variantId = product?.variants?.[0]?.id || ""
+const cat = product?.categories?.[0]
+const parentCat = product?.categories?.find((c: any) => c.parent_category_id)
+---
+<Base>
+    <Header />
+    {product ? (
+        <main>
+            <!-- Breadcrumb -->
+            <section class="page-width" style="padding:24px 0 8px;">
+                <nav style="display:flex;gap:8px;font-size:0.82rem;color:#888;text-transform:uppercase;letter-spacing:0.06em;flex-wrap:wrap;">
+                    <a href="/" style="color:#888;text-decoration:none;">Home</a>
+                    {parentCat && <><span>/</span><a href={`/categories/${parentCat.handle}`} style="color:#888;text-decoration:none;">{parentCat.name}</a></>}
+                    {cat && <><span>/</span><a href={`/categories/${cat.handle}`} style="color:#888;text-decoration:none;">{cat.name}</a></>}
+                    <span>/</span>
+                    <span style="color:#fff;">{product.title}</span>
+                </nav>
+            </section>
+
+            <!-- Main: gallery + buy box -->
+            <section class="page-width" style="padding:8px 0 40px;">
+                <div class="pdp-grid">
+                    <div>
+                        <div style="position:relative;background:#111;overflow:hidden;border-radius:var(--radius-card);">
+                            <img id="mainImage" src={productImageUrl(allImages[0] || "")} alt={product.title} style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" />
+                            <span class="sale-badge">Sale</span>
+                        </div>
+                        {allImages.length > 1 && (
+                            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px;">
+                                {allImages.map((img: string, idx: number) => (
+                                    <img src={productImageUrl(img)} alt={`Image ${idx+1}`} data-idx={idx} class="thumb-img" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:pointer;border:2px solid transparent;border-radius:0.3rem;" loading="lazy" />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">
+                            {parentCat?.name || cat?.name || "Toonhub"}
+                        </div>
+                        <h1 style="font-size:1.6rem;font-weight:700;line-height:1.25;color:#fff;text-transform:uppercase;">{product.title}</h1>
+                        {product.subtitle && <p style="font-size:0.95rem;color:#999;margin-top:8px;">{product.subtitle}</p>}
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:14px;">
+                            <span style="color:var(--color-star);font-size:0.9rem;letter-spacing:2px;">★★★★★</span>
+                            <span style="font-size:0.8rem;color:#888;">5.0 / 5.0</span>
+                        </div>
+                        <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;">
+                            <span class="pdp-price" data-usd={usdPrice ?? 0} style="font-size:1.5rem;font-weight:700;color:#fff;">{priceFrom}</span>
+                            <span class="pdp-original" style="font-size:1rem;color:#888;text-decoration:line-through;">{originalFmt}</span>
+                        </div>
+
+                        {product.description && (
+                            <div style="margin-top:18px;font-size:0.9rem;line-height:1.7;color:#aaa;" set:html={product.description} />
+                        )}
+
+                        {product.variants && product.variants.length > 1 && (
+                            <div style="margin-top:24px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <span style="font-size:0.9rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.06em;">Variant</span>
+                                </div>
+                                <div class="pdp-size-row">
+                                    {product.variants.map((v: any, vi: number) => (
+                                        <button class="pdp-size-btn" data-variant={v.id} style={vi === 0 ? "border:2px solid #fff;background:#fff;color:#000;" : "border:1.5px solid #444;background:#000;color:#fff;"} onclick={`selectSize(this)`}>{v.title || `Option ${vi+1}`}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style="margin-top:24px;display:flex;gap:12px;">
+                            <button id="addToCartBtn" class="btn btn-primary" data-variant-id={variantId} style="flex:1;justify-content:center;border:none;">Add to Cart</button>
+                            <button id="buyNowBtn" class="btn btn-outline" data-variant-id={variantId}>Buy Now</button>
+                        </div>
+                        <div id="cartMsg" style="margin-top:12px;font-size:0.85rem;color:#4caf50;display:none;">✓ Added to cart</div>
+                        <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px;font-size:0.85rem;color:#999;">
+                            <div>🚚 Worldwide shipping · Trackable delivery</div>
+                            <div>↩️ 30-day returns · No questions asked</div>
+                            <div>🔒 Secure payment · SSL encrypted</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Accordion details -->
+            <section class="page-width" style="padding:8px 0 32px;">
+                <div class="pdp-accordion">
+                    <details open>
+                        <summary>Product Details</summary>
+                        <div style="padding:16px 0;font-size:0.9rem;line-height:1.7;color:#aaa;" set:html={product.description || "Premium collectible figure."} />
+                    </details>
+                    <details>
+                        <summary>Shipping & Returns</summary>
+                        <div style="padding:16px 0;font-size:0.85rem;line-height:1.7;color:#aaa;">
+                            Worldwide shipping with tracking. 30-day returns, no questions asked.<br/>Secure payment · SSL encrypted checkout.
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+            <!-- Reviews (via @lambdacurry/medusa-product-reviews plugin) -->
+            <section class="page-width" style="padding:8px 0 48px;">
+                <h2 style="font-size:1.3rem;font-weight:700;color:#fff;text-transform:uppercase;margin-bottom:20px;">Reviews</h2>
+                <div id="reviewsContainer" style="margin-bottom:32px;">
+                    <div style="color:#888;font-size:0.85rem;">Loading reviews...</div>
+                </div>
+                <div style="background:#111;padding:24px;border-radius:0.5rem;border:1px solid var(--color-border);">
+                    <h3 style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:16px;text-transform:uppercase;">Write a Review</h3>
+                    <div style="display:flex;gap:4px;margin-bottom:12px;">
+                        {[1,2,3,4,5].map((n) => <span class="star-empty" data-rating={n} style="cursor:pointer;font-size:1.6rem;color:#555;">★</span>)}
+                    </div>
+                    <input id="reviewName" placeholder="Your name" style="width:100%;padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.85rem;background:#000;color:#fff;margin-bottom:12px;font-family:inherit;" />
+                    <textarea id="reviewText" placeholder="Share your thoughts..." style="width:100%;padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.85rem;background:#000;color:#fff;resize:vertical;min-height:80px;font-family:inherit;"></textarea>
+                    <div id="reviewError" style="display:none;color:#e53935;font-size:0.82rem;margin-top:8px;"></div>
+                    <button id="submitReview" class="btn btn-primary" style="margin-top:12px;border:none;" data-product-id={product.id}>Submit Review</button>
+                </div>
+            </section>
+
+            <!-- Related -->
+            {relatedProducts.length > 0 && (
+                <section class="page-width" style="padding:48px 0 8px;">
+                    <h2 style="font-size:1.3rem;font-weight:700;color:#fff;text-transform:uppercase;margin-bottom:20px;">You Might Also Like</h2>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" class="related-grid">
+                        {relatedProducts.map((p: any) => <ProductCard product={p} />)}
+                    </div>
+                </section>
+            )}
+        </main>
+    ) : (
+        <div class="page-width" style="padding:80px 0;text-align:center;">
+            <h1 style="font-size:2rem;font-weight:700;color:#fff;">Product not found</h1>
+            <a href="/" class="btn btn-primary" style="margin-top:24px;">Back to Home</a>
+        </div>
+    )}
+    <Footer />
+</Base>
+
+<script define:vars={{ allImages: allImages.map((i: string) => i), productId: product?.id, usd: usdPrice }}>
+    // Thumbnail switch
+    const thumbs = document.querySelectorAll('.thumb-img')
+    const mainImg = document.getElementById('mainImage')
+    thumbs.forEach(t => {
+        t.addEventListener('click', () => {
+            if (mainImg) mainImg.src = t.src
+            thumbs.forEach(x => x.style.borderColor = 'transparent')
+            t.style.borderColor = '#fff'
+        })
+    })
+    if (thumbs[0]) thumbs[0].style.borderColor = '#fff'
+
+    // Re-render price in chosen currency
+    function renderPrice() {
+        try {
+            const m = document.cookie.match(/(?:^|; )toonhub_currency=([^;]+)/)
+            const code = m ? m[1] : 'usd'
+            const rates = { usd: 1, eur: 0.92, gbp: 0.79, aud: 1.52, cad: 1.37, jpy: 156, cny: 7.25 }
+            const rate = rates[code] ?? 1
+            const sale = Math.round(usd * rate)
+            const original = Math.round(sale * 2)
+            const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: code.toUpperCase() })
+            const el = document.querySelector('.pdp-price')
+            const orig = document.querySelector('.pdp-original')
+            if (el) el.textContent = 'From ' + fmt.format(sale / 100)
+            if (orig) orig.textContent = fmt.format(original / 100)
+        } catch (e) {}
+    }
+    renderPrice()
+
+    // Variant select
+    window.selectSize = (btn) => {
+        document.querySelectorAll('.pdp-size-btn').forEach(b => {
+            b.style.border = '1.5px solid #444'; b.style.background = '#000'; b.style.color = '#fff'
+        })
+        btn.style.border = '2px solid #fff'; btn.style.background = '#fff'; btn.style.color = '#000'
+        const addBtn = document.getElementById('addToCartBtn')
+        const buyBtn = document.getElementById('buyNowBtn')
+        if (addBtn) addBtn.dataset.variantId = btn.dataset.variant
+        if (buyBtn) buyBtn.dataset.variantId = btn.dataset.variant
+    }
+
+    // Add to cart
+    const addToCartBtn = document.getElementById('addToCartBtn')
+    const buyNowBtn = document.getElementById('buyNowBtn')
+    const cartMsg = document.getElementById('cartMsg')
+
+    async function addToCart(variantId, redirect) {
+        try {
+            let cartId = localStorage.getItem('cartId')
+            if (!cartId) {
+                const res = await fetch('/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+                const data = await res.json()
+                cartId = data.cartId
+                localStorage.setItem('cartId', cartId)
+            }
+            await fetch('/api/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cartId, variantId, quantity: 1 })
+            })
+            if (redirect) window.location.href = '/cart'
+            else if (cartMsg) { cartMsg.style.display = 'block'; setTimeout(() => cartMsg.style.display = 'none', 3000) }
+        } catch(e) { console.error(e) }
+    }
+
+    if (addToCartBtn) addToCartBtn.onclick = () => addToCart(addToCartBtn.dataset.variantId, false)
+    if (buyNowBtn) buyNowBtn.onclick = () => addToCart(buyNowBtn.dataset.variantId, true)
+
+    // ---- Reviews (via medusa-product-reviews plugin) ----
+    const stars = document.querySelectorAll('[data-rating]')
+    let selectedRating = 5
+    stars.forEach(s => {
+        s.onclick = () => {
+            selectedRating = parseInt(s.dataset.rating)
+            stars.forEach(x => {
+                const n = parseInt(x.dataset.rating)
+                x.style.color = n <= selectedRating ? 'var(--color-star)' : '#555'
+            })
+        }
+    })
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`)
+            const data = await res.json()
+            const container = document.getElementById('reviewsContainer')
+            if (!container) return
+            if (data.reviews?.length) {
+                container.innerHTML = data.reviews.map(r => `
+                    <div style="border-bottom:1px solid var(--color-border);padding:16px 0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <div style="display:flex;gap:4px;color:var(--color-star);font-size:0.9rem;">${'★'.repeat(Math.max(1, Math.min(5, r.rating || 5)))}${'☆'.repeat(5 - Math.max(1, Math.min(5, r.rating || 5)))}</div>
+                            <span style="font-size:0.75rem;color:#888;">${r.name || 'Anonymous'}${r.created_at ? ' · ' + new Date(r.created_at).toLocaleDateString() : ''}</span>
+                        </div>
+                        <p style="font-size:0.85rem;color:#ddd;line-height:1.6;">${r.content || ''}</p>
+                        ${r.response ? `<div style="margin-top:10px;padding:10px 14px;background:#1a1a1a;border-radius:0.3rem;font-size:0.82rem;color:#bbb;"><strong style="color:#fff;">Seller response:</strong> ${r.response}</div>` : ''}
+                    </div>
+                `).join('')
+            } else {
+                container.innerHTML = '<div style="color:#888;font-size:0.85rem;">No reviews yet. Be the first!</div>'
+            }
+        } catch(e) { console.error(e) }
+    }
+
+    const submitReview = document.getElementById('submitReview')
+    if (submitReview) submitReview.onclick = async () => {
+        const errEl = document.getElementById('reviewError')
+        const text = document.getElementById('reviewText').value.trim()
+        const name = document.getElementById('reviewName').value.trim()
+        if (!text) { errEl.style.display = 'block'; errEl.textContent = 'Please write a review first.'; return }
+        errEl.style.display = 'none'
+        try {
+            const res = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: submitReview.dataset.productId, rating: selectedRating, content: text, name })
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                errEl.style.display = 'block'
+                errEl.textContent = data.error || 'Failed to submit. Please try again.'
+                return
+            }
+            loadReviews()
+            document.getElementById('reviewText').value = ''
+            document.getElementById('reviewName').value = ''
+        } catch(e) {
+            errEl.style.display = 'block'
+            errEl.textContent = 'Network error. Please try again.'
+            console.error(e)
+        }
+    }
+    loadReviews()
+</script>
+
+<style>
+    .pdp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+    @media (max-width: 768px) { .pdp-grid { grid-template-columns: 1fr; gap: 24px; } }
+    .pdp-size-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .pdp-size-btn {
+        padding: 12px 8px; border-radius: 0.3rem; font-size: 0.85rem; font-weight: 700;
+        cursor: pointer; transition: all 200ms ease; font-family: inherit; text-align: center;
+    }
+    .pdp-accordion details { border-top: 1px solid var(--color-border); }
+    .pdp-accordion summary { padding: 16px 0; font-size: 0.95rem; font-weight: 700; color: #fff; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pdp-accordion summary::-webkit-details-marker { display: none; }
+    .pdp-accordion summary::after { content: '+'; font-size: 1.2rem; font-weight: 400; color: #888; }
+    .pdp-accordion details[open] summary::after { content: '−'; }
+    .pdp-accordion details:last-of-type { border-bottom: 1px solid var(--color-border); }
+    @media (max-width: 990px) { .related-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+</style>

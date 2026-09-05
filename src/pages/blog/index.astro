@@ -1,0 +1,29 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import { getCollection } from "astro:content"
+
+export const prerender = true
+
+const posts = (await getCollection("posts"))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+---
+<Base>
+    <Header />
+    <main class="page-width" style="padding:48px 0 8px;min-height:50vh;">
+        <h1 style="font-size:2rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;">Blog</h1>
+        <p style="margin-top:8px;font-size:0.9rem;color:#888;">News, guides and insights from the ToonHub team.</p>
+        <div style="margin-top:32px;display:grid;gap:24px;">
+            {posts.map((post) => (
+                <a href={`/blog/${post.id}`} style="display:block;text-decoration:none;border:1px solid var(--color-border);border-radius:0.5rem;padding:20px;transition:border-color 200ms ease;" onmouseover="this.style.borderColor='#fff'" onmouseout="this.style.borderColor='var(--color-border)'">
+                    <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">{post.data.pubDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+                    <h2 style="margin-top:8px;font-size:1.15rem;font-weight:700;color:#fff;line-height:1.3;">{post.data.title}</h2>
+                    <p style="margin-top:8px;font-size:0.85rem;color:#999;line-height:1.6;">{post.data.description}</p>
+                </a>
+            ))}
+        </div>
+    </main>
+    <Footer />
+</Base>

@@ -1,0 +1,190 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import { getProducts, getAllCategories, productImageUrl } from "../../lib/medusa"
+
+const { id } = Astro.params
+let category: any = null
+let initialProducts: any[] = []
+let totalCount = 0
+let childCategories: any[] = []
+let siblingCats: any[] = []
+let parentCat: any = null
+const PAGE_SIZE = 24
+
+try {
+    const allCats = await getAllCategories()
+    category = allCats.find((c: any) => c.handle === id)
+    if (category) {
+        childCategories = allCats.filter((c: any) => c.parent_category_id === category.id)
+        const result = await getProducts(PAGE_SIZE, 0, category.id)
+        initialProducts = result.products
+        totalCount = result.count
+        if (category.parent_category_id) {
+            parentCat = allCats.find((c: any) => c.id === category.parent_category_id)
+            siblingCats = allCats.filter((c: any) => c.parent_category_id === category.parent_category_id && c.id !== category.id)
+        }
+    }
+} catch (e) { console.error(e) }
+
+function catTileImage(cat: any): string {
+    const p = cat.products?.find((p: any) => p.thumbnail)
+    return p?.thumbnail ? productImageUrl(p.thumbnail) : ""
+}
+const catId = category?.id || ""
+const hasMoreInitial = initialProducts.length < totalCount
+---
+<Base>
+    <Header />
+    {category ? (
+        <main>
+            <!-- Breadcrumb -->
+            <section class="page-width" style="padding:24px 0 8px;">
+                <nav style="display:flex;gap:8px;font-size:0.82rem;color:#888;text-transform:uppercase;letter-spacing:0.06em;flex-wrap:wrap;">
+                    <a href="/" style="color:#888;text-decoration:none;">Home</a>
+                    {parentCat && <><span>/</span><a href={`/categories/${parentCat.handle}`} style="color:#888;text-decoration:none;">{parentCat.name}</a></>}
+                    <span>/</span>
+                    <span style="color:#fff;">{category.name}</span>
+                </nav>
+                <h1 style="font-size:2.2rem;font-weight:700;color:#fff;margin-top:12px;text-transform:uppercase;letter-spacing:0.03em;">{category.name}</h1>
+                <p style="margin-top:8px;font-size:0.85rem;color:#888;">{totalCount} Products</p>
+            </section>
+
+            <!-- Sub-category pills -->
+            {childCategories.length > 0 && (
+                <section class="page-width" style="padding:12px 0;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <a href={`/categories/${category.handle}`} class="filter-pill active">All</a>
+                        {childCategories.map((cat: any) => (
+                            <a href={`/categories/${cat.handle}`} class="filter-pill">{cat.name}</a>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            <!-- Product grid -->
+            <section class="page-width" style="padding:24px 0 48px;">
+                {initialProducts.length > 0 ? (
+                    <>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" class="cat-grid" id="productGrid">
+                            {initialProducts.map((product: any) => <ProductCard product={product} />)}
+                        </div>
+                        {hasMoreInitial && (
+                            <div id="loadMoreSentinel" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 0;">
+                                <div style="width:28px;height:28px;border:2px solid #333;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                                <div id="loadMoreStatus" style="font-size:0.82rem;color:#888;">Loading more products...</div>
+                            </div>
+                        )}
+                        <div id="allLoaded" style="display:none;text-align:center;padding:24px 0;font-size:0.82rem;color:#999;">All {totalCount} products loaded</div>
+                    </>
+                ) : (
+                    <div style="text-align:center;padding:60px 0;">
+                        <div style="font-size:48px;">📦</div>
+                        <h3 style="font-size:1.25rem;font-weight:700;color:#fff;margin-top:16px;">No products in this category</h3>
+                    </div>
+                )}
+            </section>
+
+            <!-- Related sibling categories -->
+            {siblingCats.length > 0 && (
+                <section class="page-width" style="padding:48px 0 8px;">
+                    <h2 class="section-heading" style="font-size:1.4rem;">Shop by Universe</h2>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;" class="sibling-grid">
+                        {siblingCats.slice(0, 3).map((cat: any) => (
+                            <a href={`/categories/${cat.handle}`} style="display:block;text-decoration:none;" class="card">
+                                <div style="aspect-ratio:4/5;overflow:hidden;background:#111;">
+                                    {catTileImage(cat) ? (
+                                        <img src={catTileImage(cat)} alt={cat.name} loading="lazy" style="width:100%;height:100%;object-fit:cover;" />
+                                    ) : (
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;">{cat.name}</div>
+                                    )}
+                                </div>
+                                <div style="padding:12px 0;">
+                                    <div style="font-size:1rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;">{cat.name}</div>
+                                    <div style="font-size:0.8rem;color:#888;margin-top:4px;">Shop →</div>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+                </section>
+            )}
+        </main>
+    ) : (
+        <div class="page-width" style="padding:80px 0;text-align:center;">
+            <h1 style="font-size:2rem;font-weight:700;color:#fff;">Category not found</h1>
+            <a href="/" class="btn btn-primary" style="margin-top:24px;">Back to Home</a>
+        </div>
+    )}
+    <Footer />
+</Base>
+
+<script>
+    // ---- Infinite scroll via API route ----
+    const grid = document.getElementById('productGrid')
+    const sentinel = document.getElementById('loadMoreSentinel')
+    const allLoaded = document.getElementById('allLoaded')
+    const statusEl = document.getElementById('loadMoreStatus')
+    const catId = {catId}
+    const PAGE_SIZE = 24
+    let offset = PAGE_SIZE
+    let loading = false
+    let done = false
+
+    // 与 ProductCard.astro 视觉一致的动态卡片
+    function renderCardHtml(item) {
+        const img = item.thumbnail || ''
+        return `
+            <a href="/products/${encodeURIComponent(item.handle)}" class="card block group">
+                <div style="position:relative;aspect-ratio:1;background:#111;overflow:hidden;">
+                    ${img ? `<img src="${img}" alt="${item.title.replace(/"/g, '&quot;')}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;"><span style="font-size:48px;">📦</span></div>`}
+                </div>
+                <div style="padding:12px 0 0;">
+                    ${item.category ? `<div style="font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">${item.category}</div>` : ''}
+                    <div class="product-card-title" style="font-size:0.95rem;font-weight:700;color:#fff;line-height:1.35;text-transform:uppercase;letter-spacing:0.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.title}</div>
+                    <div style="display:flex;align-items:center;gap:4px;margin-top:6px;">
+                        <span style="color:var(--color-star);font-size:0.85rem;letter-spacing:1px;">★★★★★</span>
+                        <span style="font-size:0.78rem;color:#888;">5.0 / 5.0</span>
+                    </div>
+                    <div style="margin-top:6px;">
+                        <span style="font-size:1rem;font-weight:700;color:#fff;">${item.price || '—'}</span>
+                    </div>
+                </div>
+            </a>`
+    }
+
+    if (sentinel && grid) {
+        const io = new IntersectionObserver(async (entries) => {
+            if (entries[0].isIntersecting && !loading && !done) {
+                loading = true
+                if (statusEl) statusEl.textContent = 'Loading more products...'
+                try {
+                    const res = await fetch(`/api/products?categoryId=${encodeURIComponent(catId)}&offset=${offset}&limit=${PAGE_SIZE}`)
+                    const data = await res.json()
+                    if (data.products?.length) {
+                        grid.insertAdjacentHTML('beforeend', data.products.map(renderCardHtml).join(''))
+                        offset += data.products.length
+                    }
+                    if (!data.hasMore) {
+                        done = true
+                        if (sentinel) sentinel.style.display = 'none'
+                        if (allLoaded) allLoaded.style.display = 'block'
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'Failed to load more. Retry on scroll.'
+                }
+                loading = false
+            }
+        }, { rootMargin: '200px' })
+        io.observe(sentinel)
+    }
+</script>
+
+<style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 990px) {
+        .cat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        .sibling-grid { grid-template-columns: 1fr !important; }
+    }
+</style>

@@ -1,0 +1,22 @@
+---
+import "../styles/global.css"
+import { getCurrencyAndLocale } from "../lib/currency"
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toonhub — World's Leading Anime Figures Collection</title>
+    <meta name="description" content="Premium anime figures, statues and collectibles. Free shipping on orders over $68." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
+    <!-- Self-hosted fonts (Asul headings + Quattrocento Sans body) — 避免 Google Fonts 渲染阻塞 -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+</head>
+<body class="bg-[--color-background] text-[--color-foreground]">
+    <main id="main">
+        <slot />
+    </main>
+</body>
+</html>

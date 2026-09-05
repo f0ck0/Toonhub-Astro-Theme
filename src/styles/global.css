@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Toonhub design system — pixel-aligned with tsukiyashop.com
+   Black background, white text, Asul + Quattrocento Sans
+   ============================================================ */
+@theme {
+  /* Brand palette (from tsukiyashop: --color-background: 0,0,0) */
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+  --color-muted: #9a9a9a;
+  --color-secondary-button: #333333;
+  --color-secondary-button-hover: #444444;
+  --color-border: #2a2a2a;
+  --color-sale: #e53935;
+  --color-star: #f5a623;
+
+  /* Typography (from tsukiyashop: Asul headings, Quattrocento Sans body) */
+  --font-heading: "Asul", Georgia, serif;
+  --font-body: "Quattrocento Sans", "Helvetica Neue", Arial, sans-serif;
+
+  /* Layout tokens (from tsukiyashop base.css) */
+  --page-width: 100rem; /* 1600px */
+  --radius-card: 0.6rem;
+  --radius-button: 0.3rem;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+button { font-family: inherit; cursor: pointer; }
+
+/* Page width — tsukiyashop uses 100rem */
+.page-width {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+@media (min-width: 990px) {
+  .page-width { padding: 0 5rem; }
+}
+
+/* Buttons — Shopify-style solid buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem 2rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: var(--radius-button);
+  border: 1px solid transparent;
+  transition: all 200ms ease;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1;
+}
+.btn-primary { background: var(--color-secondary-button); color: #fff; }
+.btn-primary:hover { background: var(--color-secondary-button-hover); }
+.btn-outline { background: transparent; color: #fff; border-color: #fff; }
+.btn-outline:hover { background: rgba(255,255,255,0.1); }
+.btn-block { width: 100%; }
+
+/* Cards — tsukiyashop: radius 0.6rem, no shadow */
+.card {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: transparent;
+  transition: opacity 200ms ease;
+}
+.card:hover img { opacity: 0.85; }
+.card img { transition: opacity 200ms ease; }
+
+/* Announcement bar */
+.announcement-bar {
+  background: #111111;
+  color: #fff;
+  text-align: center;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Stars */
+.star { color: var(--color-star); }
+.star-empty { color: #555555; }
+
+/* Sale badge */
+.sale-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  background: var(--color-sale);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.2rem;
+  z-index: 2;
+}
+
+/* Slider arrows (carousel) */
+.slider-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+  transition: all 200ms ease;
+}
+.slider-btn:hover { background: var(--color-secondary-button); }
+
+/* Custom scrollbar (optional polish) */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
