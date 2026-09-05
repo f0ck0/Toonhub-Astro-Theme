@@ -98,7 +98,8 @@ const heading = special ? title : `Collection: ${title}`
         <div class="product-grid" id="productGrid" data-hydrate-products>
           {initialProducts.map((product: any) => <ProductCard product={product} />)}
         </div>
-        <div id="loadMoreWrap" class="load-more" hidden>
+        <div id="loadMoreWrap" class="load-more">
+          <div id="loadMoreSentinel" aria-hidden="true"></div>
           <button id="loadMoreBtn" class="btn btn-outline" type="button">Load more</button>
           <div id="loadMoreStatus" class="load-more-status" hidden>
             <div class="spinner"></div>

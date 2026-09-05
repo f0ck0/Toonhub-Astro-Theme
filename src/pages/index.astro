@@ -65,7 +65,7 @@ const moreCols = shopByList.slice(18)
 <Base>
   <Header />
   <main id="MainContent">
-    <section class="page-width" style="padding:48px 0 8px;">
+    <section class="page-width shopby-section" style="padding-top:48px;padding-bottom:8px;">
       <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
       <div class="shopby-grid" data-hydrate-cats>
         {featuredCols.map((sec) => (
@@ -121,7 +121,7 @@ const moreCols = shopByList.slice(18)
     </section>
 
     {moreCols.length > 0 && (
-      <section class="page-width" style="padding:64px 0 8px;">
+      <section class="page-width shopby-section" style="padding-top:64px;padding-bottom:8px;">
         <h2 class="section-heading" style="margin:0 0 24px;">400+ More Figures in Collections Below</h2>
         <div class="shopby-grid">
           {moreCols.map((sec) => (
