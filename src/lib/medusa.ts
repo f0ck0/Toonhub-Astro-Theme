@@ -1,21 +1,23 @@
-import Medusa from "@medusajs/js-sdk"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { formatCurrency, STATIC_RATES, convertAmount } from "./currency"
 import { FALLBACK_CATEGORIES, FALLBACK_PRODUCTS } from "./fallback"
+import { getStoreSdk, medusaConfig } from "./medusa-config"
 
-export const medusa = new Medusa({
-  baseUrl: import.meta.env.MEDUSA_URL || "http://localhost:9000",
-  publishableKey: import.meta.env.MEDUSA_PUBLISHABLE_KEY || "",
-  // SSR 防卡死: 请求必须超时, 避免 Medusa 抖动时页面无限等待
-  fetch: (input: any, init?: any) =>
-    fetch(input, { ...(init || {}), signal: AbortSignal.timeout(2500) }),
-})
+export { getStoreSdk, medusaConfig }
 
-/* ---------- 简单 TTL 缓存: 避免每次 SSR 都打 Medusa ---------- */
+const PRODUCT_FIELDS = "*variants,*variants.prices,*images,+thumbnail,+description,*categories"
+
+/* ---------- TTL cache ---------- */
 const cache = new Map<string, { t: number; data: any }>()
-const TTL = 60 * 1000 // 60s
+const TTL = 60 * 1000
 let medusaDownUntil = 0
+
+function isConnError(e: any) {
+  const m = String(e?.message || e || "")
+  return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout|network/i.test(m)
+}
+
 async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const hit = cache.get(key)
   if (hit && Date.now() - hit.t < TTL) return hit.data as T
@@ -28,47 +30,82 @@ async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
     cache.set(key, { t: Date.now(), data })
     return data
   } catch (e) {
-    medusaDownUntil = Date.now() + TTL
+    if (isConnError(e)) medusaDownUntil = Date.now() + TTL
     if (hit) return hit.data as T
     throw e
   }
 }
 
+function useFallback() {
+  return medusaConfig().isLocal
+}
+
 function fallbackProducts(categoryId?: string) {
   if (!categoryId) return FALLBACK_PRODUCTS
-  const cat = FALLBACK_CATEGORIES.find((c) => c.id === categoryId)
+  const cat = FALLBACK_CATEGORIES.find((c) => c.id === categoryId || c.handle === categoryId)
   return (cat?.products as any[]) || FALLBACK_PRODUCTS.filter((p) => p.categories?.[0]?.id === categoryId)
+}
+
+async function expandCategoryIds(categoryId: string): Promise<string[]> {
+  try {
+    const all = await getNavCategories()
+    const ids = [categoryId]
+    const walk = (pid: string) => {
+      for (const c of all) {
+        if (c.parent_category_id === pid) {
+          ids.push(c.id)
+          walk(c.id)
+        }
+      }
+    }
+    walk(categoryId)
+    return ids
+  } catch {
+    return [categoryId]
+  }
 }
 
 export async function getProducts(limit = 24, offset = 0, categoryId?: string) {
   const key = `products:${limit}:${offset}:${categoryId || "all"}`
   try {
     return await cached(key, async () => {
-      const params: any = { limit, offset, fields: "*variants,*variants.prices,*images,+thumbnail,+description,*categories" }
-      if (categoryId) params.category_id = [categoryId]
+      const medusa = getStoreSdk()
+      const params: any = { limit, offset, fields: PRODUCT_FIELDS }
+      if (categoryId) params.category_id = await expandCategoryIds(categoryId)
       const { products, count } = await medusa.store.product.list(params)
-      if (!products?.length) throw new Error("empty catalog")
-      return { products, count }
+      if (categoryId && !products?.length) {
+        try {
+          const { product_category } = await medusa.store.category.retrieve(categoryId, {
+            fields: `*products,*products.variants,*products.variants.prices,*products.images,+products.thumbnail`,
+          })
+          const list = product_category?.products || []
+          return { products: list.slice(offset, offset + limit), count: list.length }
+        } catch { /* stick with list result */ }
+      }
+      return { products: products || [], count: count ?? products?.length ?? 0 }
     })
-  } catch {
+  } catch (e) {
+    console.error("getProducts", medusaConfig().baseUrl, e)
+    if (!useFallback()) return { products: [], count: 0 }
     const all = fallbackProducts(categoryId)
-    const data = { products: all.slice(offset, offset + limit), count: all.length }
-    cache.set(key, { t: Date.now(), data })
-    return data
+    return { products: all.slice(offset, offset + limit), count: all.length }
   }
 }
 
 export async function getProduct(handle: string) {
   try {
     return await cached(`product:${handle}`, async () => {
+      const medusa = getStoreSdk()
       const { products } = await medusa.store.product.list({
         handle,
-        fields: "*variants,*variants.prices,*images,+thumbnail,+description,*categories",
+        fields: PRODUCT_FIELDS,
       })
       if (!products?.[0]) throw new Error("missing")
       return products[0]
     })
-  } catch {
+  } catch (e) {
+    console.error("getProduct", handle, e)
+    if (!useFallback()) return null
     return FALLBACK_PRODUCTS.find((p) => p.handle === handle) || null
   }
 }
@@ -76,24 +113,25 @@ export async function getProduct(handle: string) {
 export async function getCategories() {
   try {
     return await cached("categories:top", async () => {
+      const medusa = getStoreSdk()
       const { product_categories } = await medusa.store.category.list({
-        fields: "*products",
+        fields: "id,name,handle,parent_category_id,description",
         parent_category_id: null as any,
         limit: 100,
       })
-      if (!product_categories?.length) throw new Error("empty")
-      return product_categories
+      return product_categories || []
     })
-  } catch {
-    const data = FALLBACK_CATEGORIES.filter((c) => !c.parent_category_id)
-    cache.set("categories:top", { t: Date.now(), data })
-    return data
+  } catch (e) {
+    console.error("getCategories", e)
+    if (!useFallback()) return []
+    return FALLBACK_CATEGORIES.filter((c) => !c.parent_category_id)
   }
 }
 
 export async function getNavCategories() {
   try {
     return await cached("categories:nav", async () => {
+      const medusa = getStoreSdk()
       const { product_categories } = await medusa.store.category.list({
         fields: "id,name,handle,parent_category_id",
         limit: 200,
@@ -101,8 +139,9 @@ export async function getNavCategories() {
       if (!product_categories?.length) throw new Error("empty")
       return product_categories
     })
-  } catch {
-    cache.set("categories:nav", { t: Date.now(), data: FALLBACK_CATEGORIES })
+  } catch (e) {
+    console.error("getNavCategories", e)
+    if (!useFallback()) return []
     return FALLBACK_CATEGORIES
   }
 }
@@ -110,15 +149,35 @@ export async function getNavCategories() {
 export async function getAllCategories() {
   try {
     return await cached("categories:all", async () => {
+      const medusa = getStoreSdk()
       const { product_categories } = await medusa.store.category.list({
-        fields: "*products",
+        fields: "id,name,handle,parent_category_id,description,*category_children",
         limit: 200,
       })
       if (!product_categories?.length) throw new Error("empty")
       return product_categories
     })
-  } catch {
+  } catch (e) {
+    console.error("getAllCategories", e)
+    if (!useFallback()) return []
     return FALLBACK_CATEGORIES
+  }
+}
+
+export async function getCategoryByHandle(handle: string) {
+  const all = await getAllCategories()
+  const hit = all.find((c: any) => c.handle === handle)
+  if (hit) return hit
+  try {
+    const medusa = getStoreSdk()
+    const { product_categories } = await medusa.store.category.list({
+      handle,
+      fields: "id,name,handle,parent_category_id,description,*category_children",
+      limit: 1,
+    })
+    return product_categories?.[0] || null
+  } catch {
+    return null
   }
 }
 
@@ -126,31 +185,32 @@ export async function searchProducts(query: string, limit = 24) {
   const key = `search:${query}:${limit}`
   try {
     return await cached(key, async () => {
+      const medusa = getStoreSdk()
       const { products, count } = await medusa.store.product.list({
         limit,
         q: query,
         fields: "*variants,*variants.prices,*images,+thumbnail",
       })
-      if (!products?.length) throw new Error("empty")
-      return { products: products || [], count }
+      return { products: products || [], count: count ?? products?.length ?? 0 }
     })
-  } catch {
+  } catch (e) {
+    console.error("searchProducts", e)
+    if (!useFallback()) return { products: [], count: 0 }
     const q = query.toLowerCase()
     const products = FALLBACK_PRODUCTS.filter((p) => p.title.toLowerCase().includes(q) || p.handle.includes(q))
     return { products: products.slice(0, limit), count: products.length }
   }
 }
 
-/**
- * Get the base (USD) price in minor units for a product's first variant.
- */
 export function getProductUsdPrice(product: any): number | null {
   const price = product?.variants?.[0]?.prices?.find((p: any) => p.currency_code === "usd")
+    ?? product?.variants?.[0]?.calculated_price?.calculated_amount
     ?? product?.variants?.[0]?.prices?.[0]
-  return price ? (price.amount ?? null) : null
+  if (price == null) return null
+  if (typeof price === "number") return Math.round(price * (price < 1000 ? 100 : 1))
+  return price.amount ?? null
 }
 
-/** Legacy helper: format a product's price in a target currency. */
 export function getProductPrice(product: any, currency = "usd"): string {
   const usd = getProductUsdPrice(product)
   if (usd == null) return ""
@@ -161,13 +221,11 @@ export function getProductImage(product: any): string {
   return product?.thumbnail || product?.images?.[0]?.url || ""
 }
 
-/** Resolve the image URL — images are served by the Astro frontend's static public/ dir. */
 const webpExistsCache = new Map<string, boolean>()
 export function productImageUrl(path?: string | null): string {
   if (!path) return ""
   if (/^https?:\/\//.test(path)) return path
   const url = path.startsWith("/") ? path : `/${path}`
-  // 优先返回已转换的 WebP 版本 (同名 .webp), 减少图片下载体积
   const webp = url.replace(/\.(jpe?g|png)$/i, ".webp")
   if (webp !== url) {
     let has = webpExistsCache.get(webp)

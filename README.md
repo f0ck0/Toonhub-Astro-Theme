@@ -23,4 +23,13 @@ Storefront for **TOONHUB** — a black Shopify-Dawn-style anime figures shop. Fr
 | `npm run build`   | Production build                            |
 | `npm run preview` | Preview the build                           |
 
-Set `MEDUSA_URL` and `MEDUSA_PUBLISHABLE_KEY` for a live catalog. Without them, chrome and content pages still render; cart falls back to the browser.
+Copy `.env.example` to `.env`. Defaults:
+
+```
+MEDUSA_URL=http://96.47.238.191:9000
+MEDUSA_PUBLISHABLE_KEY=pk_...
+```
+
+The Store API is on **port 9000** (`/health` → `OK`). `http://96.47.238.191/` is nginx and does not proxy `/store`. Medusa v2 **requires** `MEDUSA_PUBLISHABLE_KEY` (Admin → Settings → Publishable API Keys, linked to a sales channel). Without that header, `/store/products` and `/store/product-categories` return `Publishable API key required`, and category pages stay empty.
+
+Anime List / Shop All are Medusa product categories. Opening a category loads that category’s products (`category_id`, including child categories).

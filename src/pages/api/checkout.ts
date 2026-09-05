@@ -1,13 +1,8 @@
 import type { APIRoute } from "astro"
-import Medusa from "@medusajs/js-sdk"
+import { getStoreSdk } from "../../lib/medusa-config"
 import { medusaFetch, json, medusaEnv, providerLabel } from "../../lib/server-medusa"
 
 export const prerender = false
-
-const sdk = new Medusa({
-  baseUrl: process.env.MEDUSA_URL || "http://localhost:9000",
-  publishableKey: process.env.MEDUSA_PUBLISHABLE_KEY || "",
-})
 
 const CART_FIELDS = "*items,*items.variant,*items.product,*shipping_address,*billing_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions,+email,+total,+subtotal,+shipping_total,+discount_total,+tax_total,+currency_code,*region"
 
@@ -38,6 +33,7 @@ function mapCart(cart: any) {
 }
 
 async function retrieveCart(cartId: string) {
+  const sdk = getStoreSdk()
   try {
     const { cart } = await sdk.store.cart.retrieve(cartId, { fields: CART_FIELDS })
     if (cart) return cart
@@ -64,7 +60,7 @@ export const GET: APIRoute = async ({ url }) => {
     } catch { /* none */ }
     if (!shipping_options.length) {
       try {
-        const so = await (sdk.store as any).fulfillment?.listCartOptions?.({ cart_id: cartId })
+        const so = await (getStoreSdk().store as any).fulfillment?.listCartOptions?.({ cart_id: cartId })
         shipping_options = so?.shipping_options || []
       } catch { /* none */ }
     }
@@ -114,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (body.newsletter) payload.metadata = { newsletter: true }
       let cart
       try {
-        const out = await sdk.store.cart.update(cartId, payload)
+        const out = await getStoreSdk().store.cart.update(cartId, payload)
         cart = out.cart
       } catch {
         const { ok, data } = await medusaFetch(`/store/carts/${cartId}`, { method: "POST", body: JSON.stringify(payload) })
@@ -129,7 +125,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (action === "shipping") {
       try {
-        const { cart } = await sdk.store.cart.addShippingMethod(cartId, { option_id: body.optionId })
+        const { cart } = await getStoreSdk().store.cart.addShippingMethod(cartId, { option_id: body.optionId })
         return json({ success: true, cart: mapCart(cart) })
       } catch {
         const { ok, data } = await medusaFetch(`/store/carts/${cartId}/shipping-methods`, {
@@ -154,7 +150,7 @@ export const POST: APIRoute = async ({ request }) => {
       let cart = await retrieveCart(cartId)
       let session: any = null
       try {
-        const out = await sdk.store.payment.initiatePaymentSession(cart, { provider_id: body.providerId })
+        const out = await getStoreSdk().store.payment.initiatePaymentSession(cart, { provider_id: body.providerId })
         cart = out.cart || (await retrieveCart(cartId))
         session = cart.payment_collection?.payment_sessions?.find((s: any) => s.provider_id === body.providerId)
           || cart.payment_collection?.payment_sessions?.[0]
@@ -191,7 +187,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (action === "complete") {
       try {
-        const out: any = await sdk.store.cart.complete(cartId)
+        const out: any = await getStoreSdk().store.cart.complete(cartId)
         if (out.type === "order" || out.order) {
           const order = out.order
           return json({ success: true, type: "order", order: { id: order.id, display_id: order.display_id, email: order.email } })

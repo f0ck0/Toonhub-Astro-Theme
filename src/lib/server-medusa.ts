@@ -1,9 +1,12 @@
 /** Shared Medusa HTTP helper for API routes (checkout, reviews, newsletter). */
 
+import { medusaConfig } from "./medusa-config"
+
 export function medusaEnv() {
+  const { baseUrl, publishableKey } = medusaConfig()
   return {
-    baseUrl: (import.meta.env.MEDUSA_URL || process.env.MEDUSA_URL || "http://127.0.0.1:9000").replace(/\/$/, ""),
-    pk: import.meta.env.MEDUSA_PUBLISHABLE_KEY || process.env.MEDUSA_PUBLISHABLE_KEY || "",
+    baseUrl,
+    pk: publishableKey,
     stripePk: import.meta.env.PUBLIC_STRIPE_KEY || process.env.STRIPE_PUBLISHABLE_KEY || process.env.PUBLIC_STRIPE_KEY || "",
     paypalClientId: import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "",
   }

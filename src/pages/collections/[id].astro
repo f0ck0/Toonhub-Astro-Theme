@@ -3,7 +3,7 @@ import Base from "../../layouts/Base.astro"
 import Header from "../../components/Header.astro"
 import Footer from "../../components/Footer.astro"
 import ProductCard from "../../components/ProductCard.astro"
-import { getProducts, getAllCategories } from "../../lib/medusa"
+import { getProducts, getAllCategories, getCategoryByHandle } from "../../lib/medusa"
 
 const { id } = Astro.params
 const sort = Astro.url.searchParams.get("sort") || "featured"
@@ -19,7 +19,9 @@ const special = id === "new-arrivals"
 
 try {
   const allCats = await getAllCategories()
-  if (!special) category = allCats.find((c: any) => c.handle === id)
+  if (!special) {
+    category = allCats.find((c: any) => c.handle === id) || await getCategoryByHandle(id || "")
+  }
   if (category || special) {
     if (category) {
       childCategories = allCats.filter((c: any) => c.parent_category_id === category.id)

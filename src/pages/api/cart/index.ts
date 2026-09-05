@@ -1,12 +1,7 @@
 import type { APIRoute } from "astro"
-import Medusa from "@medusajs/js-sdk"
+import { getStoreSdk } from "../../../lib/medusa-config"
 
 export const prerender = false
-
-const medusa = new Medusa({
-  baseUrl: process.env.MEDUSA_URL || "http://localhost:9000",
-  publishableKey: process.env.MEDUSA_PUBLISHABLE_KEY || "",
-})
 
 function mapItems(cart: any) {
   return (cart?.items || []).map((i: any) => ({
@@ -25,6 +20,7 @@ export const POST: APIRoute = async ({ cookies }) => {
   try {
     const currency = (cookies.get("toonhub_currency")?.value || "usd").toLowerCase()
     let regionId: string | undefined
+    const medusa = getStoreSdk()
     try {
       const { regions } = await medusa.store.region.list({ limit: 20 })
       const match = (regions || []).find((r: any) => r.currency_code?.toLowerCase() === currency)
@@ -41,6 +37,7 @@ export const GET: APIRoute = async ({ url }) => {
   const cartId = url.searchParams.get("cartId")
   if (!cartId) return new Response(JSON.stringify({ items: [] }), { headers: { "Content-Type": "application/json" } })
   try {
+    const medusa = getStoreSdk()
     const { cart } = await medusa.store.cart.retrieve(cartId, {
       fields: "*items,*items.variant,*items.product,+total,+subtotal,+shipping_total,+discount_total",
     })

@@ -34,7 +34,10 @@ function catTileImage(cat: any): string {
       ))}
     </div>
     {ipCats.length === 0 && (
-      <p style="color:#888;padding:48px 0;">Categories will appear here once Medusa is connected.</p>
+      <p style="color:#888;padding:48px 0;">
+        No Medusa categories yet. Backend: {medusaConfig().baseUrl}
+        {!medusaConfig().publishableKey && " — add MEDUSA_PUBLISHABLE_KEY (Admin → Settings → Publishable API Keys)."}
+      </p>
     )}
   </main>
   <Footer />

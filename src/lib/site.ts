@@ -69,12 +69,12 @@ export function groupCategories(categories: any[]) {
  */
 export function shopCategories(categories: any[]) {
   const { parentCats, childMap } = groupCategories(categories)
-  const figures = categories.find((c: any) => c.handle === FIGURES_HANDLE)
+  const figures = categories.find((c: any) => c.handle === FIGURES_HANDLE || /^figures?$/i.test(String(c.handle || "")) || /^figures?$/i.test(String(c.name || "")))
   let list: any[] = []
   if (figures && childMap[figures.id]?.length) list = childMap[figures.id]
   else {
     const leaves = categories.filter((c: any) => c.parent_category_id)
-    list = leaves.length ? leaves : parentCats
+    list = leaves.length ? leaves : parentCats.length ? parentCats : categories
   }
   return list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { sensitivity: "base" }))
 }
