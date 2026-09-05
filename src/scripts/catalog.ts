@@ -1,14 +1,4 @@
-const FALLBACK = {
-  baseUrl: "https://medusa.toonhubshop.com",
-  publishableKey: "pk_7b55f85cfbc0b36baa03e4f3914732c2f5f9d8fc5ae3bb50a98e01d6fcc73c4b",
-}
-
-function cfg() {
-  const w = (window as any).toonhubMedusa
-  const baseUrl = String(w?.baseUrl || FALLBACK.baseUrl).replace(/\/$/, "").replace(/^http:\/\/96\.47\.238\.191:9000$/, FALLBACK.baseUrl)
-  const publishableKey = String(w?.publishableKey || FALLBACK.publishableKey)
-  return { baseUrl, publishableKey }
-}
+import { medusaGet } from "./medusa-client"
 
 function shopCategories(categories: any[]) {
   const parentCats = categories.filter((c) => !c.parent_category_id)
@@ -49,43 +39,6 @@ function status(msg: string) {
     }
   })
   console.warn("[toonhub catalog]", msg)
-}
-
-async function medusaGet(path: string): Promise<any> {
-  const { baseUrl, publishableKey } = cfg()
-  const raw = `${baseUrl}${path}`
-  const headers: Record<string, string> = {
-    accept: "application/json",
-    "x-publishable-api-key": publishableKey,
-  }
-  const urls = [
-    raw,
-    "https://corsproxy.org/?" + encodeURIComponent(raw),
-    "https://corsproxy.io/?" + encodeURIComponent(raw),
-    `/api/medusa-proxy?path=${encodeURIComponent(path)}`,
-  ]
-  let last = "Medusa request failed"
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { headers, mode: "cors", credentials: "omit", signal: AbortSignal.timeout(8000) })
-      const text = await res.text()
-      let data: any = {}
-      try { data = text ? JSON.parse(text) : {} } catch { last = "non-JSON"; continue }
-      if (data?.type === "not_allowed" || /publishable/i.test(String(data?.message || ""))) {
-        last = data.message
-        continue
-      }
-      if (data?.error && /unreachable|fetch failed|invalid path/i.test(String(data.error))) {
-        last = data.error
-        continue
-      }
-      if (res.ok) return data
-      last = data.message || data.error || `HTTP ${res.status}`
-    } catch (e: any) {
-      last = e.message || last
-    }
-  }
-  throw new Error(last)
 }
 
 function money(amount: number | null | undefined) {
@@ -137,6 +90,7 @@ function productCard(p: any) {
     </div>
     <a href="/products/${esc(p.handle)}" class="pc-info">
       <div class="pc-title">${esc(p.title)}</div>
+      <div class="stars" data-review-product="${esc(p.id)}"></div>
       <div class="pc-price-row"><span class="pc-price">${esc(price)}</span></div>
     </a>
   </article>`
@@ -214,6 +168,7 @@ async function load() {
     fillProductGrids(products)
     const countEl = document.querySelector("[data-product-count]")
     if (countEl) countEl.textContent = `${prodData.count ?? products.length} products`
+    document.dispatchEvent(new Event("toonhub:catalog"))
   } catch (e: any) {
     status(`Could not load Medusa products: ${e.message || e}. If this is CORS, set STORE_CORS=* (or this preview origin) on the Medusa server.`)
   }

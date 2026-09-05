@@ -1,7 +1,7 @@
 ---
 import { getProductImage, getProductUsdPrice, productImageUrl } from "../lib/medusa"
 import { salePrice, formatPriceFrom, formatCurrency, currencyFromCookies } from "../lib/currency"
-import { productSocial } from "../lib/site"
+import { productReviews } from "../lib/site"
 import Stars from "./Stars.astro"
 
 const { product } = Astro.props
@@ -12,7 +12,7 @@ const currency = currencyFromCookies(Astro.cookies)
 const { original, sale } = salePrice(usdPrice, currency)
 const priceFrom = formatPriceFrom(sale, currency)
 const originalFmt = formatCurrency(original, currency)
-const { rating, count } = productSocial(product?.id || product?.handle || "")
+const { rating, count } = productReviews(product)
 const variants = (product?.variants || []).map((v: any) => ({ id: v.id, title: v.title || v.options?.map((o: any) => o.value).join(" / ") || "Default" }))
 const qv = encodeURIComponent(JSON.stringify({
   variantId: variants[0]?.id || "",
@@ -43,7 +43,7 @@ const href = `/products/${product.handle}`
   </div>
   <a href={href} class="pc-info">
     <div class="pc-title">{product.title}</div>
-    <Stars rating={rating} count={count} />
+    <Stars rating={rating} count={count} productId={product?.id || ""} />
     <div class="pc-price-row">
       <span class="pc-price product-card-price">{priceFrom}</span>
       <span class="pc-compare" data-price-strike>{originalFmt}</span>

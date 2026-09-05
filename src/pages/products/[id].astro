@@ -6,7 +6,7 @@ import ProductCard from "../../components/ProductCard.astro"
 import Stars from "../../components/Stars.astro"
 import { getProduct, getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
 import { salePrice, formatPriceFrom, formatCurrency, currencyFromCookies } from "../../lib/currency"
-import { productSocial, SITE } from "../../lib/site"
+import { productReviews, SITE } from "../../lib/site"
 
 const { id } = Astro.params
 let product: any = null
@@ -31,13 +31,13 @@ const variants = product?.variants || []
 const variantId = variants[0]?.id || ""
 const cat = product?.categories?.[0]
 const parentCat = product?.categories?.find((c: any) => c.parent_category_id) || cat
-const { rating, count } = productSocial(product?.id || "")
+const { rating, count } = productReviews(product)
 const options = product?.options || []
 ---
 <Base title={product ? `${product.title} — TOONHUB` : "Product — TOONHUB"} description={product?.subtitle || SITE.description}>
   <Header />
   {product ? (
-    <main id="MainContent">
+    <main id="MainContent" data-pdp-product={product.id}>
       <section class="page-width" style="padding:24px 0 8px;">
         <nav class="breadcrumb">
           <a href="/">Home</a>
@@ -64,7 +64,7 @@ const options = product?.options || []
           </div>
 
           <div>
-            <Stars rating={rating} count={count} size="0.95rem" />
+            <Stars rating={rating} count={count} size="0.95rem" productId={product.id} />
             <h1 style="font-size:1.6rem;font-weight:700;line-height:1.25;color:#fff;margin-top:10px;">{product.title}</h1>
             {product.subtitle && <p style="font-size:0.95rem;color:#999;margin-top:8px;">{product.subtitle}</p>}
 
@@ -159,9 +159,7 @@ const options = product?.options || []
           <div id="reviewAvgStars" style="color:var(--color-star);font-size:1.2rem;"></div>
           <div id="reviewAvgText" style="font-size:0.88rem;color:#aaa;"></div>
         </div>
-        <div id="reviewsContainer" style="margin-bottom:32px;">
-          <div style="color:#888;font-size:0.85rem;">Loading reviews...</div>
-        </div>
+        <div id="reviewsContainer" style="margin-bottom:32px;"></div>
         <div style="background:#111;padding:24px;border-radius:0.5rem;border:1px solid var(--color-border);">
           <h3 style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:16px;">Write a Review</h3>
           <p style="font-size:0.8rem;color:#888;margin-bottom:14px;">Reviews are stored in Medusa. Add stars, photos, and a written review.</p>
@@ -200,7 +198,7 @@ const options = product?.options || []
   <Footer />
 </Base>
 
-<script define:vars={{ allImages: allImages.map((i: string) => i), productId: product?.id }}>
+<script define:vars={{ allImages: allImages.map((i: string) => i) }}>
   const thumbs = document.querySelectorAll<HTMLImageElement>(".thumb-img")
   const mainImg = document.getElementById("mainImage") as HTMLImageElement | null
   thumbs.forEach((t) => {
@@ -252,10 +250,6 @@ const options = product?.options || []
     }
   })
 
-  function esc(s: string) {
-    return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
-  }
-
   function filesToDataUrls(files: FileList | null) {
     if (!files?.length) return Promise.resolve([] as string[])
     return Promise.all(Array.from(files).slice(0, 5).filter((f) => f.type.startsWith("image/") && f.size < 2_000_000).map((f) => new Promise<string>((resolve, reject) => {
@@ -272,38 +266,9 @@ const options = product?.options || []
     if (box) box.innerHTML = urls.map((u) => `<img src="${u}" alt="">`).join("")
   })
 
-  async function loadReviews() {
-    try {
-      const res = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`)
-      const data = await res.json()
-      const container = document.getElementById("reviewsContainer")
-      const summary = document.getElementById("reviewSummary")
-      if (summary && data.count) {
-        summary.hidden = false
-        const avg = Number(data.average || 0)
-        document.getElementById("reviewAvgStars")!.textContent = "★".repeat(Math.round(avg)) + "☆".repeat(5 - Math.round(avg))
-        document.getElementById("reviewAvgText")!.textContent = `${avg} out of 5 · ${data.count} review${data.count === 1 ? "" : "s"}`
-      }
-      if (!container) return
-      if (data.reviews?.length) {
-        container.innerHTML = data.reviews.map((r: any) => {
-          const n = Math.max(1, Math.min(5, r.rating || 5))
-          const photos = (r.images || []).map((src: string) => `<img src="${esc(src)}" alt="">`).join("")
-          return `<div style="border-bottom:1px solid var(--color-border);padding:16px 0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <div style="color:var(--color-star);font-size:0.9rem;">${"★".repeat(n)}${"☆".repeat(5 - n)}</div>
-              <span style="font-size:0.75rem;color:#888;">${esc(r.name || "Anonymous")}${r.created_at ? " · " + new Date(r.created_at).toLocaleDateString() : ""}</span>
-            </div>
-            ${r.title ? `<h4 style="font-size:0.95rem;color:#fff;margin-bottom:6px;">${esc(r.title)}</h4>` : ""}
-            <p style="font-size:0.85rem;color:#ddd;line-height:1.6;">${esc(r.content || "")}</p>
-            ${photos ? `<div class="review-photos">${photos}</div>` : ""}
-            ${r.response ? `<div style="margin-top:10px;padding:10px 14px;background:#1a1a1a;border-radius:0.3rem;font-size:0.82rem;color:#bbb;"><strong style="color:#fff;">Seller response:</strong> ${esc(r.response)}</div>` : ""}
-          </div>`
-        }).join("")
-      } else {
-        container.innerHTML = '<div style="color:#888;font-size:0.85rem;">No reviews yet. Be the first!</div>'
-      }
-    } catch (e) { console.error(e) }
+  function loadReviews() {
+    const fn = (window as any).toonhubLoadReviews
+    if (typeof fn === "function") fn()
   }
 
   const submitReview = document.getElementById("submitReview") as HTMLButtonElement | null

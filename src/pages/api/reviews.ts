@@ -18,7 +18,7 @@ function normalize(r: any) {
   return {
     id: r.id,
     name: r.name || r.first_name || [r.first_name, r.last_name].filter(Boolean).join(" ") || r.customer?.first_name || "Anonymous",
-    rating: Number(r.rating) || 5,
+    rating: Number(r.rating) || 0,
     title: r.title || "",
     content: r.content || r.comment || r.body || "",
     created_at: r.created_at,
@@ -33,27 +33,35 @@ function extractList(data: any): any[] {
 
 export const GET: APIRoute = async ({ url }) => {
   const productId = url.searchParams.get("productId")
-  if (!productId) return json({ reviews: [], count: 0, average: 0 })
-
-  const tries = [
-    `/store/product-reviews?product_id=${encodeURIComponent(productId)}&limit=50`,
-    `/store/products/${encodeURIComponent(productId)}/reviews?limit=50`,
-    `/store/reviews?product_id=${encodeURIComponent(productId)}&limit=50`,
-  ]
+  const tries = productId
+    ? [
+        `/store/product-reviews?product_id=${encodeURIComponent(productId)}&limit=50`,
+        `/store/products/${encodeURIComponent(productId)}/reviews?limit=50`,
+        `/store/reviews?product_id=${encodeURIComponent(productId)}&limit=50`,
+      ]
+    : [
+        `/store/product-reviews?limit=100`,
+        `/store/reviews?limit=100`,
+      ]
   let reviews: any[] = []
+  let apiCount: number | null = null
+  let apiAverage = 0
   for (const path of tries) {
     try {
       const { ok, data } = await medusaFetch(path)
       if (!ok) continue
       const list = extractList(data)
-      if (list.length || data?.count === 0) {
-        reviews = list.map(normalize)
-        break
-      }
+      reviews = list.map(normalize)
+      if (data?.count != null) apiCount = Number(data.count)
+      apiAverage = Number(data?.average ?? data?.average_rating) || 0
+      break
     } catch { /* next */ }
   }
-  const count = reviews.length
-  const average = count ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0
+  const count = apiCount != null ? apiCount : reviews.length
+  const rated = reviews.filter((r) => r.rating > 0)
+  const average = rated.length
+    ? Math.round((rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10) / 10
+    : apiAverage
   return json({ reviews, count, average })
 }
 

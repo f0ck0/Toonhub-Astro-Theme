@@ -61,7 +61,6 @@ const shopByList = ipCats.map((cat: any) => ({
 
 const featuredCols = shopByList.slice(0, 18)
 const moreCols = shopByList.slice(18)
-const reviewTotal = Math.max(1200, totalCount * 3 + 857)
 ---
 <Base>
   <Header />
@@ -93,9 +92,9 @@ const reviewTotal = Math.max(1200, totalCount * 3 + 857)
       </div>
     </div>
 
-    <div class="trust-strip">
-      <div class="big-stars">★★★★★</div>
-      <div class="count">{reviewTotal.toLocaleString()} reviews</div>
+    <div class="trust-strip" data-hydrate-reviews aria-live="polite">
+      <div class="big-stars" data-review-stars></div>
+      <div class="count" data-review-count></div>
     </div>
 
     <section class="page-width" style="padding:48px 0 8px;" data-slider>

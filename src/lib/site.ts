@@ -38,13 +38,26 @@ export const COLLECTION_IMAGES: Record<string, string> = {
   "tokyo-ghoul-100043": "/images/collection/tokyo-ghoul.webp",
 }
 
-/** Deterministic rating + review count so cards look like Judge.me social proof. */
-export function productSocial(id = ""): { rating: number; count: number } {
-  let h = 2166136261
-  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619)
-  const rating = Math.round((4.55 + (Math.abs(h) % 46) / 100) * 100) / 100
-  const count = 1 + (Math.abs(h >> 3) % 164)
-  return { rating, count }
+/** Real Medusa review stats on a product, if the reviews plugin attached them. Never invent numbers. */
+export function productReviews(product: any): { rating: number; count: number } {
+  const count = Number(
+    product?.reviews_count ??
+    product?.review_count ??
+    product?.metadata?.reviews_count ??
+    product?.metadata?.review_count ??
+    0,
+  )
+  const rating = Number(
+    product?.average_rating ??
+    product?.rating ??
+    product?.metadata?.average_rating ??
+    product?.metadata?.rating ??
+    0,
+  )
+  return {
+    count: Number.isFinite(count) && count > 0 ? count : 0,
+    rating: Number.isFinite(rating) && rating > 0 ? rating : 0,
+  }
 }
 
 export function groupCategories(categories: any[]) {

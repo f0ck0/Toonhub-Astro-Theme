@@ -246,6 +246,7 @@ input, select, textarea { font-family: inherit; }
   gap: 6px;
   margin-top: 6px;
   flex-wrap: wrap;
+  min-height: 1.15em;
 }
 .stars .star-glyphs { color: var(--color-star); letter-spacing: 1px; font-size: 0.85rem; }
 .stars .star-meta { font-size: 0.78rem; color: #888; }
@@ -407,6 +408,7 @@ input, select, textarea { font-family: inherit; }
   align-items: center;
   gap: 6px;
   padding: 28px 1.5rem 8px;
+  min-height: 4.5rem;
 }
 .trust-strip .big-stars { color: var(--color-star); font-size: 1.4rem; letter-spacing: 3px; }
 .trust-strip .count { font-size: 0.95rem; color: #ccc; }
