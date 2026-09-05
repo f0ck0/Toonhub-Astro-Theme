@@ -14,7 +14,8 @@ let childCategories: any[] = []
 let siblingCats: any[] = []
 let parentCat: any = null
 const PAGE_SIZE = 24
-const special = id === "all" || id === "new-arrivals"
+if (id === "all") return Astro.redirect("/collections")
+const special = id === "new-arrivals"
 
 try {
   const allCats = await getAllCategories()
@@ -43,7 +44,7 @@ function sortProducts(list: any[]) {
 }
 initialProducts = sortProducts(initialProducts)
 
-const title = special ? (id === "new-arrivals" ? "New Designs" : "Shop All") : category?.name
+const title = special ? "New Designs" : category?.name
 const heading = special ? title : `Collection: ${title}`
 const catId = category?.id || ""
 const hasMoreInitial = initialProducts.length < totalCount
@@ -54,7 +55,7 @@ const notFound = !special && !category
   {notFound ? (
     <main id="MainContent" class="page-width" style="padding:80px 0;text-align:center;">
       <h1 style="font-size:2rem;font-weight:700;color:#fff;">Collection not found</h1>
-      <a href="/collections/all" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
+      <a href="/collections" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
     </main>
   ) : (
     <main id="MainContent">
@@ -71,8 +72,8 @@ const notFound = !special && !category
         ) : (
           <p style="margin-top:8px;font-size:0.9rem;color:#888;max-width:820px;">
             {special
-              ? "Browse the full Toonhub catalog of premium anime figures, statues and collectibles."
-              : `Protect your shelf in style with our exclusive ${title} figures, featuring high-quality sculpts of iconic characters.`}
+              ? "The newest figures added to Toonhub."
+              : `Shop ${title} figures from this Medusa category.`}
           </p>
         )}
       </section>

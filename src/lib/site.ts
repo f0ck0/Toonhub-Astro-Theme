@@ -61,3 +61,32 @@ export function groupCategories(categories: any[]) {
   }
   return { parentCats, childMap }
 }
+
+/**
+ * Categories used in Shop All / Anime List.
+ * These are Medusa product categories for browsing — not products themselves.
+ * Prefer leaf (IP) categories under Figures; otherwise all non-root categories.
+ */
+export function shopCategories(categories: any[]) {
+  const { parentCats, childMap } = groupCategories(categories)
+  const figures = categories.find((c: any) => c.handle === FIGURES_HANDLE)
+  let list: any[] = []
+  if (figures && childMap[figures.id]?.length) list = childMap[figures.id]
+  else {
+    const leaves = categories.filter((c: any) => c.parent_category_id)
+    list = leaves.length ? leaves : parentCats
+  }
+  return list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { sensitivity: "base" }))
+}
+
+export function groupAz(categories: any[]) {
+  const groups: { letter: string; items: any[] }[] = []
+  for (const cat of shopCategories(categories)) {
+    const letter = String(cat.name || "#").charAt(0).toUpperCase()
+    const key = /[A-Z]/.test(letter) ? letter : "#"
+    const last = groups[groups.length - 1]
+    if (last && last.letter === key) last.items.push(cat)
+    else groups.push({ letter: key, items: [cat] })
+  }
+  return groups
+}

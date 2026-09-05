@@ -154,17 +154,28 @@ const options = product?.options || []
       </section>
 
       <section class="page-width" style="padding:8px 0 48px;">
-        <h2 style="font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:20px;">Reviews</h2>
+        <h2 style="font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:12px;">Customer Reviews</h2>
+        <div id="reviewSummary" class="review-summary" hidden>
+          <div id="reviewAvgStars" style="color:var(--color-star);font-size:1.2rem;"></div>
+          <div id="reviewAvgText" style="font-size:0.88rem;color:#aaa;"></div>
+        </div>
         <div id="reviewsContainer" style="margin-bottom:32px;">
           <div style="color:#888;font-size:0.85rem;">Loading reviews...</div>
         </div>
         <div style="background:#111;padding:24px;border-radius:0.5rem;border:1px solid var(--color-border);">
           <h3 style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:16px;">Write a Review</h3>
+          <p style="font-size:0.8rem;color:#888;margin-bottom:14px;">Reviews are stored in Medusa. Add stars, photos, and a written review.</p>
           <div style="display:flex;gap:4px;margin-bottom:12px;">
             {[1,2,3,4,5].map((n) => <span class="star-empty" data-rating={n} style="cursor:pointer;font-size:1.6rem;color:var(--color-star);">★</span>)}
           </div>
           <input id="reviewName" placeholder="Your name" class="field" style="margin-bottom:12px;" />
+          <input id="reviewTitle" placeholder="Review title (optional)" class="field" style="margin-bottom:12px;" />
           <textarea id="reviewText" placeholder="Share your thoughts..." class="field" style="resize:vertical;min-height:80px;"></textarea>
+          <label style="display:block;margin-top:12px;font-size:0.8rem;color:#aaa;">
+            Photos (up to 5)
+            <input id="reviewImages" type="file" accept="image/*" multiple style="display:block;margin-top:8px;color:#ccc;" />
+          </label>
+          <div id="reviewPreview" class="review-photos"></div>
           <div id="reviewError" style="display:none;color:#e53935;font-size:0.82rem;margin-top:8px;"></div>
           <button id="submitReview" class="btn btn-primary" type="button" style="margin-top:12px;" data-product-id={product.id}>Submit Review</button>
         </div>
@@ -183,7 +194,7 @@ const options = product?.options || []
   ) : (
     <main id="MainContent" class="page-width" style="padding:80px 0;text-align:center;">
       <h1 style="font-size:2rem;font-weight:700;color:#fff;">Product not found</h1>
-      <a href="/collections/all" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
+      <a href="/collections" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
     </main>
   )}
   <Footer />
@@ -241,23 +252,54 @@ const options = product?.options || []
     }
   })
 
+  function esc(s: string) {
+    return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
+  }
+
+  function filesToDataUrls(files: FileList | null) {
+    if (!files?.length) return Promise.resolve([] as string[])
+    return Promise.all(Array.from(files).slice(0, 5).filter((f) => f.type.startsWith("image/") && f.size < 2_000_000).map((f) => new Promise<string>((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result || ""))
+      r.onerror = () => reject(r.error)
+      r.readAsDataURL(f)
+    })))
+  }
+
+  document.getElementById("reviewImages")?.addEventListener("change", async (e) => {
+    const urls = await filesToDataUrls((e.target as HTMLInputElement).files)
+    const box = document.getElementById("reviewPreview")
+    if (box) box.innerHTML = urls.map((u) => `<img src="${u}" alt="">`).join("")
+  })
+
   async function loadReviews() {
     try {
       const res = await fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`)
       const data = await res.json()
       const container = document.getElementById("reviewsContainer")
+      const summary = document.getElementById("reviewSummary")
+      if (summary && data.count) {
+        summary.hidden = false
+        const avg = Number(data.average || 0)
+        document.getElementById("reviewAvgStars")!.textContent = "★".repeat(Math.round(avg)) + "☆".repeat(5 - Math.round(avg))
+        document.getElementById("reviewAvgText")!.textContent = `${avg} out of 5 · ${data.count} review${data.count === 1 ? "" : "s"}`
+      }
       if (!container) return
       if (data.reviews?.length) {
-        container.innerHTML = data.reviews.map((r: any) => `
-          <div style="border-bottom:1px solid var(--color-border);padding:16px 0;">
+        container.innerHTML = data.reviews.map((r: any) => {
+          const n = Math.max(1, Math.min(5, r.rating || 5))
+          const photos = (r.images || []).map((src: string) => `<img src="${esc(src)}" alt="">`).join("")
+          return `<div style="border-bottom:1px solid var(--color-border);padding:16px 0;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <div style="color:var(--color-star);font-size:0.9rem;">${"★".repeat(Math.max(1, Math.min(5, r.rating || 5)))}${"☆".repeat(5 - Math.max(1, Math.min(5, r.rating || 5)))}</div>
-              <span style="font-size:0.75rem;color:#888;">${r.name || "Anonymous"}${r.created_at ? " · " + new Date(r.created_at).toLocaleDateString() : ""}</span>
+              <div style="color:var(--color-star);font-size:0.9rem;">${"★".repeat(n)}${"☆".repeat(5 - n)}</div>
+              <span style="font-size:0.75rem;color:#888;">${esc(r.name || "Anonymous")}${r.created_at ? " · " + new Date(r.created_at).toLocaleDateString() : ""}</span>
             </div>
-            <p style="font-size:0.85rem;color:#ddd;line-height:1.6;">${r.content || ""}</p>
-            ${r.response ? `<div style="margin-top:10px;padding:10px 14px;background:#1a1a1a;border-radius:0.3rem;font-size:0.82rem;color:#bbb;"><strong style="color:#fff;">Seller response:</strong> ${r.response}</div>` : ""}
-          </div>
-        `).join("")
+            ${r.title ? `<h4 style="font-size:0.95rem;color:#fff;margin-bottom:6px;">${esc(r.title)}</h4>` : ""}
+            <p style="font-size:0.85rem;color:#ddd;line-height:1.6;">${esc(r.content || "")}</p>
+            ${photos ? `<div class="review-photos">${photos}</div>` : ""}
+            ${r.response ? `<div style="margin-top:10px;padding:10px 14px;background:#1a1a1a;border-radius:0.3rem;font-size:0.82rem;color:#bbb;"><strong style="color:#fff;">Seller response:</strong> ${esc(r.response)}</div>` : ""}
+          </div>`
+        }).join("")
       } else {
         container.innerHTML = '<div style="color:#888;font-size:0.85rem;">No reviews yet. Be the first!</div>'
       }
@@ -269,13 +311,16 @@ const options = product?.options || []
     const errEl = document.getElementById("reviewError")!
     const text = (document.getElementById("reviewText") as HTMLTextAreaElement).value.trim()
     const name = (document.getElementById("reviewName") as HTMLInputElement).value.trim()
+    const title = (document.getElementById("reviewTitle") as HTMLInputElement).value.trim()
     if (!text) { errEl.style.display = "block"; errEl.textContent = "Please write a review first."; return }
     errEl.style.display = "none"
+    submitReview.disabled = true
     try {
+      const images = await filesToDataUrls((document.getElementById("reviewImages") as HTMLInputElement).files)
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: submitReview.dataset.productId, rating: selectedRating, content: text, name }),
+        body: JSON.stringify({ productId: submitReview.dataset.productId, rating: selectedRating, content: text, name, title, images }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -286,9 +331,15 @@ const options = product?.options || []
       loadReviews()
       ;(document.getElementById("reviewText") as HTMLTextAreaElement).value = ""
       ;(document.getElementById("reviewName") as HTMLInputElement).value = ""
+      ;(document.getElementById("reviewTitle") as HTMLInputElement).value = ""
+      ;(document.getElementById("reviewImages") as HTMLInputElement).value = ""
+      const prev = document.getElementById("reviewPreview")
+      if (prev) prev.innerHTML = ""
     } catch (e) {
       errEl.style.display = "block"
       errEl.textContent = "Network error. Please try again."
+    } finally {
+      submitReview.disabled = false
     }
   }
   loadReviews()

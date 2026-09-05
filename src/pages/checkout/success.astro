@@ -1,0 +1,28 @@
+---
+import "../../styles/checkout.css"
+import { SITE } from "../../lib/site"
+export const prerender = false
+const order = Astro.url.searchParams.get("order") || ""
+const email = Astro.url.searchParams.get("email") || ""
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thank you — {SITE.name}</title>
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/checkout.css" />
+</head>
+<body class="co-body">
+  <main class="co-main" style="margin:0 auto;padding-top:80px;text-align:center;">
+    <a href="/" class="co-logo">{SITE.name}</a>
+    <h1 class="co-h" style="margin-top:36px;font-size:1.8rem;">Thank you for your order</h1>
+    <p style="color:#555;margin-top:12px;">
+      {order ? `Order ${order} is confirmed.` : "Your order is confirmed."}
+      {email ? ` A receipt will be sent to ${email}.` : ""}
+    </p>
+    <a href="/collections" class="co-btn pay" style="max-width:280px;margin:28px auto 0;">Continue shopping</a>
+  </main>
+</body>
+</html>

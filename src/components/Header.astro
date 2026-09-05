@@ -1,6 +1,6 @@
 ---
 import { getNavCategories } from "../lib/medusa"
-import { SITE, FIGURES_HANDLE, groupCategories } from "../lib/site"
+import { SITE, groupAz } from "../lib/site"
 import { currencyFromCookies, currencyLabel, CURRENCY_OPTIONS } from "../lib/currency"
 
 let categories: any[] = []
@@ -8,10 +8,7 @@ try {
   categories = await getNavCategories()
 } catch (e) {}
 
-const { parentCats, childMap } = groupCategories(categories)
-const figuresCatId = categories.find((c: any) => c.handle === FIGURES_HANDLE)?.id || ""
-const ipList = (childMap[figuresCatId] || []).slice().sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
-const extraParents = parentCats.filter((c: any) => c.id !== figuresCatId)
+const azGroups = groupAz(categories)
 const currency = currencyFromCookies(Astro.cookies)
 ---
 <header class="site-header">
@@ -51,23 +48,25 @@ const currency = currencyFromCookies(Astro.cookies)
   <nav class="page-width nav-row desktop-nav">
     <a href="/" class="nav-link">Home</a>
     <a href="/track-order" class="nav-link">Track Order</a>
-    <a href="/collections/all" class="nav-link">Shop All</a>
-    <details class="nav-details" style="position:static;">
+    <a href="/collections" class="nav-link">Shop All</a>
+    <details class="nav-details az-details">
       <summary class="nav-link">
         <span>Anime List (A-Z)</span>
         <svg class="icon-caret" width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"></path></svg>
       </summary>
-      {ipList.length > 0 && (
-        <ul class="mega-panel">
-          {ipList.map((child) => (
-            <li><a href={`/collections/${child.handle}`}>{child.name}</a></li>
+      {azGroups.length > 0 && (
+        <div class="az-dropdown">
+          {azGroups.map((g) => (
+            <div class="az-group">
+              <div class="az-letter">{g.letter}</div>
+              {g.items.map((child) => (
+                <a href={`/collections/${child.handle}`}>{child.name}</a>
+              ))}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </details>
-    {extraParents.map((cat) => (
-      <a href={`/collections/${cat.handle}`} class="nav-link">{cat.name}</a>
-    ))}
   </nav>
 
   <div id="currencyMenu" class="currency-menu">
@@ -87,13 +86,15 @@ const currency = currencyFromCookies(Astro.cookies)
   <nav class="drawer-body" style="display:flex;flex-direction:column;gap:4px;">
     <a href="/" class="nav-link" style="padding:12px 0;">Home</a>
     <a href="/track-order" class="nav-link" style="padding:12px 0;">Track Order</a>
-    <a href="/collections/all" class="nav-link" style="padding:12px 0;">Shop All</a>
-    <a href="/collections" class="nav-link" style="padding:12px 0;">Anime List (A-Z)</a>
-    {ipList.map((child) => (
-      <a href={`/collections/${child.handle}`} style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">{child.name}</a>
-    ))}
-    {extraParents.map((cat) => (
-      <a href={`/collections/${cat.handle}`} class="nav-link" style="padding:12px 0;">{cat.name}</a>
+    <a href="/collections" class="nav-link" style="padding:12px 0;">Shop All</a>
+    <div class="nav-link" style="padding:12px 0;cursor:default;">Anime List (A-Z)</div>
+    {azGroups.map((g) => (
+      <>
+        <div class="az-letter" style="padding:8px 8px 2px;">{g.letter}</div>
+        {g.items.map((child) => (
+          <a href={`/collections/${child.handle}`} style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">{child.name}</a>
+        ))}
+      </>
     ))}
     <a href="/account" class="nav-link" style="padding:12px 0;">Account</a>
     <a href="/search" class="nav-link" style="padding:12px 0;">Search</a>
@@ -125,5 +126,4 @@ const currency = currencyFromCookies(Astro.cookies)
     d.addEventListener("mouseenter", () => { d.open = true })
     d.addEventListener("mouseleave", () => { d.open = false })
   })
-
 </script>

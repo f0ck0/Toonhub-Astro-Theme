@@ -18,20 +18,22 @@ import Footer from "../components/Footer.astro"
   <Footer />
 </Base>
 <script>
-  document.getElementById("trackForm")?.addEventListener("submit", (e) => {
+  document.getElementById("trackForm")?.addEventListener("submit", async (e) => {
     e.preventDefault()
     const fd = new FormData(e.target as HTMLFormElement)
     const id = String(fd.get("order") || "").trim()
     const email = String(fd.get("email") || "").trim().toLowerCase()
     const box = document.getElementById("trackResult")!
+    box.innerHTML = `<p>Looking up your order…</p>`
     try {
-      const orders = JSON.parse(localStorage.getItem("toonhub_orders") || "[]")
-      const hit = orders.find((o: any) => String(o.id).toLowerCase() === id.toLowerCase() && String(o.email).toLowerCase() === email)
-      if (hit) {
-        box.innerHTML = `<h2>Order ${hit.id}</h2><p>Status: <strong>Processing</strong></p><p>Placed ${new Date(hit.created).toLocaleString()}.</p><p>We'll email tracking to ${hit.email} once the parcel leaves our warehouse (usually 2–3 business days).</p>`
+      const res = await fetch(`/api/track?order=${encodeURIComponent(id)}&email=${encodeURIComponent(email)}`)
+      const data = await res.json()
+      if (res.ok && data.order) {
+        const o = data.order
+        box.innerHTML = `<h2>Order ${o.display_id || o.id}</h2><p>Status: <strong>${o.status}</strong></p><p>Placed ${o.created_at ? new Date(o.created_at).toLocaleString() : ""}.</p><p>Updates will be emailed to ${o.email}.</p>`
         return
       }
     } catch {}
-    box.innerHTML = `<p>We couldn't find that order in this browser. If you checked out recently, use the exact order number from your confirmation. For older orders email hello@toonhubshop.com.</p>`
+    box.innerHTML = `<p>We couldn't find that Medusa order. Use the exact order number from your confirmation email.</p>`
   })
 </script>

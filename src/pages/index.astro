@@ -5,7 +5,7 @@ import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
 import CollectionCard from "../components/CollectionCard.astro"
 import { getProducts, getAllCategories, productImageUrl } from "../lib/medusa"
-import { SITE, FIGURES_HANDLE, COLLECTION_IMAGES, groupCategories } from "../lib/site"
+import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
 
 let products: any[] = []
 let totalCount = 0
@@ -44,10 +44,7 @@ try {
   console.error("Failed to fetch products:", e)
 }
 
-const { parentCats, childMap } = groupCategories(categories)
-const figuresParent = categories.find((c: any) => c.handle === FIGURES_HANDLE) || parentCats[0]
-const ipCats: any[] = (figuresParent ? childMap[figuresParent.id] || [] : [])
-  .sort((a: any, b: any) => (b.products?.length || 0) - (a.products?.length || 0))
+const ipCats = shopCategories(categories)
 
 function catTileImage(cat: any): string {
   const p = cat.products?.find((p: any) => p.thumbnail)

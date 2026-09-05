@@ -5,13 +5,14 @@ Storefront for **TOONHUB** — a black Shopify-Dawn-style anime figures shop. Fr
 ## What’s included
 
 - Sticky header: rotating announcement, centered logo, currency, predictive search overlay, account, cart drawer
-- Nav: Home · Track Order · Shop All · Anime List (A–Z mega menu)
+- Nav: Home · Track Order · Shop All (Medusa category list) · Anime List (A–Z one-column dropdown of those categories)
 - Home: Shop by List, clearance countdown, benefits marquee, review strip, new-arrivals slider, more collections, SEO block, newsletter
-- Collection grids with sort + infinite scroll
-- Product pages: gallery + lightbox, sale pricing, quantity, variants, add-to-cart drawer, reviews, related products
-- Cart drawer + cart page with Buy-1-Get-2nd-50% off, terms checkbox, checkout
+- Collection grids with sort + infinite scroll (a category only lists that category’s products)
+- Product pages: gallery + lightbox, sale pricing, quantity, variants, add-to-cart drawer, Medusa reviews (stars, text, photos), related products
+- Cart drawer + cart page with Buy-1-Get-2nd-50% off, terms checkbox
+- Shopify-style checkout: right-hand order summary; left express pay → address → PayPal/Stripe → confirm
 - Policies, about, contact, care guide, affiliate, track order, blog, 404
-- Medusa.js catalog/cart APIs with a localStorage cart fallback
+- Medusa.js catalog, cart, checkout, reviews, newsletter, and contact APIs (localStorage cart fallback when Medusa is down)
 
 ## Commands
 

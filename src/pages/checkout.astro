@@ -1,100 +1,391 @@
 ---
-import Base from "../layouts/Base.astro"
-import Header from "../components/Header.astro"
-import Footer from "../components/Footer.astro"
----
-<Base title="Checkout — TOONHUB">
-  <Header />
-  <main id="MainContent" class="page-width" style="padding:48px 0;">
-    <h1 style="font-size:2rem;margin-bottom:28px;">Checkout</h1>
-    <div id="done" class="hidden" style="text-align:center;padding:48px 0;">
-      <h2 style="font-size:1.6rem;">Thank you</h2>
-      <p id="doneMsg" style="margin-top:12px;color:#aaa;"></p>
-      <a href="/collections/all" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
-    </div>
-    <div id="checkoutGrid" class="cart-layout">
-      <form id="checkoutForm" style="display:flex;flex-direction:column;gap:14px;">
-        <h2 style="font-size:1.05rem;">Contact</h2>
-        <input class="field" type="email" name="email" placeholder="Email" required />
-        <h2 style="font-size:1.05rem;margin-top:12px;">Shipping</h2>
-        <input class="field" type="text" name="name" placeholder="Full name" required />
-        <input class="field" type="text" name="address" placeholder="Address" required />
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <input class="field" type="text" name="city" placeholder="City" required />
-          <input class="field" type="text" name="postal" placeholder="Postal code" required />
-        </div>
-        <input class="field" type="text" name="country" placeholder="Country" required />
-        <label class="terms-row">
-          <input type="checkbox" name="terms" required />
-          <span>I accept the <a href="/policies/terms-of-service">terms of service</a> and <a href="/policies/privacy-policy">privacy policy</a>.</span>
-        </label>
-        <button type="submit" class="btn btn-primary btn-block" id="placeBtn">Place order</button>
-      </form>
-      <div class="cart-summary">
-        <h3 style="font-size:0.9rem;letter-spacing:0.06em;margin-bottom:16px;">Order summary</h3>
-        <div id="summaryLines"></div>
-        <div style="display:flex;justify-content:space-between;padding-top:16px;font-weight:700;border-top:1px solid var(--color-border);margin-top:12px;">
-          <span>Total</span><span id="sumTotal">$0.00</span>
-        </div>
-      </div>
-    </div>
-  </main>
-  <Footer />
-</Base>
-<script>
-  async function boot() {
-    await window.toonhub.refresh()
-    const items = window.toonhub.getItems()
-    if (!items.length) {
-      window.location.href = "/cart"
-      return
-    }
-    const fmt = window.toonhub.formatMoney
-    const box = document.getElementById("summaryLines")!
-    box.innerHTML = items.map((i) => `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-border);font-size:0.85rem;">
-        <span style="color:#ccc;">${i.title} × ${i.quantity}</span>
-        <span>${fmt(i.unit_price * i.quantity)}</span>
-      </div>
-    `).join("")
-    const sum = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
-    const units: number[] = []
-    for (const it of items) for (let n = 0; n < it.quantity; n++) units.push(it.unit_price)
-    units.sort((a, b) => b - a)
-    let disc = 0
-    for (let i = 0; i + 1 < units.length; i += 2) disc += Math.round(Math.min(units[i], units[i + 1]) * 0.5)
-    document.getElementById("sumTotal")!.textContent = fmt(Math.max(0, sum - disc))
-  }
+import "../styles/checkout.css"
+import { SITE } from "../lib/site"
+export const prerender = false
 
-  document.getElementById("checkoutForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault()
-    const form = e.target as HTMLFormElement
-    const fd = new FormData(form)
-    const email = String(fd.get("email") || "")
-    const btn = document.getElementById("placeBtn") as HTMLButtonElement
-    btn.disabled = true
-    btn.textContent = "Placing order…"
-    const cartId = localStorage.getItem("cartId")
-    try {
-      if (cartId) {
-        await fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cartId, email, name: fd.get("name") }),
+const countries = [
+  ["US", "United States"],
+  ["CA", "Canada"],
+  ["GB", "United Kingdom"],
+  ["AU", "Australia"],
+  ["DE", "Germany"],
+  ["FR", "France"],
+  ["IT", "Italy"],
+  ["ES", "Spain"],
+  ["NL", "Netherlands"],
+  ["JP", "Japan"],
+  ["CN", "China"],
+  ["KR", "South Korea"],
+  ["SG", "Singapore"],
+  ["HK", "Hong Kong"],
+  ["MX", "Mexico"],
+  ["BR", "Brazil"],
+]
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — {SITE.name}</title>
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/checkout.css" />
+  <script is:inline src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="co-body">
+  <div class="co-wrap">
+    <main class="co-main">
+      <a href="/" class="co-logo">{SITE.name}</a>
+      <nav class="co-crumb">
+        <a href="/cart">Cart</a><span>›</span><span>Information</span><span>›</span><span>Shipping</span><span>›</span><span>Payment</span>
+      </nav>
+
+      <section class="co-express" id="expressBox">
+        <div class="co-express-label">Express checkout</div>
+        <div class="co-express-row">
+          <button type="button" class="co-exp paypal" id="expressPaypal">PayPal</button>
+          <button type="button" class="co-exp gpay" id="expressGpay">GPay</button>
+          <button type="button" class="co-exp apple" id="expressApple">Apple Pay</button>
+        </div>
+      </section>
+      <div class="co-or">OR</div>
+
+      <form id="coForm">
+        <h2 class="co-h">Contact</h2>
+        <div class="co-row">
+          <input class="co-field" type="email" name="email" placeholder="Email" required autocomplete="email" />
+        </div>
+        <label class="co-check">
+          <input type="checkbox" name="newsletter" checked />
+          <span>Email me with news and offers</span>
+        </label>
+
+        <h2 class="co-h">Delivery</h2>
+        <div class="co-row">
+          <select class="co-field" name="country" required>
+            {countries.map(([code, name]) => <option value={code} selected={code === "US"}>{name}</option>)}
+          </select>
+        </div>
+        <div class="co-row two">
+          <input class="co-field" name="first" placeholder="First name" required autocomplete="given-name" />
+          <input class="co-field" name="last" placeholder="Last name" required autocomplete="family-name" />
+        </div>
+        <div class="co-row">
+          <input class="co-field" name="address" placeholder="Address" required autocomplete="address-line1" />
+        </div>
+        <div class="co-row">
+          <input class="co-field" name="apartment" placeholder="Apartment, suite, etc. (optional)" autocomplete="address-line2" />
+        </div>
+        <div class="co-row two">
+          <input class="co-field" name="city" placeholder="City" required autocomplete="address-level2" />
+          <input class="co-field" name="postal" placeholder="Postal code" required autocomplete="postal-code" />
+        </div>
+        <div class="co-row two">
+          <input class="co-field" name="province" placeholder="State / province (optional)" autocomplete="address-level1" />
+          <input class="co-field" name="phone" placeholder="Phone (optional)" autocomplete="tel" />
+        </div>
+        <label class="co-check">
+          <input type="checkbox" name="save" />
+          <span>Save this information for next time</span>
+        </label>
+
+        <h2 class="co-h">Shipping method</h2>
+        <div class="co-ship" id="shipList">
+          <label><span>Calculating…</span></label>
+        </div>
+
+        <h2 class="co-h">Payment</h2>
+        <p style="font-size:0.82rem;color:#737373;margin:-8px 0 12px;">All transactions are secure and encrypted.</p>
+        <div class="co-method" id="payList"></div>
+        <div class="co-card-box" id="cardBox" hidden>
+          <div id="card-element"></div>
+          <div id="card-errors" class="co-error"></div>
+        </div>
+
+        <p id="coError" class="co-error" hidden></p>
+        <button type="submit" class="co-btn pay" id="payBtn">Pay now</button>
+        <div class="co-foot">
+          <a href="/cart">‹ Return to cart</a>
+          <span>SSL encrypted</span>
+        </div>
+        <p class="co-lock">By placing this order you agree to our <a href="/policies/terms-of-service">Terms</a> and <a href="/policies/privacy-policy">Privacy Policy</a>.</p>
+      </form>
+    </main>
+
+    <aside class="co-aside">
+      <div id="coLines"></div>
+      <div class="co-discount">
+        <input class="co-field" id="discountCode" placeholder="Discount code" />
+        <button type="button" id="discountBtn">Apply</button>
+      </div>
+      <div class="co-totals">
+        <div class="co-tot-row"><span>Subtotal</span><span id="coSub">—</span></div>
+        <div class="co-tot-row"><span>Shipping</span><span id="coShip">Calculated at next step</span></div>
+        <div class="co-tot-row" id="coDiscRow" hidden><span>Discount</span><span id="coDisc">—</span></div>
+        <div class="co-tot-row grand"><span>Total</span><span id="coTotal">—</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const $ = (s: string) => document.querySelector(s) as HTMLElement
+    const form = document.getElementById("coForm") as HTMLFormElement
+    let cartId = ""
+    let cart: any = null
+    let providers: { id: string; label: string }[] = []
+    let shipping: any[] = []
+    let stripe: any = null
+    let cardEl: any = null
+    let stripeKey = ""
+    let selectedPay = ""
+    const fmt = (n: number, c = "usd") => {
+      try {
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: (c || "usd").toUpperCase() }).format((n || 0) / 100)
+      } catch {
+        return `$${((n || 0) / 100).toFixed(2)}`
+      }
+    }
+
+    function showError(msg: string) {
+      const el = document.getElementById("coError")!
+      el.hidden = !msg
+      el.textContent = msg
+    }
+
+    function findPayUrl(obj: any, depth = 0): string | null {
+      if (!obj || depth > 5) return null
+      if (typeof obj === "string" && /^https?:\/\//.test(obj)) return obj
+      if (obj.url && typeof obj.url === "string") return obj.url
+      if (obj.approval_url) return obj.approval_url
+      if (Array.isArray(obj.links)) {
+        const a = obj.links.find((l: any) => /approve|payer-action|redirect/i.test(l.rel || "") || l.href)
+        if (a?.href) return a.href
+      }
+      for (const v of Object.values(obj)) {
+        if (v && typeof v === "object") {
+          const u = findPayUrl(v, depth + 1)
+          if (u) return u
+        }
+      }
+      return null
+    }
+
+    function renderSummary() {
+      const items = cart?.items || []
+      const currency = cart?.currency || "usd"
+      const box = document.getElementById("coLines")!
+      box.innerHTML = items.map((i: any) => `
+        <div class="co-line">
+          <div style="position:relative">
+            ${i.thumbnail ? `<img class="co-thumb" src="${i.thumbnail}" alt="">` : `<div class="co-thumb"></div>`}
+            <span class="co-qty">${i.quantity}</span>
+          </div>
+          <div class="co-title">${i.title}${i.variant_title ? `<div style="font-weight:400;color:#737373;font-size:0.78rem;">${i.variant_title}</div>` : ""}</div>
+          <div class="co-price">${fmt(i.unit_price * i.quantity, currency)}</div>
+        </div>
+      `).join("")
+      document.getElementById("coSub")!.textContent = fmt(cart?.subtotal ?? items.reduce((s: number, i: any) => s + i.unit_price * i.quantity, 0), currency)
+      const ship = cart?.shipping_total
+      document.getElementById("coShip")!.textContent = ship || ship === 0 ? (ship === 0 ? "Free" : fmt(ship, currency)) : "Calculated at next step"
+      const disc = cart?.discount_total || 0
+      const row = document.getElementById("coDiscRow")!
+      row.hidden = !disc
+      if (disc) document.getElementById("coDisc")!.textContent = `−${fmt(disc, currency)}`
+      document.getElementById("coTotal")!.textContent = fmt(cart?.total ?? 0, currency)
+    }
+
+    function renderShipping() {
+      const box = document.getElementById("shipList")!
+      if (!shipping.length) {
+        box.innerHTML = `<label><span>Free worldwide shipping</span><strong>Free</strong></label>`
+        return
+      }
+      box.innerHTML = shipping.map((s, i) => `
+        <label>
+          <span style="display:flex;gap:8px;align-items:center;">
+            <input type="radio" name="ship" value="${s.id}" ${i === 0 ? "checked" : ""} />
+            ${s.name || s.id}
+          </span>
+          <strong>${!s.amount ? "Free" : fmt(s.amount, cart?.currency)}</strong>
+        </label>
+      `).join("")
+    }
+
+    function renderPay() {
+      const list = providers.length ? providers : [
+        { id: "pp_stripe_stripe", label: "Credit card" },
+        { id: "pp_paypal_paypal", label: "PayPal" },
+      ]
+      const box = document.getElementById("payList")!
+      box.innerHTML = list.map((p, i) => `
+        <label class="${i === 0 ? "is-on" : ""}" data-pay="${p.id}">
+          <input type="radio" name="pay" value="${p.id}" ${i === 0 ? "checked" : ""} />
+          <span>${p.label}</span>
+        </label>
+      `).join("")
+      selectedPay = list[0]?.id || ""
+      toggleCard()
+      box.querySelectorAll("label").forEach((lab) => {
+        lab.addEventListener("click", () => {
+          box.querySelectorAll("label").forEach((x) => x.classList.remove("is-on"))
+          lab.classList.add("is-on")
+          selectedPay = lab.getAttribute("data-pay") || ""
+          toggleCard()
+        })
+      })
+    }
+
+    function toggleCard() {
+      const isCard = /stripe|card/i.test(selectedPay)
+      const box = document.getElementById("cardBox") as HTMLElement
+      box.hidden = !isCard
+      if (isCard && stripe && !cardEl) {
+        const elements = stripe.elements()
+        cardEl = elements.create("card", { hidePostalCode: true, style: { base: { fontSize: "16px", color: "#333" } } })
+        cardEl.mount("#card-element")
+        cardEl.on("change", (e: any) => {
+          document.getElementById("card-errors")!.textContent = e.error?.message || ""
         })
       }
-    } catch {}
-    const order = window.toonhub.snapshotOrder(email)
-    window.toonhub.clearCart()
-    document.getElementById("checkoutGrid")?.classList.add("hidden")
-    const done = document.getElementById("done")!
-    done.classList.remove("hidden")
-    document.getElementById("doneMsg")!.textContent = `Order ${order.id} confirmed. A receipt will be sent to ${email}.`
-  })
+    }
 
-  const wait = () => {
-    if (window.toonhub) boot()
-    else setTimeout(wait, 20)
-  }
-  wait()
-</script>
+    async function api(action: string, extra: any = {}) {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, cartId, ...extra }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Request failed")
+      if (data.cart) cart = data.cart
+      return data
+    }
+
+    function formPayload() {
+      const fd = new FormData(form)
+      return {
+        email: String(fd.get("email") || ""),
+        name: `${fd.get("first") || ""} ${fd.get("last") || ""}`.trim(),
+        address: String(fd.get("address") || ""),
+        apartment: String(fd.get("apartment") || ""),
+        city: String(fd.get("city") || ""),
+        postal: String(fd.get("postal") || ""),
+        country: String(fd.get("country") || "US"),
+        province: String(fd.get("province") || ""),
+        phone: String(fd.get("phone") || ""),
+        newsletter: fd.get("newsletter") === "on",
+      }
+    }
+
+    async function saveAddress() {
+      const p = formPayload()
+      if (!p.email || !p.address) return
+      await api("update", p)
+      const shipId = (form.querySelector('input[name="ship"]:checked') as HTMLInputElement | null)?.value
+      if (shipId) await api("shipping", { optionId: shipId })
+      renderSummary()
+    }
+
+    async function startPay(providerId: string) {
+      const data = await api("pay", { providerId })
+      return data.session
+    }
+
+    async function completeOrder() {
+      const data = await api("complete")
+      if (data.order) {
+        try { localStorage.removeItem("cartId"); localStorage.removeItem("toonhub_local_cart") } catch {}
+        const id = data.order.display_id || data.order.id
+        window.location.href = `/checkout/success?order=${encodeURIComponent(id)}&email=${encodeURIComponent(data.order.email || "")}`
+        return
+      }
+      throw new Error("Payment was not completed")
+    }
+
+    async function payFlow(providerId: string) {
+      showError("")
+      const btn = document.getElementById("payBtn") as HTMLButtonElement
+      btn.disabled = true
+      btn.textContent = "Processing…"
+      try {
+        await saveAddress()
+        const session = await startPay(providerId)
+        const secret = session?.data?.client_secret || session?.data?.clientSecret
+        if (secret && stripe) {
+          const result = await stripe.confirmCardPayment(secret, { payment_method: { card: cardEl } })
+          if (result.error) throw new Error(result.error.message)
+        }
+        const redirect = findPayUrl(session?.data)
+        if (redirect && /paypal/i.test(providerId)) {
+          window.location.href = redirect
+          return
+        }
+        await completeOrder()
+      } catch (e: any) {
+        showError(e.message || "Checkout failed")
+        btn.disabled = false
+        btn.textContent = "Pay now"
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault()
+      await payFlow(selectedPay)
+    })
+
+    document.getElementById("expressPaypal")?.addEventListener("click", async () => {
+      const paypal = providers.find((p) => /paypal/i.test(p.id))?.id || "pp_paypal_paypal"
+      selectedPay = paypal
+      await payFlow(paypal)
+    })
+    document.getElementById("expressGpay")?.addEventListener("click", () => payFlow(providers.find((p) => /stripe/i.test(p.id))?.id || selectedPay))
+    document.getElementById("expressApple")?.addEventListener("click", () => payFlow(providers.find((p) => /stripe/i.test(p.id))?.id || selectedPay))
+
+    document.getElementById("discountBtn")?.addEventListener("click", async () => {
+      const code = (document.getElementById("discountCode") as HTMLInputElement).value.trim()
+      if (!code) return
+      try {
+        await api("discount", { code })
+        renderSummary()
+      } catch (e: any) {
+        showError(e.message)
+      }
+    })
+
+    async function boot() {
+      cartId = localStorage.getItem("cartId") || ""
+      if (!cartId) {
+        window.location.href = "/cart"
+        return
+      }
+      const cfg = await fetch("/api/checkout?action=config").then((r) => r.json())
+      stripeKey = cfg.stripeKey || ""
+      if (stripeKey && (window as any).Stripe) stripe = (window as any).Stripe(stripeKey)
+      if (!stripeKey) {
+        document.getElementById("expressGpay")?.remove()
+        document.getElementById("expressApple")?.remove()
+        const row = document.querySelector(".co-express-row") as HTMLElement | null
+        if (row) row.style.gridTemplateColumns = "1fr"
+      }
+      const res = await fetch(`/api/checkout?cartId=${encodeURIComponent(cartId)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Could not load checkout")
+      cart = data.cart
+      shipping = data.shipping_options || []
+      providers = data.payment_providers || []
+      if (!cart?.items?.length) {
+        window.location.href = "/cart"
+        return
+      }
+      renderSummary()
+      renderShipping()
+      renderPay()
+      if (new URLSearchParams(location.search).get("paypal") === "return") {
+        await completeOrder()
+      }
+    }
+
+    boot().catch((e) => showError(e.message || "Checkout unavailable"))
+  </script>
+</body>
+</html>
