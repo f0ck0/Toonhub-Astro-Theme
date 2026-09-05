@@ -1,43 +1,25 @@
-# Astro Starter Kit: Minimal
+# Toonhub Astro Theme
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Storefront for **TOONHUB** — a black Shopify-Dawn-style anime figures shop. Frontend design, page structure and shopping features follow [tsukiyashop.com](https://tsukiyashop.com/) (assets are original / catalog-driven, not copied).
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## What’s included
 
-## 🚀 Project Structure
+- Sticky header: rotating announcement, centered logo, currency, predictive search overlay, account, cart drawer
+- Nav: Home · Track Order · Shop All · Anime List (A–Z mega menu)
+- Home: Shop by List, clearance countdown, benefits marquee, review strip, new-arrivals slider, more collections, SEO block, newsletter
+- Collection grids with sort + infinite scroll
+- Product pages: gallery + lightbox, sale pricing, quantity, variants, add-to-cart drawer, reviews, related products
+- Cart drawer + cart page with Buy-1-Get-2nd-50% off, terms checkbox, checkout
+- Policies, about, contact, care guide, affiliate, track order, blog, 404
+- Medusa.js catalog/cart APIs with a localStorage cart fallback
 
-Inside of your Astro project, you'll see the following folders and files:
+## Commands
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+| Command           | Action                                      |
+| :---------------- | :------------------------------------------ |
+| `npm install`     | Install dependencies                        |
+| `npm run dev`     | Dev server (port 8888, all hosts allowed)   |
+| `npm run build`   | Production build                            |
+| `npm run preview` | Preview the build                           |
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Set `MEDUSA_URL` and `MEDUSA_PUBLISHABLE_KEY` for a live catalog. Without them, chrome and content pages still render; cart falls back to the browser.

@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     port: 8888,
     host: true,
-    allowedHosts: ["toonhubshop.com", "www.toonhubshop.com", "96.47.238.191"],
+    allowedHosts: true,
   },
   preview: {
     port: 3001,

@@ -1,0 +1,40 @@
+---
+import { SITE } from "../lib/site"
+---
+<div id="cartOverlay" class="overlay"></div>
+<aside id="cartDrawer" class="drawer drawer-right" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 id="cartDrawerTitle">Your cart</h2>
+    <button class="close-x" type="button" data-close-cart aria-label="Close">×</button>
+  </div>
+  <div class="drawer-body">
+    <div id="cartAddedNote" class="offer-note hidden">{SITE.offer}</div>
+    <div class="offer-note warn">{SITE.offerWarn}</div>
+    <div id="cartDrawerEmpty" class="hidden" style="text-align:center;padding:48px 8px;color:#888;">
+      <p style="font-size:1.1rem;color:#fff;text-transform:uppercase;font-family:var(--font-heading);">Your cart is empty</p>
+      <button class="btn btn-primary" type="button" data-close-cart style="margin-top:20px;">Continue shopping</button>
+    </div>
+    <div id="cartDrawerList"></div>
+  </div>
+  <div id="cartDrawerFoot" class="drawer-foot hidden">
+    <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#999;padding:4px 0;">
+      <span>Subtotal</span><span id="cartSubtotal">$0.00</span>
+    </div>
+    <div id="cartDiscountRow" class="hidden" style="display:flex;justify-content:space-between;font-size:0.85rem;color:#8bc34a;padding:4px 0;">
+      <span>Buy 1 get 2nd 50% off</span><span id="cartDiscount">−$0.00</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;padding:10px 0 6px;border-top:1px solid var(--color-border);margin-top:8px;">
+      <span>Estimated total</span><span id="cartTotal">$0.00</span>
+    </div>
+    <p style="font-size:0.72rem;color:#666;margin-bottom:8px;">Taxes included. Discounts and shipping calculated at checkout.</p>
+    <label class="terms-row">
+      <input id="cartTerms" type="checkbox" style="margin-top:3px;" />
+      <span>I accept the <a href="/policies/terms-of-service">terms of service</a> and <a href="/policies/privacy-policy">privacy policy</a>.</span>
+    </label>
+    <a id="cartCheckout" href="/checkout" class="btn btn-primary btn-block">Check out</a>
+    <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:0.82rem;">
+      <a href="/cart" style="text-decoration:underline;">View cart</a>
+      <button type="button" data-close-cart style="background:none;border:none;color:#fff;text-decoration:underline;">Continue shopping</button>
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,22 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+---
+<PolicyLayout title="Shipping policy" description="Free worldwide shipping on Toonhub anime figures.">
+  <h2>Order processing</h2>
+  <p>Please make sure your order details are correct. Customers are liable for wrong information submitted. Check your order before placing it, or contact us within 24 hours if something is wrong.</p>
+  <p>All orders are processed within 2–3 business days. Orders are not shipped or delivered on weekends or holidays.</p>
+  <h2>Confirmation</h2>
+  <p>You will receive an email confirmation when your order is placed, and a second email with tracking once it ships. After shipment, address changes may incur a courier reshipment fee.</p>
+  <h2>International shipping</h2>
+  <p>We offer free international shipping to selected countries. Typical delivery windows:</p>
+  <ul>
+    <li>USA, UK, Canada, Australia, Europe — 7–10 business days</li>
+    <li>Japan, Korea, China, Singapore — 5–7 business days</li>
+  </ul>
+  <p>VAT is not included. The buyer is responsible for any applicable VAT or import duties.</p>
+  <h2>Tracking</h2>
+  <p>Use the tracking number in your shipping email, or our <a href="/track-order">Track Order</a> page. Questions: {SITE.email}.</p>
+  <h2>Delivery issues</h2>
+  <p>If tracking shows delivered but you have not received the parcel, contact the carrier first. If a package arrives damaged, email {SITE.email} with your order number and photos.</p>
+</PolicyLayout>

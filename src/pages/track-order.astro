@@ -1,0 +1,37 @@
+---
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+---
+<Base title="Track Order — TOONHUB">
+  <Header />
+  <main id="MainContent" class="page-width policy-page">
+    <h1>Track Order</h1>
+    <p class="rte">Enter your order number and email to look up status. You can also track parcels at your carrier once a tracking number is emailed to you.</p>
+    <form id="trackForm" style="display:flex;flex-direction:column;gap:14px;max-width:480px;margin-top:24px;">
+      <input class="field" name="order" placeholder="Order number" required />
+      <input class="field" type="email" name="email" placeholder="Email" required />
+      <button class="btn btn-primary" type="submit">Track</button>
+    </form>
+    <div id="trackResult" class="rte" style="margin-top:28px;"></div>
+  </main>
+  <Footer />
+</Base>
+<script>
+  document.getElementById("trackForm")?.addEventListener("submit", (e) => {
+    e.preventDefault()
+    const fd = new FormData(e.target as HTMLFormElement)
+    const id = String(fd.get("order") || "").trim()
+    const email = String(fd.get("email") || "").trim().toLowerCase()
+    const box = document.getElementById("trackResult")!
+    try {
+      const orders = JSON.parse(localStorage.getItem("toonhub_orders") || "[]")
+      const hit = orders.find((o: any) => String(o.id).toLowerCase() === id.toLowerCase() && String(o.email).toLowerCase() === email)
+      if (hit) {
+        box.innerHTML = `<h2>Order ${hit.id}</h2><p>Status: <strong>Processing</strong></p><p>Placed ${new Date(hit.created).toLocaleString()}.</p><p>We'll email tracking to ${hit.email} once the parcel leaves our warehouse (usually 2–3 business days).</p>`
+        return
+      }
+    } catch {}
+    box.innerHTML = `<p>We couldn't find that order in this browser. If you checked out recently, use the exact order number from your confirmation. For older orders email hello@toonhubshop.com.</p>`
+  })
+</script>

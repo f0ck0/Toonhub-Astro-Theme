@@ -15,4 +15,4 @@ Welcome to ToonHub — the world's leading anime figures collection. We curate p
 
 ## Shop by series
 
-Browse our collections: [One Piece](/categories/one-piece-100029), [Dragon Ball](/categories/dragon-ball-100030), [Naruto](/categories/naruto-100031) and more.
+Browse our collections: [One Piece](/collections/one-piece-100029), [Dragon Ball](/collections/dragon-ball-100030), [Naruto](/collections/naruto-100031) and more.

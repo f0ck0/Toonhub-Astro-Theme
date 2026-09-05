@@ -1,0 +1,181 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import { getProducts, getAllCategories } from "../../lib/medusa"
+
+const { id } = Astro.params
+const sort = Astro.url.searchParams.get("sort") || "featured"
+let category: any = null
+let initialProducts: any[] = []
+let totalCount = 0
+let childCategories: any[] = []
+let siblingCats: any[] = []
+let parentCat: any = null
+const PAGE_SIZE = 24
+const special = id === "all" || id === "new-arrivals"
+
+try {
+  const allCats = await getAllCategories()
+  if (!special) category = allCats.find((c: any) => c.handle === id)
+  if (category || special) {
+    if (category) {
+      childCategories = allCats.filter((c: any) => c.parent_category_id === category.id)
+      if (category.parent_category_id) {
+        parentCat = allCats.find((c: any) => c.id === category.parent_category_id)
+        siblingCats = allCats.filter((c: any) => c.parent_category_id === category.parent_category_id && c.id !== category.id)
+      }
+    }
+    const result = await getProducts(PAGE_SIZE, 0, category?.id)
+    initialProducts = result.products
+    totalCount = result.count
+  }
+} catch (e) { console.error(e) }
+
+function sortProducts(list: any[]) {
+  const copy = [...list]
+  if (sort === "az") copy.sort((a, b) => String(a.title).localeCompare(String(b.title)))
+  else if (sort === "za") copy.sort((a, b) => String(b.title).localeCompare(String(a.title)))
+  else if (sort === "price-asc") copy.sort((a, b) => (a.variants?.[0]?.prices?.[0]?.amount || 0) - (b.variants?.[0]?.prices?.[0]?.amount || 0))
+  else if (sort === "price-desc") copy.sort((a, b) => (b.variants?.[0]?.prices?.[0]?.amount || 0) - (a.variants?.[0]?.prices?.[0]?.amount || 0))
+  return copy
+}
+initialProducts = sortProducts(initialProducts)
+
+const title = special ? (id === "new-arrivals" ? "New Designs" : "Shop All") : category?.name
+const heading = special ? title : `Collection: ${title}`
+const catId = category?.id || ""
+const hasMoreInitial = initialProducts.length < totalCount
+const notFound = !special && !category
+---
+<Base title={`${title || "Collection"} — TOONHUB`}>
+  <Header />
+  {notFound ? (
+    <main id="MainContent" class="page-width" style="padding:80px 0;text-align:center;">
+      <h1 style="font-size:2rem;font-weight:700;color:#fff;">Collection not found</h1>
+      <a href="/collections/all" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
+    </main>
+  ) : (
+    <main id="MainContent">
+      <section class="page-width" style="padding:24px 0 8px;">
+        <nav class="breadcrumb">
+          <a href="/">Home</a>
+          {parentCat && <><span>/</span><a href={`/collections/${parentCat.handle}`}>{parentCat.name}</a></>}
+          <span>/</span>
+          <span style="color:#fff;">{title}</span>
+        </nav>
+        <h1 class="section-heading" style="margin-top:12px;font-size:2rem;">{heading}</h1>
+        {category?.description ? (
+          <div class="rte" style="margin-top:12px;max-width:820px;" set:html={category.description} />
+        ) : (
+          <p style="margin-top:8px;font-size:0.9rem;color:#888;max-width:820px;">
+            {special
+              ? "Browse the full Toonhub catalog of premium anime figures, statues and collectibles."
+              : `Protect your shelf in style with our exclusive ${title} figures, featuring high-quality sculpts of iconic characters.`}
+          </p>
+        )}
+      </section>
+
+      {childCategories.length > 0 && (
+        <section class="page-width" style="padding:12px 0;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href={`/collections/${category.handle}`} class="filter-pill active">All</a>
+            {childCategories.map((cat: any) => (
+              <a href={`/collections/${cat.handle}`} class="filter-pill">{cat.name}</a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section class="page-width" style="padding:24px 0 48px;">
+        <div class="toolbar">
+          <p style="font-size:0.85rem;color:#888;">{totalCount} products</p>
+          <form method="get">
+            <label style="font-size:0.8rem;color:#888;margin-right:8px;">Sort by</label>
+            <select name="sort" onchange="this.form.submit()">
+              <option value="featured" selected={sort === "featured"}>Featured</option>
+              <option value="az" selected={sort === "az"}>Alphabetically, A–Z</option>
+              <option value="za" selected={sort === "za"}>Alphabetically, Z–A</option>
+              <option value="price-asc" selected={sort === "price-asc"}>Price, low to high</option>
+              <option value="price-desc" selected={sort === "price-desc"}>Price, high to low</option>
+            </select>
+          </form>
+        </div>
+        {initialProducts.length > 0 ? (
+          <>
+            <div class="product-grid" id="productGrid">
+              {initialProducts.map((product: any) => <ProductCard product={product} />)}
+            </div>
+            {hasMoreInitial && (
+              <div id="loadMoreSentinel" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 0;">
+                <div style="width:28px;height:28px;border:2px solid #333;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                <div id="loadMoreStatus" style="font-size:0.82rem;color:#888;">Loading more products...</div>
+              </div>
+            )}
+            <div id="allLoaded" style="display:none;text-align:center;padding:24px 0;font-size:0.82rem;color:#999;">All {totalCount} products loaded</div>
+          </>
+        ) : (
+          <div style="text-align:center;padding:60px 0;">
+            <div style="font-size:48px;">📦</div>
+            <h3 style="font-size:1.25rem;font-weight:700;color:#fff;margin-top:16px;">No products in this collection</h3>
+          </div>
+        )}
+      </section>
+    </main>
+  )}
+  <Footer />
+</Base>
+
+<script define:vars={{ catId, PAGE_SIZE, hasMoreInitial }}>
+  const grid = document.getElementById("productGrid")
+  const sentinel = document.getElementById("loadMoreSentinel")
+  const allLoaded = document.getElementById("allLoaded")
+  const statusEl = document.getElementById("loadMoreStatus")
+  let offset = PAGE_SIZE
+  let loading = false
+  let done = !hasMoreInitial
+
+  if (sentinel && grid) {
+    const io = new IntersectionObserver(async (entries) => {
+      if (entries[0].isIntersecting && !loading && !done) {
+        loading = true
+        if (statusEl) statusEl.textContent = "Loading more products..."
+        try {
+          const qs = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) })
+          if (catId) qs.set("categoryId", catId)
+          const res = await fetch(`/api/products?${qs}`)
+          const data = await res.json()
+          if (data.products?.length) {
+            const wrap = document.createElement("div")
+            wrap.innerHTML = data.products.map((item: any) => {
+              const img = item.thumbnail || ""
+              return `<a href="/products/${encodeURIComponent(item.handle)}" class="product-card card">
+                <div class="pc-media">
+                  ${img ? `<img src="${img}" alt="" loading="lazy" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
+                  <span class="sale-badge">Sale</span>
+                  <button class="choose-options" type="button">View</button>
+                </div>
+                <div class="pc-info">
+                  <div class="pc-title">${item.title}</div>
+                  <div class="pc-price-row"><span class="pc-price">${item.price || ""}</span></div>
+                </div>
+              </a>`
+            }).join("")
+            while (wrap.firstChild) grid.appendChild(wrap.firstChild)
+            offset += data.products.length
+          }
+          if (!data.hasMore) {
+            done = true
+            if (sentinel) sentinel.style.display = "none"
+            if (allLoaded) allLoaded.style.display = "block"
+          }
+        } catch (e) {
+          if (statusEl) statusEl.textContent = "Failed to load more. Retry on scroll."
+        }
+        loading = false
+      }
+    }, { rootMargin: "200px" })
+    io.observe(sentinel)
+  }
+</script>

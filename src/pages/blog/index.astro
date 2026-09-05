@@ -4,15 +4,13 @@ import Header from "../../components/Header.astro"
 import Footer from "../../components/Footer.astro"
 import { getCollection } from "astro:content"
 
-export const prerender = true
-
 const posts = (await getCollection("posts"))
   .filter((p) => !p.data.draft)
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 ---
 <Base>
     <Header />
-    <main class="page-width" style="padding:48px 0 8px;min-height:50vh;">
+    <main id="MainContent" class="page-width" style="padding:48px 0 8px;min-height:50vh;">
         <h1 style="font-size:2rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;">Blog</h1>
         <p style="margin-top:8px;font-size:0.9rem;color:#888;">News, guides and insights from the ToonHub team.</p>
         <div style="margin-top:32px;display:grid;gap:24px;">

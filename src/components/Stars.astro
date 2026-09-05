@@ -1,0 +1,10 @@
+---
+const { rating = 5, count, size = "0.85rem" } = Astro.props
+const r = Math.max(0, Math.min(5, Number(rating) || 5))
+const full = Math.round(r)
+const glyphs = "★".repeat(full) + "☆".repeat(5 - full)
+---
+<div class="stars">
+  <span class="star-glyphs" style={`font-size:${size};`}>{glyphs}</span>
+  <span class="star-meta">{r.toFixed(2)} / 5.0{typeof count === "number" ? ` (${count})` : ""}</span>
+</div>

@@ -1,0 +1,23 @@
+---
+const { name, handle, description, img, count, href } = Astro.props
+const url = href || `/collections/${handle}`
+---
+<a href={url} class="shopby-tile card">
+  <div class="shopby-media">
+    {img ? (
+      <img src={img} alt={name} loading="lazy" />
+    ) : (
+      <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">{name}</div>
+    )}
+  </div>
+  <div class="shopby-heading">
+    <h3>{name}</h3>
+    <svg class="icon-arrow" width="14" height="10" viewBox="0 0 14 10" fill="none"><path fill="currentColor" fill-rule="evenodd" d="M8.537.808a.5.5 0 0 1 .817-.162l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 1 1-.708-.708L11.793 5.5H1a.5.5 0 0 1 0-1h10.793L8.646 1.354a.5.5 0 0 1-.109-.546" clip-rule="evenodd"/></svg>
+  </div>
+  {description && (
+    <p style="margin-top:6px;font-size:0.8rem;color:#999;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{description}</p>
+  )}
+  {typeof count === "number" && (
+    <p style="margin-top:8px;font-size:0.75rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;">{count} products</p>
+  )}
+</a>

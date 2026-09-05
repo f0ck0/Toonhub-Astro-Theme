@@ -1,39 +1,28 @@
 import type { APIRoute } from "astro"
-import Medusa from "@medusajs/js-sdk"
+import { getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
+import { salePrice, formatPriceFrom, currencyFromCookies } from "../../lib/currency"
 
 export const prerender = false
 
-const medusa = new Medusa({
-  baseUrl: process.env.MEDUSA_URL || "http://localhost:9000",
-  publishableKey: process.env.MEDUSA_PUBLISHABLE_KEY || "",
-})
-
-function fmtPrice(amount: number): string {
-  return `$${(amount / 100).toFixed(2)}`
-}
-
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies }) => {
   try {
     const categoryId = url.searchParams.get("categoryId") || ""
     const offset = parseInt(url.searchParams.get("offset") || "0") || 0
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "24") || 24, 48)
+    const { products, count } = await getProducts(limit, offset, categoryId || undefined)
+    const currency = currencyFromCookies(cookies)
 
-    const params: any = {
-      limit,
-      offset,
-      fields: "handle,title,thumbnail,*variants.prices,*categories.name",
-    }
-    if (categoryId) params.category_id = [categoryId]
-
-    const { products, count } = await medusa.store.product.list(params)
-
-    const items = (products || []).map((p: any) => ({
-      handle: p.handle,
-      title: p.title,
-      thumbnail: p.thumbnail || "",
-      price: p.variants?.[0]?.prices?.[0] ? fmtPrice(p.variants[0].prices[0].amount) : "",
-      category: p.categories?.[0]?.name || "",
-    }))
+    const items = (products || []).map((p: any) => {
+      const usd = getProductUsdPrice(p) || 0
+      const { sale } = salePrice(usd, currency)
+      return {
+        handle: p.handle,
+        title: p.title,
+        thumbnail: productImageUrl(p.thumbnail || ""),
+        price: usd ? formatPriceFrom(sale, currency) : "",
+        category: p.categories?.[0]?.name || "",
+      }
+    })
 
     return new Response(
       JSON.stringify({ products: items, count, hasMore: offset + items.length < count }),

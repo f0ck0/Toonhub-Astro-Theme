@@ -3,87 +3,98 @@ import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 ---
-<Base>
-    <Header />
-    <main class="page-width" style="padding:48px 0;max-width:720px;margin:0 auto;">
-        <h1 style="font-size:2rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:32px;">Checkout</h1>
-        <div id="checkoutContainer">
-            <div style="text-align:center;padding:40px 0;">
-                <p style="font-size:0.9rem;color:#888;">Loading your cart...</p>
-            </div>
+<Base title="Checkout — TOONHUB">
+  <Header />
+  <main id="MainContent" class="page-width" style="padding:48px 0;">
+    <h1 style="font-size:2rem;margin-bottom:28px;">Checkout</h1>
+    <div id="done" class="hidden" style="text-align:center;padding:48px 0;">
+      <h2 style="font-size:1.6rem;">Thank you</h2>
+      <p id="doneMsg" style="margin-top:12px;color:#aaa;"></p>
+      <a href="/collections/all" class="btn btn-primary" style="margin-top:24px;">Continue shopping</a>
+    </div>
+    <div id="checkoutGrid" class="cart-layout">
+      <form id="checkoutForm" style="display:flex;flex-direction:column;gap:14px;">
+        <h2 style="font-size:1.05rem;">Contact</h2>
+        <input class="field" type="email" name="email" placeholder="Email" required />
+        <h2 style="font-size:1.05rem;margin-top:12px;">Shipping</h2>
+        <input class="field" type="text" name="name" placeholder="Full name" required />
+        <input class="field" type="text" name="address" placeholder="Address" required />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <input class="field" type="text" name="city" placeholder="City" required />
+          <input class="field" type="text" name="postal" placeholder="Postal code" required />
         </div>
-    </main>
-    <Footer />
+        <input class="field" type="text" name="country" placeholder="Country" required />
+        <label class="terms-row">
+          <input type="checkbox" name="terms" required />
+          <span>I accept the <a href="/policies/terms-of-service">terms of service</a> and <a href="/policies/privacy-policy">privacy policy</a>.</span>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block" id="placeBtn">Place order</button>
+      </form>
+      <div class="cart-summary">
+        <h3 style="font-size:0.9rem;letter-spacing:0.06em;margin-bottom:16px;">Order summary</h3>
+        <div id="summaryLines"></div>
+        <div style="display:flex;justify-content:space-between;padding-top:16px;font-weight:700;border-top:1px solid var(--color-border);margin-top:12px;">
+          <span>Total</span><span id="sumTotal">$0.00</span>
+        </div>
+      </div>
+    </div>
+  </main>
+  <Footer />
 </Base>
-
 <script>
-    const RATES = { usd: 1, eur: 0.92, gbp: 0.79, aud: 1.52, cad: 1.37, jpy: 156, cny: 7.25 }
-    function getCurrency() {
-        try {
-            const m = document.cookie.match(/(?:^|; )toonhub_currency=([^;]+)/)
-            return m ? m[1] : 'usd'
-        } catch (e) { return 'usd' }
+  async function boot() {
+    await window.toonhub.refresh()
+    const items = window.toonhub.getItems()
+    if (!items.length) {
+      window.location.href = "/cart"
+      return
     }
-    function fmtMinor(minor, code) {
-        const rate = RATES[code] ?? 1
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: code.toUpperCase() })
-            .format((minor * rate) / 100)
-    }
+    const fmt = window.toonhub.formatMoney
+    const box = document.getElementById("summaryLines")!
+    box.innerHTML = items.map((i) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-border);font-size:0.85rem;">
+        <span style="color:#ccc;">${i.title} × ${i.quantity}</span>
+        <span>${fmt(i.unit_price * i.quantity)}</span>
+      </div>
+    `).join("")
+    const sum = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    const units: number[] = []
+    for (const it of items) for (let n = 0; n < it.quantity; n++) units.push(it.unit_price)
+    units.sort((a, b) => b - a)
+    let disc = 0
+    for (let i = 0; i + 1 < units.length; i += 2) disc += Math.round(Math.min(units[i], units[i + 1]) * 0.5)
+    document.getElementById("sumTotal")!.textContent = fmt(Math.max(0, sum - disc))
+  }
 
-    async function loadCheckout() {
-        const cartId = localStorage.getItem('cartId')
-        if (!cartId) {
-            window.location.href = '/cart'
-            return
-        }
-        try {
-            const res = await fetch(`/api/cart?cartId=${cartId}`)
-            const data = await res.json()
-            const container = document.getElementById('checkoutContainer')
-            if (container && data.items?.length) {
-                const code = getCurrency()
-                const total = data.items.reduce((sum, i) => sum + (i.unit_price * i.quantity), 0)
-                container.innerHTML = `
-                    <div style="margin-bottom:32px;">
-                        <h2 style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.04em;">Order Summary</h2>
-                        ${data.items.map(item => `
-                            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-border);">
-                                <span style="font-size:0.85rem;color:#ccc;">${item.title} × ${item.quantity}</span>
-                                <span style="font-size:0.85rem;color:#fff;">${fmtMinor(item.unit_price * item.quantity, code)}</span>
-                            </div>
-                        `).join('')}
-                        <div style="display:flex;justify-content:space-between;padding-top:16px;font-size:1.1rem;font-weight:700;color:#fff;margin-top:8px;">
-                            <span>Total</span><span>${fmtMinor(total, code)}</span>
-                        </div>
-                    </div>
-                    <form id="checkoutForm" style="display:flex;flex-direction:column;gap:16px;">
-                        <h2 style="font-size:1.1rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;">Shipping Information</h2>
-                        <input type="email" name="email" placeholder="Email" required style="padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;" />
-                        <input type="text" name="name" placeholder="Full Name" required style="padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;" />
-                        <input type="text" name="address" placeholder="Address" required style="padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;" />
-                        <input type="text" name="city" placeholder="City" required style="padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;" />
-                        <input type="text" name="country" placeholder="Country" required style="padding:12px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;" />
-                        <button type="submit" class="btn btn-primary" style="justify-content:center;margin-top:16px;">Place Order</button>
-                    </form>
-                `
-                document.getElementById('checkoutForm').onsubmit = async (e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.target)
-                    const res = await fetch('/api/checkout', {
-                        method: 'POST',
-                        headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({ cartId, email: formData.get('email'), name: formData.get('name') })
-                    })
-                    const result = await res.json()
-                    if (result.success) {
-                        localStorage.removeItem('cartId')
-                        window.location.href = '/?order=success'
-                    }
-                }
-            } else {
-                container.innerHTML = '<p style="color:#888;">Your cart is empty. <a href="/" style="color:#fff;">Continue shopping</a></p>'
-            }
-        } catch(e) { console.error(e) }
-    }
-    loadCheckout()
+  document.getElementById("checkoutForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault()
+    const form = e.target as HTMLFormElement
+    const fd = new FormData(form)
+    const email = String(fd.get("email") || "")
+    const btn = document.getElementById("placeBtn") as HTMLButtonElement
+    btn.disabled = true
+    btn.textContent = "Placing order…"
+    const cartId = localStorage.getItem("cartId")
+    try {
+      if (cartId) {
+        await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartId, email, name: fd.get("name") }),
+        })
+      }
+    } catch {}
+    const order = window.toonhub.snapshotOrder(email)
+    window.toonhub.clearCart()
+    document.getElementById("checkoutGrid")?.classList.add("hidden")
+    const done = document.getElementById("done")!
+    done.classList.remove("hidden")
+    document.getElementById("doneMsg")!.textContent = `Order ${order.id} confirmed. A receipt will be sent to ${email}.`
+  })
+
+  const wait = () => {
+    if (window.toonhub) boot()
+    else setTimeout(wait, 20)
+  }
+  wait()
 </script>

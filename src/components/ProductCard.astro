@@ -1,69 +1,52 @@
 ---
 import { getProductImage, getProductUsdPrice, productImageUrl } from "../lib/medusa"
-import { salePrice, formatPriceFrom, formatCurrency, readCurrencyCookie } from "../lib/currency"
+import { salePrice, formatPriceFrom, formatCurrency, currencyFromCookies } from "../lib/currency"
+import { productSocial } from "../lib/site"
+import Stars from "./Stars.astro"
 
 const { product } = Astro.props
 const img = getProductImage(product)
-const usdPrice = getProductUsdPrice(product)
-
-// Resolve currency: SSR reads the cookie; client re-renders via script below.
-const serverCurrency = readCurrencyCookie() || "usd"
-
-const { original, sale } = salePrice(usdPrice || 0, serverCurrency)
-const priceFrom = formatPriceFrom(sale, serverCurrency)
-const originalFmt = formatCurrency(original, serverCurrency)
-const cat = product?.categories?.[0]?.name || ""
+const hoverRaw = (product?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img)
+const usdPrice = getProductUsdPrice(product) || 0
+const currency = currencyFromCookies(Astro.cookies)
+const { original, sale } = salePrice(usdPrice, currency)
+const priceFrom = formatPriceFrom(sale, currency)
+const originalFmt = formatCurrency(original, currency)
+const { rating, count } = productSocial(product?.id || product?.handle || "")
+const variants = (product?.variants || []).map((v: any) => ({ id: v.id, title: v.title || v.options?.map((o: any) => o.value).join(" / ") || "Default" }))
+const qv = encodeURIComponent(JSON.stringify({
+  variantId: variants[0]?.id || "",
+  title: product.title,
+  thumbnail: productImageUrl(img),
+  handle: product.handle,
+  unit_price: usdPrice,
+  variant_title: variants[0]?.title,
+  variants,
+}))
+const hasOptions = variants.length > 1
+const href = `/products/${product.handle}`
 ---
-<a href={`/products/${product.handle}`} class="card block group" data-price-usd={usdPrice ?? 0}>
-    <div style="position:relative;aspect-ratio:1;background:#111;overflow:hidden;">
-        {img ? (
-            <img src={productImageUrl(img)} alt={product.title} loading="lazy" style="width:100%;height:100%;object-fit:cover;" />
-        ) : (
-            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;">
-                <span style="font-size:48px;">📦</span>
-            </div>
-        )}
-        <span class="sale-badge">Sale</span>
+<article class="product-card card" data-qv={qv} data-price-usd={usdPrice}>
+  <div class="pc-media">
+    <a href={href} aria-label={product.title} style="position:absolute;inset:0;z-index:1;">
+      {img ? (
+        <img src={productImageUrl(img)} alt={product.title} loading="lazy" />
+      ) : (
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;"><span style="font-size:48px;">📦</span></div>
+      )}
+      {hoverRaw && <img class="pc-hover" src={productImageUrl(hoverRaw)} alt="" loading="lazy" />}
+    </a>
+    <span class="sale-badge">Sale</span>
+    <button class="choose-options" type="button" data-action="quickview">
+      {hasOptions ? "Choose options" : "Add to cart"}
+    </button>
+  </div>
+  <a href={href} class="pc-info">
+    <div class="pc-title">{product.title}</div>
+    <Stars rating={rating} count={count} />
+    <div class="pc-price-row">
+      <span class="pc-price product-card-price">{priceFrom}</span>
+      <span class="pc-compare" data-price-strike>{originalFmt}</span>
     </div>
-    <div style="padding:12px 0 0;">
-        {cat && (
-            <div style="font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">{cat}</div>
-        )}
-        <div class="product-card-title" style="font-size:0.95rem;font-weight:700;color:#fff;line-height:1.35;text-transform:uppercase;letter-spacing:0.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{product.title}</div>
-        <!-- Star rating (placeholder per requirements) -->
-        <div style="display:flex;align-items:center;gap:4px;margin-top:6px;">
-            <span style="color:var(--color-star);font-size:0.85rem;letter-spacing:1px;">★★★★★</span>
-            <span style="font-size:0.78rem;color:#888;">5.0 / 5.0</span>
-        </div>
-        <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;">
-            <span class="product-card-price" data-price-from={priceFrom} data-price-original={originalFmt} style="font-size:1rem;font-weight:700;color:#fff;">{priceFrom}</span>
-            <span data-price-strike style="font-size:0.85rem;color:#888;text-decoration:line-through;">{originalFmt}</span>
-        </div>
-    </div>
-</a>
-
-<script>
-    // Re-render prices when the user switches currency without a full reload.
-    function applyCurrency() {
-        try {
-            const m = document.cookie.match(/(?:^|; )toonhub_currency=([^;]+)/)
-            const code = m ? m[1] : "usd"
-            document.querySelectorAll("[data-price-usd]").forEach((card) => {
-                const usd = Number(card.getAttribute("data-price-usd")) || 0
-                const fromEl = card.querySelector(".product-card-price")
-                if (!fromEl) return
-                // Use the server-rendered static rates for consistency.
-                const rates = { usd: 1, eur: 0.92, gbp: 0.79, aud: 1.52, cad: 1.37, jpy: 156, cny: 7.25 }
-                const rate = rates[code] ?? 1
-                const sale = Math.round(usd * rate)
-                const original = Math.round(sale * 2)
-                const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: code.toUpperCase() })
-                fromEl.textContent = "From " + fmt.format(sale / 100)
-                const strike = card.querySelector("[data-price-strike]")
-                if (strike) strike.textContent = fmt.format(original / 100)
-            })
-        } catch (e) {}
-    }
-    if (document.readyState === "complete") applyCurrency()
-    else document.addEventListener("DOMContentLoaded", applyCurrency)
-</script>
+  </a>
+</article>
