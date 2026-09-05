@@ -31,8 +31,8 @@ const medusa = medusaConfig()
   <CartDrawer />
   <SearchOverlay />
   <QuickView />
-  <script define:vars={{ baseUrl: medusa.baseUrl, publishableKey: medusa.publishableKey }}>
-    ;(window as any).toonhubMedusa = { baseUrl, publishableKey }
+  <script is:inline define:vars={{ baseUrl: medusa.baseUrl, publishableKey: medusa.publishableKey }}>
+    window.toonhubMedusa = { baseUrl: baseUrl, publishableKey: publishableKey }
   </script>
   <script>
     import "../scripts/storefront"

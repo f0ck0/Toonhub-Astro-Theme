@@ -1,7 +1,13 @@
-type MedusaCfg = { baseUrl: string; publishableKey: string }
+const FALLBACK = {
+  baseUrl: "https://medusa.toonhubshop.com",
+  publishableKey: "pk_7b55f85cfbc0b36baa03e4f3914732c2f5f9d8fc5ae3bb50a98e01d6fcc73c4b",
+}
 
-function cfg(): MedusaCfg {
-  return (window as any).toonhubMedusa || { baseUrl: "https://medusa.toonhubshop.com", publishableKey: "" }
+function cfg() {
+  const w = (window as any).toonhubMedusa
+  const baseUrl = String(w?.baseUrl || FALLBACK.baseUrl).replace(/\/$/, "").replace(/^http:\/\/96\.47\.238\.191:9000$/, FALLBACK.baseUrl)
+  const publishableKey = String(w?.publishableKey || FALLBACK.publishableKey)
+  return { baseUrl, publishableKey }
 }
 
 function shopCategories(categories: any[]) {
@@ -35,32 +41,46 @@ function groupAz(cats: any[]) {
   return groups
 }
 
+function status(msg: string) {
+  document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
+    if (!el.querySelector(".product-card")) {
+      const p = el.querySelector("div")
+      if (p) p.textContent = msg
+    }
+  })
+  console.warn("[toonhub catalog]", msg)
+}
+
 async function medusaGet(path: string): Promise<any> {
   const { baseUrl, publishableKey } = cfg()
-  const raw = `${baseUrl.replace(/\/$/, "")}${path}`
+  const raw = `${baseUrl}${path}`
   const headers: Record<string, string> = {
     accept: "application/json",
     "x-publishable-api-key": publishableKey,
   }
-  const urls: string[] = [
-    `/api/medusa-proxy?path=${encodeURIComponent(path)}`,
+  const urls = [
     raw,
+    "https://corsproxy.org/?" + encodeURIComponent(raw),
+    "https://corsproxy.io/?" + encodeURIComponent(raw),
+    `/api/medusa-proxy?path=${encodeURIComponent(path)}`,
   ]
-  urls.push("https://corsproxy.org/?" + encodeURIComponent(raw))
-  urls.push("https://api.allorigins.win/raw?url=" + encodeURIComponent(raw))
-  urls.push("https://corsproxy.io/?" + encodeURIComponent(raw))
-  urls.push("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(raw))
   let last = "Medusa request failed"
   for (const url of urls) {
     try {
-      const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) })
+      const res = await fetch(url, { headers, mode: "cors", credentials: "omit", signal: AbortSignal.timeout(8000) })
       const text = await res.text()
       let data: any = {}
-      try { data = text ? JSON.parse(text) : {} } catch { continue }
-      if (data?.error && /unreachable|invalid path/i.test(String(data.error))) { last = data.error; continue }
-      if (res.ok && data && !data.type) return data
-      last = data.message || data.error || `HTTP ${res.status}`
+      try { data = text ? JSON.parse(text) : {} } catch { last = "non-JSON"; continue }
+      if (data?.type === "not_allowed" || /publishable/i.test(String(data?.message || ""))) {
+        last = data.message
+        continue
+      }
+      if (data?.error && /unreachable|fetch failed|invalid path/i.test(String(data.error))) {
+        last = data.error
+        continue
+      }
       if (res.ok) return data
+      last = data.message || data.error || `HTTP ${res.status}`
     } catch (e: any) {
       last = e.message || last
     }
@@ -97,12 +117,10 @@ function esc(s: string) {
 
 function catTile(cat: any, img = "") {
   const src = img || cat.products?.find((p: any) => p.thumbnail)?.thumbnail || ""
-  const count = cat.products?.length
   return `<a href="/collections/${esc(cat.handle)}" class="shopby-tile card">
     <div class="shopby-media">${src ? `<img src="${esc(src)}" alt="${esc(cat.name)}" loading="lazy" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
     <div class="shopby-heading"><h3>${esc(cat.name)}</h3></div>
     <p style="margin-top:6px;font-size:0.8rem;color:#999;">Shop our exclusive ${esc(cat.name)} figures.</p>
-    ${typeof count === "number" ? `<p style="margin-top:8px;font-size:0.75rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;">${count} products</p>` : ""}
   </a>`
 }
 
@@ -126,10 +144,9 @@ function productCard(p: any) {
 
 function fillAz(categories: any[]) {
   const groups = groupAz(categories)
+  const html = groups.map((g) => `<div class="az-group"><div class="az-letter">${g.letter}</div>${g.items.map((c) => `<a href="/collections/${esc(c.handle)}">${esc(c.name)}</a>`).join("")}</div>`).join("")
   const desk = document.querySelector(".az-dropdown")
-  if (desk && !desk.querySelector("a")) {
-    desk.innerHTML = groups.map((g) => `<div class="az-group"><div class="az-letter">${g.letter}</div>${g.items.map((c) => `<a href="/collections/${esc(c.handle)}">${esc(c.name)}</a>`).join("")}</div>`).join("")
-  }
+  if (desk && !desk.querySelector("a")) desk.innerHTML = html
   const mobile = document.getElementById("azMobile")
   if (mobile && !mobile.querySelector("a")) {
     mobile.innerHTML = groups.map((g) => `<div class="az-letter" style="padding:8px 8px 2px;">${g.letter}</div>${g.items.map((c) => `<a href="/collections/${esc(c.handle)}" style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">${esc(c.name)}</a>`).join("")}`).join("")
@@ -147,7 +164,7 @@ function fillCatGrids(categories: any[], products: any[]) {
   }
   const html = shop.map((c) => catTile(c, imgOf(byCat[c.id]?.[0] || byCat[c.handle]?.[0] || {}))).join("")
   document.querySelectorAll("[data-hydrate-cats]").forEach((el) => {
-    if (!el.querySelector(".shopby-tile")) el.innerHTML = html
+    if (!el.querySelector(".shopby-tile") && html) el.innerHTML = html
   })
 }
 
@@ -155,7 +172,7 @@ function fillProductGrids(products: any[]) {
   document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
     if (el.querySelector(".product-card")) return
     if (!products.length) {
-      el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products in this collection</h3></div>`
+      el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products returned from Medusa</h3><p style="color:#888;margin-top:8px;">Check the publishable key is linked to a sales channel that has products.</p></div>`
       return
     }
     el.innerHTML = products.map(productCard).join("")
@@ -163,8 +180,7 @@ function fillProductGrids(products: any[]) {
 }
 
 async function load() {
-  const { publishableKey } = cfg()
-  if (!publishableKey) return
+  status("Loading products from Medusa…")
   try {
     const catsData = await medusaGet("/store/product-categories?limit=200&fields=id,name,handle,parent_category_id,description")
     const categories = catsData.product_categories || catsData.categories || []
@@ -198,8 +214,8 @@ async function load() {
     fillProductGrids(products)
     const countEl = document.querySelector("[data-product-count]")
     if (countEl) countEl.textContent = `${prodData.count ?? products.length} products`
-  } catch (e) {
-    console.error("Medusa catalog", e)
+  } catch (e: any) {
+    status(`Could not load Medusa products: ${e.message || e}. If this is CORS, set STORE_CORS=* (or this preview origin) on the Medusa server.`)
   }
 }
 
