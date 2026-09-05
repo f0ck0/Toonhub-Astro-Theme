@@ -6,7 +6,25 @@ import { getStoreSdk, medusaConfig } from "./medusa-config"
 
 export { getStoreSdk, medusaConfig }
 
-const PRODUCT_FIELDS = "*variants,*variants.prices,*images,+thumbnail,+description,*categories"
+const PRODUCT_FIELDS = "*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,+description,*categories"
+
+async function getRegionId(): Promise<string> {
+  try {
+    return await cached("region:id", async () => {
+      const { regions } = await getStoreSdk().store.region.list({ limit: 10 })
+      return regions?.[0]?.id || ""
+    })
+  } catch {
+    return ""
+  }
+}
+
+async function productQuery(extra: Record<string, any> = {}) {
+  const regionId = await getRegionId()
+  const params: any = { fields: PRODUCT_FIELDS, ...extra }
+  if (regionId) params.region_id = regionId
+  return params
+}
 
 /* ---------- TTL cache ---------- */
 const cache = new Map<string, { t: number; data: any }>()
@@ -70,7 +88,7 @@ export async function getProducts(limit = 24, offset = 0, categoryId?: string) {
   try {
     return await cached(key, async () => {
       const medusa = getStoreSdk()
-      const params: any = { limit, offset, fields: PRODUCT_FIELDS }
+      const params: any = await productQuery({ limit, offset })
       if (categoryId) params.category_id = await expandCategoryIds(categoryId)
       const { products, count } = await medusa.store.product.list(params)
       if (categoryId && !products?.length) {
@@ -96,10 +114,7 @@ export async function getProduct(handle: string) {
   try {
     return await cached(`product:${handle}`, async () => {
       const medusa = getStoreSdk()
-      const { products } = await medusa.store.product.list({
-        handle,
-        fields: PRODUCT_FIELDS,
-      })
+      const { products } = await medusa.store.product.list(await productQuery({ handle }))
       if (!products?.[0]) throw new Error("missing")
       return products[0]
     })
@@ -150,10 +165,20 @@ export async function getAllCategories() {
   try {
     return await cached("categories:all", async () => {
       const medusa = getStoreSdk()
-      const { product_categories } = await medusa.store.category.list({
-        fields: "id,name,handle,parent_category_id,description,*category_children",
-        limit: 200,
-      })
+      let product_categories: any[] = []
+      try {
+        const r = await medusa.store.category.list({
+          fields: "id,name,handle,parent_category_id,description,*category_children,*products,+products.thumbnail,+products.handle,+products.title",
+          limit: 200,
+        })
+        product_categories = r.product_categories || []
+      } catch {
+        const r = await medusa.store.category.list({
+          fields: "id,name,handle,parent_category_id,description,*category_children",
+          limit: 200,
+        })
+        product_categories = r.product_categories || []
+      }
       if (!product_categories?.length) throw new Error("empty")
       return product_categories
     })
@@ -186,11 +211,7 @@ export async function searchProducts(query: string, limit = 24) {
   try {
     return await cached(key, async () => {
       const medusa = getStoreSdk()
-      const { products, count } = await medusa.store.product.list({
-        limit,
-        q: query,
-        fields: "*variants,*variants.prices,*images,+thumbnail",
-      })
+      const { products, count } = await medusa.store.product.list(await productQuery({ limit, q: query }))
       return { products: products || [], count: count ?? products?.length ?? 0 }
     })
   } catch (e) {
