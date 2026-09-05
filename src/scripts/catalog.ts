@@ -1,7 +1,7 @@
 type MedusaCfg = { baseUrl: string; publishableKey: string }
 
 function cfg(): MedusaCfg {
-  return (window as any).toonhubMedusa || { baseUrl: "http://96.47.238.191:9000", publishableKey: "" }
+  return (window as any).toonhubMedusa || { baseUrl: "https://medusa.toonhubshop.com", publishableKey: "" }
 }
 
 function shopCategories(categories: any[]) {
@@ -44,8 +44,8 @@ async function medusaGet(path: string): Promise<any> {
   }
   const urls: string[] = [
     `/api/medusa-proxy?path=${encodeURIComponent(path)}`,
+    raw,
   ]
-  if (typeof location === "undefined" || location.protocol === "http:") urls.push(raw)
   urls.push("https://corsproxy.org/?" + encodeURIComponent(raw))
   urls.push("https://api.allorigins.win/raw?url=" + encodeURIComponent(raw))
   urls.push("https://corsproxy.io/?" + encodeURIComponent(raw))

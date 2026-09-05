@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import Medusa from "@medusajs/js-sdk"
 
-/** Live Medusa backend. Port 80 is nginx; the Store API listens on 9000. */
-export const DEFAULT_MEDUSA_URL = "http://96.47.238.191:9000"
+/** Live Medusa backend. */
+export const DEFAULT_MEDUSA_URL = "https://medusa.toonhubshop.com"
 /** Publishable keys are meant for the storefront; also set in .env */
 export const DEFAULT_PUBLISHABLE_KEY = "pk_7b55f85cfbc0b36baa03e4f3914732c2f5f9d8fc5ae3bb50a98e01d6fcc73c4b"
 
