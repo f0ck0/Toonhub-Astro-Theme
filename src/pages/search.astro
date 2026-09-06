@@ -27,8 +27,8 @@ try {
   <Header />
   <main id="MainContent" class="page-width" style="padding:48px 0;" data-search-page data-search-q={q}>
     <h1 style="font-size:2rem;margin-bottom:24px;">Search</h1>
-    <form method="get" style="display:flex;gap:12px;margin-bottom:24px;">
-      <input class="field" type="search" name="q" value={q} placeholder="Search anime figures..." style="flex:1;" />
+    <form class="search-page-form" method="get">
+      <input class="field" type="search" name="q" value={q} placeholder="Search anime figures..." />
       <button type="submit" class="btn btn-primary">Search</button>
     </form>
 

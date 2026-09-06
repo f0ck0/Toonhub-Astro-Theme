@@ -20,8 +20,8 @@ const currency = currencyFromCookies(Astro.cookies)
 
   <div class="page-width header-row">
     <div>
-      <button id="mobileMenuBtn" class="icon-btn mobile-only" data-open-nav type="button" aria-label="Menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      <button id="mobileMenuBtn" class="icon-btn header-menu-btn" data-open-nav type="button" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
     </div>
 
@@ -88,23 +88,25 @@ const currency = currencyFromCookies(Astro.cookies)
     <button class="close-x" type="button" data-close-nav aria-label="Close">×</button>
   </div>
   <nav class="drawer-body" style="display:flex;flex-direction:column;gap:4px;">
-    <a href="/" class="nav-link" style="padding:12px 0;">Home</a>
-    <a href="/track-order" class="nav-link" style="padding:12px 0;">Track Order</a>
-    <a href="/collections" class="nav-link" style="padding:12px 0;">Shop All</a>
-    <div class="nav-link" style="padding:12px 0;cursor:default;">Anime List (A-Z)</div>
-    <div id="azMobile">
-      {azGroups.map((g) => (
-        <>
-          <div class="az-letter" style="padding:8px 8px 2px;">{g.letter}</div>
-          {g.items.map((child) => (
-            <a href={`/collections/${child.handle}`} style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">{child.name}</a>
-          ))}
-        </>
-      ))}
-    </div>
-    <a href="/account" class="nav-link" style="padding:12px 0;">Account</a>
-    <a href="/wishlist" class="nav-link" style="padding:12px 0;">Wishlist</a>
-    <a href="/search" class="nav-link" style="padding:12px 0;">Search</a>
+    <a href="/" class="nav-link mobile-nav-link">Home</a>
+    <a href="/track-order" class="nav-link mobile-nav-link">Track Order</a>
+    <a href="/collections" class="nav-link mobile-nav-link">Shop All</a>
+    <details class="mobile-az">
+      <summary class="nav-link mobile-nav-link">Anime List (A-Z)</summary>
+      <div id="azMobile">
+        {azGroups.map((g) => (
+          <>
+            <div class="az-letter">{g.letter}</div>
+            {g.items.map((child) => (
+              <a href={`/collections/${child.handle}`}>{child.name}</a>
+            ))}
+          </>
+        ))}
+      </div>
+    </details>
+    <a href="/account" class="nav-link mobile-nav-link">Account</a>
+    <a href="/wishlist" class="nav-link mobile-nav-link">Wishlist</a>
+    <a href="/search" class="nav-link mobile-nav-link">Search</a>
     <div class="mobile-currency">
       <div class="az-letter" style="padding:16px 8px 6px;">Country / currency</div>
       {CURRENCY_OPTIONS.map((opt) => (
