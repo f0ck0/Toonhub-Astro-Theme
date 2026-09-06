@@ -93,11 +93,7 @@ const options = product?.options || []
               <span class="pdp-price" style="font-size:1.5rem;font-weight:700;">{priceFrom}</span>
               <span class="pdp-original pc-compare" style="font-size:1rem;">{originalFmt}</span>
             </div>
-            <p style="font-size:0.78rem;color:#888;margin-top:4px;">Sale · Taxes included.</p>
-
-            {product.description && (
-              <div class="rte" style="margin-top:18px;font-size:0.9rem;" set:html={product.description} />
-            )}
+            <p style="font-size:0.78rem;color:#888;margin-top:4px;">Sale · Taxes included. Free worldwide shipping.</p>
 
             {variants.length > 1 && (
               <div style="margin-top:24px;">
@@ -125,8 +121,14 @@ const options = product?.options || []
 
             <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
               <button
-                id="addToCartBtn"
+                id="buyNowBtn"
                 class="btn btn-primary"
+                type="button"
+                style="flex:1;"
+              >Buy now — checkout</button>
+              <button
+                id="addToCartBtn"
+                class="btn btn-outline"
                 type="button"
                 data-action="add"
                 data-variant-id={variantId}
@@ -138,12 +140,6 @@ const options = product?.options || []
                 data-qty="1"
                 style="flex:1;"
               >Add to cart</button>
-              <button
-                id="buyNowBtn"
-                class="btn btn-outline"
-                type="button"
-                style="flex:1;"
-              >Buy now</button>
               <button
                 class="pdp-wish"
                 type="button"
@@ -227,7 +223,7 @@ const options = product?.options || []
           <div class="pdp-sticky-title">{product.title}</div>
           <div class="pdp-sticky-price">{priceFrom}</div>
         </div>
-        <button type="button" class="btn btn-primary" id="stickyAdd">Add to cart</button>
+        <button type="button" class="btn btn-primary" id="stickyAdd">Buy now</button>
       </div>
     </main>
   ) : (
@@ -290,7 +286,7 @@ const options = product?.options || []
     await window.toonhub.addToCart(pdpPayload(), { goCheckout: true })
   })
   document.getElementById("stickyAdd")?.addEventListener("click", () => {
-    document.getElementById("addToCartBtn")?.click()
+    document.getElementById("buyNowBtn")?.click()
   })
 
   document.getElementById("pdpQtyRow")?.addEventListener("click", (e) => {

@@ -87,10 +87,15 @@ function openCart(added = false) {
   setOpen("cartDrawer", true)
   setOpen("cartOverlay", true)
   const title = document.getElementById("cartDrawerTitle")
-  if (title) title.textContent = added ? "Item added to your cart" : "Your cart"
+  if (title) title.textContent = added ? "Added — checkout in 1 step" : "Your cart"
   document.getElementById("cartAddedNote")?.classList.toggle("hidden", !added)
+  const checkout = document.getElementById("cartCheckout")
+  checkout?.classList.toggle("pulse-cta", added)
   lockBody()
   renderCart()
+  if (added) {
+    setTimeout(() => document.getElementById("cartDrawerFoot")?.scrollIntoView({ block: "nearest" }), 80)
+  }
 }
 
 function closeCart() {
@@ -266,36 +271,44 @@ function addLocal(payload: AddPayload) {
   items = local
 }
 
+let adding = false
+
 async function addToCart(payload: AddPayload, opts?: { goCheckout?: boolean }) {
+  if (adding) return
+  adding = true
   const qty = payload.quantity || 1
   try {
-    const cartId = await ensureCartId()
-    if (cartId) {
-      const res = await fetch("/api/cart/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId, variantId: payload.variantId, quantity: qty }),
-      })
-      if (res.ok) {
-        await refresh()
-        if (opts?.goCheckout) {
-          window.location.href = "/checkout"
+    try {
+      const cartId = await ensureCartId()
+      if (cartId) {
+        const res = await fetch("/api/cart/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartId, variantId: payload.variantId, quantity: qty }),
+        })
+        if (res.ok) {
+          await refresh()
+          if (opts?.goCheckout) {
+            window.location.href = "/checkout"
+            return
+          }
+          openCart(true)
           return
         }
-        openCart(true)
-        return
       }
+    } catch {
+      /* fall through */
     }
-  } catch {
-    /* fall through */
+    addLocal(payload)
+    renderCart()
+    if (opts?.goCheckout) {
+      window.location.href = "/checkout"
+      return
+    }
+    openCart(true)
+  } finally {
+    adding = false
   }
-  addLocal(payload)
-  renderCart()
-  if (opts?.goCheckout) {
-    window.location.href = "/checkout"
-    return
-  }
-  openCart(true)
 }
 
 async function removeItem(itemId: string) {

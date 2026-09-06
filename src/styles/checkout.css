@@ -73,6 +73,51 @@ body.co-body {
   text-transform: uppercase;
   margin: 22px 0 12px;
 }
+.co-saved {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  background: #111;
+  border: 1px solid var(--co-border);
+  border-radius: 0.4rem;
+  padding: 16px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+.co-saved-k {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 6px;
+}
+.co-saved b { display: block; margin-bottom: 4px; }
+.co-saved #savedLine, .co-saved #savedMail { font-size: 0.88rem; color: #bbb; line-height: 1.45; }
+.co-text-btn {
+  background: none;
+  border: 0;
+  color: #ccc;
+  text-decoration: underline;
+  padding: 8px 0 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.co-ship-line {
+  font-size: 0.88rem;
+  color: #bbb;
+  margin: 8px 0 18px;
+  line-height: 1.5;
+}
+.co-ship-opt {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--co-border);
+  cursor: pointer;
+}
 .co-field {
   width: 100%;
   padding: 13px 12px;

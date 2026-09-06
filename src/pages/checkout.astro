@@ -24,31 +24,38 @@ export const prerender = false
         Buy 1 get 2nd 50% off · Free worldwide shipping · 30-day returns
       </div>
 
-      <form id="coForm">
+      <form id="coForm" autocomplete="on">
+        <div id="savedBox" class="co-saved" hidden>
+          <div>
+            <div class="co-saved-k">Deliver to</div>
+            <b id="savedName"></b>
+            <div id="savedLine"></div>
+            <div id="savedMail"></div>
+          </div>
+          <button type="button" class="co-text-btn" id="editAddr">Change</button>
+        </div>
+
+        <div id="addrFields">
         <h2 class="co-h">Contact</h2>
         <div class="co-row">
-          <input class="co-field" type="email" name="email" placeholder="Email" required autocomplete="email" />
+          <input class="co-field" type="email" name="email" id="coEmail" placeholder="Email" required autocomplete="email" inputmode="email" />
         </div>
-        <label class="co-check">
-          <input type="checkbox" name="newsletter" checked />
-          <span>Email me drops, restocks, and member offers</span>
-        </label>
 
         <h2 class="co-h">Delivery</h2>
         <div class="co-row">
-          <select class="co-field" name="country" id="countrySelect" required autocomplete="country">
+          <select class="co-field" name="country" id="countrySelect" required autocomplete="country-name">
             {COUNTRIES.map((c) => <option value={c.code}>{c.name}</option>)}
           </select>
         </div>
-        <div class="co-row two">
-          <input class="co-field" name="first" placeholder="First name" required autocomplete="given-name" />
-          <input class="co-field" name="last" placeholder="Last name" required autocomplete="family-name" />
+        <div class="co-row">
+          <input class="co-field" name="name" id="coName" placeholder="Full name" required autocomplete="name" />
         </div>
         <div class="co-row">
           <input class="co-field" name="address" placeholder="Address" required autocomplete="address-line1" />
         </div>
-        <div class="co-row">
-          <input class="co-field" name="apartment" placeholder="Apartment, suite, etc. (optional)" autocomplete="address-line2" />
+        <button type="button" class="co-text-btn" id="toggleApt">+ Apartment, suite</button>
+        <div class="co-row" id="aptRow" hidden>
+          <input class="co-field" name="apartment" placeholder="Apartment, suite, etc." autocomplete="address-line2" />
         </div>
         <div class="co-row two">
           <input class="co-field" name="city" placeholder="City" required autocomplete="address-level2" />
@@ -59,17 +66,15 @@ export const prerender = false
             <option value="">Province / state</option>
           </select>
           <input class="co-field" name="provinceText" id="provinceText" placeholder="Province / state (optional)" autocomplete="address-level1" hidden />
-          <input class="co-field" name="phone" placeholder="Phone (delivery updates)" autocomplete="tel" />
         </div>
-        <label class="co-check">
-          <input type="checkbox" name="save" checked />
-          <span>Save this address on this device for next time</span>
-        </label>
+        <button type="button" class="co-text-btn" id="togglePhone">+ Phone for delivery updates</button>
+        <div class="co-row" id="phoneRow" hidden>
+          <input class="co-field" name="phone" placeholder="Phone" autocomplete="tel" inputmode="tel" />
+        </div>
+        </div>
 
-        <h2 class="co-h">Shipping</h2>
-        <div class="co-ship" id="shipList">
-          <label><span>Free worldwide shipping</span><strong>Free</strong></label>
-        </div>
+        <p class="co-ship-line" id="shipList">Free worldwide shipping included</p>
+        <input type="checkbox" name="newsletter" checked hidden />
 
         <h2 class="co-h">Payment</h2>
         <div class="co-pay-reserved" id="payReserved">
@@ -92,7 +97,7 @@ export const prerender = false
         <p id="coError" class="co-error" hidden></p>
         <button type="submit" class="co-btn pay" id="payBtn">Place order — free shipping</button>
         <div class="co-foot">
-          <a href="/cart">‹ Return to cart</a>
+          <a href="/cart">‹ Cart</a>
           <span>Secure checkout</span>
         </div>
         <p class="co-lock">By placing this order you agree to our <a href="/policies/terms-of-service">Terms</a> and <a href="/policies/privacy-policy">Privacy Policy</a>.</p>
@@ -115,7 +120,7 @@ export const prerender = false
   </div>
 
   <script>
-    import { provincesOf, countryFromCurrency, COUNTRIES } from "../lib/regions"
+    import { provincesOf, countryFromCurrency, countryFromTimezone, COUNTRIES } from "../lib/regions"
 
     const form = document.getElementById("coForm") as HTMLFormElement
     const countrySelect = document.getElementById("countrySelect") as HTMLSelectElement
@@ -228,15 +233,18 @@ export const prerender = false
     function renderShipping() {
       const box = document.getElementById("shipList")!
       if (!shipping.length) {
-        box.innerHTML = `<label><span>Free worldwide shipping · 2–3 day processing</span><strong>Free</strong></label>`
+        box.textContent = "Free worldwide shipping included · 2–3 day processing"
+        return
+      }
+      const first = shipping[0]
+      if (shipping.length === 1) {
+        box.innerHTML = `${first.name || "Shipping"} · <strong>${!first.amount ? "Free" : fmt(first.amount, cart?.currency)}</strong>
+          <input type="hidden" name="ship" value="${first.id}" />`
         return
       }
       box.innerHTML = shipping.map((s, i) => `
-        <label>
-          <span style="display:flex;gap:8px;align-items:center;">
-            <input type="radio" name="ship" value="${s.id}" ${i === 0 ? "checked" : ""} />
-            ${s.name || s.id}
-          </span>
+        <label class="co-ship-opt">
+          <span><input type="radio" name="ship" value="${s.id}" ${i === 0 ? "checked" : ""} /> ${s.name || s.id}</span>
           <strong>${!s.amount ? "Free" : fmt(s.amount, cart?.currency)}</strong>
         </label>
       `).join("")
@@ -304,7 +312,7 @@ export const prerender = false
       const fd = new FormData(form)
       return {
         email: String(fd.get("email") || "").trim(),
-        name: `${fd.get("first") || ""} ${fd.get("last") || ""}`.trim(),
+        name: String(fd.get("name") || "").trim(),
         address: String(fd.get("address") || ""),
         apartment: String(fd.get("apartment") || ""),
         city: String(fd.get("city") || ""),
@@ -312,13 +320,30 @@ export const prerender = false
         country: String(fd.get("country") || "US"),
         province: String(fd.get("province") || fd.get("provinceText") || ""),
         phone: String(fd.get("phone") || ""),
-        newsletter: fd.get("newsletter") === "on",
+        newsletter: true,
       }
     }
 
     function persistAddress() {
-      if (!(form.querySelector('[name="save"]') as HTMLInputElement)?.checked) return
       try { localStorage.setItem("toonhub_checkout", JSON.stringify(formPayload())) } catch {}
+    }
+
+    function showOptional(id: string, on: boolean) {
+      const el = document.getElementById(id)
+      if (el) el.hidden = !on
+    }
+
+    function setCompact(on: boolean) {
+      const box = document.getElementById("savedBox")!
+      const fields = document.getElementById("addrFields")!
+      box.hidden = !on
+      fields.hidden = on
+      if (on) {
+        const p = formPayload()
+        document.getElementById("savedName")!.textContent = p.name
+        document.getElementById("savedLine")!.textContent = [p.address, p.city, p.postal, p.country].filter(Boolean).join(", ")
+        document.getElementById("savedMail")!.textContent = p.email
+      }
     }
 
     function restoreAddress() {
@@ -326,15 +351,29 @@ export const prerender = false
       try { saved = JSON.parse(localStorage.getItem("toonhub_checkout") || "{}") } catch { saved = {} }
       const email = saved.email || localStorage.getItem("toonhub_email") || ""
       if (email) (form.querySelector('[name="email"]') as HTMLInputElement).value = email
-      const name = String(saved.name || "").split(" ")
-      if (name[0]) (form.querySelector('[name="first"]') as HTMLInputElement).value = name[0]
-      if (name.length > 1) (form.querySelector('[name="last"]') as HTMLInputElement).value = name.slice(1).join(" ")
+      if (saved.name) (form.querySelector('[name="name"]') as HTMLInputElement).value = saved.name
       ;["address", "apartment", "city", "postal", "phone"].forEach((k) => {
         if (saved[k]) (form.querySelector(`[name="${k}"]`) as HTMLInputElement).value = saved[k]
       })
-      const country = saved.country || countryFromCurrency(cookieCurrency())
+      if (saved.apartment) {
+        showOptional("aptRow", true)
+        const t = document.getElementById("toggleApt")
+        if (t) t.hidden = true
+      }
+      if (saved.phone) {
+        showOptional("phoneRow", true)
+        const t = document.getElementById("togglePhone")
+        if (t) t.hidden = true
+      }
+      const guessed = countryFromTimezone() || countryFromCurrency(cookieCurrency())
+      const country = saved.country || guessed
       countrySelect.value = COUNTRY_SET.has(country) ? country : "US"
       fillProvinces(countrySelect.value, saved.province || "")
+      const needsProv = provincesOf(countrySelect.value).length > 0
+      const complete = Boolean(saved.email && saved.name && saved.address && saved.city && saved.postal && (!needsProv || saved.province))
+      setCompact(complete)
+      if (!email) document.getElementById("coEmail")?.focus()
+      else if (!complete) document.getElementById("coName")?.focus()
     }
 
 
@@ -344,7 +383,7 @@ export const prerender = false
       persistAddress()
       if (!cartId || !p.email || !p.address) return
       await api("update", p)
-      const shipId = (form.querySelector('input[name="ship"]:checked') as HTMLInputElement | null)?.value
+      const shipId = (form.querySelector('input[name="ship"]:checked, input[name="ship"][type="hidden"]') as HTMLInputElement | null)?.value
       if (shipId) await api("shipping", { optionId: shipId })
       renderSummary()
     }
@@ -427,6 +466,17 @@ export const prerender = false
     })
 
     countrySelect.addEventListener("change", () => fillProvinces(countrySelect.value))
+    document.getElementById("editAddr")?.addEventListener("click", () => setCompact(false))
+    document.getElementById("toggleApt")?.addEventListener("click", () => {
+      showOptional("aptRow", true)
+      ;(document.getElementById("toggleApt") as HTMLElement).hidden = true
+      form.querySelector<HTMLInputElement>('[name="apartment"]')?.focus()
+    })
+    document.getElementById("togglePhone")?.addEventListener("click", () => {
+      showOptional("phoneRow", true)
+      ;(document.getElementById("togglePhone") as HTMLElement).hidden = true
+      form.querySelector<HTMLInputElement>('[name="phone"]')?.focus()
+    })
 
     document.getElementById("discountBtn")?.addEventListener("click", async () => {
       const code = (document.getElementById("discountCode") as HTMLInputElement).value.trim()

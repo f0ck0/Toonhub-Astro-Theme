@@ -205,22 +205,17 @@ input, select, textarea { font-family: inherit; }
   border: none;
   border-radius: var(--radius-button);
   padding: 0.7rem 0.5rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 200ms ease, transform 200ms ease;
-  z-index: 3;
-}
-.product-card:hover .choose-options,
-.product-card:focus-within .choose-options {
   opacity: 1;
   transform: none;
+  z-index: 3;
+  cursor: pointer;
+  text-align: center;
 }
 @media (max-width: 749px) {
-  .product-card .choose-options { opacity: 1; transform: none; }
   .product-card .pc-hover { display: none; }
 }
 .product-card .pc-info { padding: 12px 0 0; }
@@ -939,6 +934,8 @@ button, a, summary { touch-action: manipulation; }
   padding: 24px;
   border-radius: 0.4rem;
   background: #0a0a0a;
+  position: sticky;
+  top: 72px;
 }
 .cart-layout {
   display: grid;

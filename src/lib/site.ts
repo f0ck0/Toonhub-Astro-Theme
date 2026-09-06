@@ -14,7 +14,7 @@ export const SITE = {
     "Free Shipping Ends Soon",
   ],
   offer: "Limited Offer: Buy 1 Get 2nd Half Price. World Wide Free Shipping.",
-  offerWarn: "PLEASE CHECK YOUR FIGURE EDITION AND SHIPPING ADDRESS AFTER !!!!!",
+  offerWarn: "Please confirm the figure edition and shipping address before you place the order.",
   marquee:
     "✅ 30-Day Guarantee   🚚 Free Shipping World Wide   🎁 Buy 1 Get Second 50% Off  •  For all figures",
 }

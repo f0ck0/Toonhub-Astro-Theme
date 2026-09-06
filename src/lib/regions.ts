@@ -173,3 +173,44 @@ export function countryFromCurrency(code: string) {
   }
   return m[String(code || "usd").toLowerCase()] || "US"
 }
+
+export function countryFromTimezone(tz = "") {
+  const t = tz || (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "")
+  const map: Record<string, string> = {
+    "Asia/Hong_Kong": "HK",
+    "Asia/Macau": "HK",
+    "Asia/Shanghai": "CN",
+    "Asia/Chongqing": "CN",
+    "Asia/Harbin": "CN",
+    "Asia/Urumqi": "CN",
+    "Asia/Taipei": "TW",
+    "Asia/Tokyo": "JP",
+    "Asia/Seoul": "KR",
+    "Asia/Singapore": "SG",
+    "Asia/Kuala_Lumpur": "MY",
+    "Asia/Bangkok": "TH",
+    "Asia/Ho_Chi_Minh": "VN",
+    "Asia/Jakarta": "ID",
+    "Asia/Manila": "PH",
+    "Asia/Kolkata": "IN",
+    "Asia/Dubai": "AE",
+    "Australia/Sydney": "AU",
+    "Australia/Melbourne": "AU",
+    "Pacific/Auckland": "NZ",
+    "Europe/London": "GB",
+    "Europe/Paris": "FR",
+    "Europe/Berlin": "DE",
+    "Europe/Rome": "IT",
+    "Europe/Madrid": "ES",
+    "Europe/Amsterdam": "NL",
+    "America/New_York": "US",
+    "America/Chicago": "US",
+    "America/Denver": "US",
+    "America/Los_Angeles": "US",
+    "America/Toronto": "CA",
+    "America/Vancouver": "CA",
+    "America/Sao_Paulo": "BR",
+    "America/Mexico_City": "MX",
+  }
+  return map[t] || ""
+}

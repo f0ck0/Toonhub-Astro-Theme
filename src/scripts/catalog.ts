@@ -93,7 +93,24 @@ function productCard(p: any) {
   const usd = productUsdMinor(p)
   const price = usd ? "From " + money(usd) : ""
   const cats = (p.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
-  return `<article class="product-card card" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
+  const variants = (p.variants || []).map((v: any) => ({
+    id: v.id,
+    title: v.title || (v.options || []).map((o: any) => o.value).join(" / ") || "Default",
+  })).filter((v: any) => v.id)
+  const qv = encodeURIComponent(JSON.stringify({
+    variantId: variants[0]?.id || "",
+    title: p.title,
+    thumbnail: img,
+    handle: p.handle,
+    unit_price: usd,
+    variant_title: variants[0]?.title,
+    variants,
+  }))
+  const hasOptions = variants.length > 1
+  const cta = variants.length
+    ? `<button class="choose-options" type="button" data-action="quickview">${hasOptions ? "Choose options" : "Add to cart"}</button>`
+    : `<a class="choose-options" href="/products/${esc(p.handle)}">View</a>`
+  return `<article class="product-card card" data-qv="${qv}" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
     <div class="pc-media">
       <a href="/products/${esc(p.handle)}" aria-label="${esc(p.title)}" style="position:absolute;inset:0;z-index:1;">
         ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
@@ -101,7 +118,7 @@ function productCard(p: any) {
       </a>
       <button class="wish-btn" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${usd}" aria-label="Add to wishlist">♡</button>
       <span class="sale-badge">Sale</span>
-      <a class="choose-options" href="/products/${esc(p.handle)}">View</a>
+      ${cta}
     </div>
     <a href="/products/${esc(p.handle)}" class="pc-info">
       <div class="pc-title">${esc(p.title)}</div>
