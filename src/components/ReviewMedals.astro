@@ -1,0 +1,38 @@
+---
+/** Judge.me-style medals row. Counts hydrate from Medusa — never invented. */
+---
+<div class="trust-strip" data-hydrate-reviews aria-live="polite">
+  <div class="jdgm-widget">
+    <div class="jdgm-rating">
+      <div class="jdgm-stars" data-review-stars>
+        <div class="jdgm-stars-track">
+          {Array.from({ length: 5 }).map(() => (
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 14.9 8.3l6.5.9-4.7 4.6 1.1 6.5L12 17.2 6.2 20.3l1.1-6.5L2.6 9.2l6.5-.9L12 2.4z"/></svg>
+          ))}
+          <div class="jdgm-stars-fill" data-review-fill style="width:0%">
+            {Array.from({ length: 5 }).map(() => (
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 14.9 8.3l6.5.9-4.7 4.6 1.1 6.5L12 17.2 6.2 20.3l1.1-6.5L2.6 9.2l6.5-.9L12 2.4z"/></svg>
+            ))}
+          </div>
+        </div>
+      </div>
+      <span class="jdgm-avg" data-review-avg></span>
+      <span class="jdgm-count" data-review-count></span>
+    </div>
+    <div class="jdgm-sep" aria-hidden="true"></div>
+    <div class="jdgm-medals">
+      <div class="jdgm-medal" data-medal="verified">
+        <div class="jdgm-medal-art" data-medal-art></div>
+        <span>Verified Reviews</span>
+      </div>
+      <div class="jdgm-medal" data-medal="month">
+        <div class="jdgm-medal-art" data-medal-art></div>
+        <span>This month</span>
+      </div>
+      <div class="jdgm-medal" data-medal="shop">
+        <div class="jdgm-medal-art" data-medal-art></div>
+        <span>Trusted shop</span>
+      </div>
+    </div>
+  </div>
+</div>

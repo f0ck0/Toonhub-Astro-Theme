@@ -65,9 +65,10 @@ export const GET: APIRoute = async ({ request }) => {
   if (!auth) return json({ error: "Not signed in" }, 401)
   try {
     const me = await medusaFetch("/store/customers/me", {}, { Authorization: auth })
-    if (!me.ok) return json({ error: errMessage(me.data, "Session expired") }, 401)
+    if (me.status === 401 || me.status === 403) return json({ error: errMessage(me.data, "Session expired") }, 401)
+    if (!me.ok) return json({ error: errMessage(me.data, "Could not load account") }, 502)
     return json({ customer: me.data?.customer || me.data })
   } catch (e: any) {
-    return json({ error: e.message || "Session expired" }, 401)
+    return json({ error: e.message || "Could not reach store" }, 502)
   }
 }

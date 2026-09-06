@@ -5,45 +5,94 @@ import Footer from "../components/Footer.astro"
 ---
 <Base title="Account — TOONHUB">
   <Header />
-  <main id="MainContent" class="page-width" style="display:flex;justify-content:center;padding:48px 0 80px;">
-    <div style="width:100%;max-width:460px;">
-      <div id="accountGuest">
-        <h1 class="account-title" style="font-size:1.5rem;margin-bottom:12px;">Login</h1>
-        <p class="account-sub" style="font-size:0.85rem;color:#888;margin-bottom:24px;">Sign in to access your orders and member benefits.</p>
+  <script is:inline>
+    (function () {
+      try {
+        if (localStorage.getItem("toonhub_token")) document.documentElement.classList.add("has-account")
+      } catch (e) {}
+    })()
+  </script>
+  <main id="MainContent" class="page-width account-page">
+    <div id="accountGuest" class="account-guest">
+      <h1 class="account-title">Login</h1>
+      <p class="account-sub">Sign in to access your orders and member benefits.</p>
 
-        <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--color-border);">
-          <button type="button" class="account-tab is-on" data-mode="login">Login</button>
-          <button type="button" class="account-tab" data-mode="register">Create account</button>
+      <div class="account-tabs">
+        <button type="button" class="account-tab is-on" data-mode="login">Login</button>
+        <button type="button" class="account-tab" data-mode="register">Create account</button>
+      </div>
+
+      <form id="accountForm">
+        <div id="registerNames" class="account-names" hidden>
+          <input class="field" id="firstName" placeholder="First name" autocomplete="given-name" />
+          <input class="field" id="lastName" placeholder="Last name" autocomplete="family-name" />
         </div>
+        <input type="email" id="loginEmail" class="field" placeholder="Email address" required autocomplete="email" />
+        <input type="password" id="loginPassword" class="field" placeholder="Password" required autocomplete="current-password" minlength="8" />
+        <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" hidden autocomplete="new-password" minlength="8" />
+        <div id="loginError" class="account-error" hidden></div>
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
+      </form>
 
-        <form id="accountForm" style="display:flex;flex-direction:column;gap:16px;">
-          <div id="registerNames" class="account-names" hidden>
-            <input class="field" id="firstName" placeholder="First name" autocomplete="given-name" />
-            <input class="field" id="lastName" placeholder="Last name" autocomplete="family-name" />
-          </div>
-          <input type="email" id="loginEmail" class="field" placeholder="Email address" required autocomplete="email" />
-          <input type="password" id="loginPassword" class="field" placeholder="Password" required autocomplete="current-password" minlength="8" />
-          <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" hidden autocomplete="new-password" minlength="8" />
-          <div id="loginError" style="display:none;font-size:0.82rem;color:#e53935;"></div>
-          <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
-        </form>
+      <p class="account-legal">
+        By continuing, you agree to Toonhub's <a href="/policies/terms-of-service">Terms of Use</a> and <a href="/policies/privacy-policy">Privacy Policy</a>.
+      </p>
+    </div>
 
-        <p style="font-size:0.72rem;color:#666;text-align:center;margin-top:20px;line-height:18px;">
-          By continuing, you agree to Toonhub's <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms of Use</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
-        </p>
+    <div id="accountHome" class="account-home" hidden>
+      <header class="account-head">
+        <div>
+          <h1>Your account</h1>
+          <p id="accountHello" class="account-hello"></p>
+        </div>
+        <button type="button" id="logoutBtn" class="btn btn-outline account-logout">Log out</button>
+      </header>
+
+      <div class="account-grid">
+        <section class="account-card" id="profileCard">
+          <h2>Account details</h2>
+          <dl class="account-dl">
+            <div><dt>Name</dt><dd id="infoName">—</dd></div>
+            <div><dt>Email</dt><dd id="infoEmail">—</dd></div>
+            <div><dt>Phone</dt><dd id="infoPhone">—</dd></div>
+          </dl>
+          <form id="profileForm" class="account-edit" hidden>
+            <div class="account-names">
+              <input class="field" id="editFirst" placeholder="First name" autocomplete="given-name" />
+              <input class="field" id="editLast" placeholder="Last name" autocomplete="family-name" />
+            </div>
+            <input class="field" id="editPhone" placeholder="Phone" autocomplete="tel" inputmode="tel" />
+            <div id="profileError" class="account-error" hidden></div>
+            <div class="account-edit-actions">
+              <button type="submit" id="profileSave" class="btn btn-primary">Save</button>
+              <button type="button" id="profileCancel" class="btn btn-outline">Cancel</button>
+            </div>
+          </form>
+          <button type="button" id="editProfileBtn" class="account-text-btn">Edit profile</button>
+        </section>
+
+        <section class="account-card">
+          <h2>Addresses</h2>
+          <div id="accountAddresses" class="account-addr-list"></div>
+        </section>
       </div>
 
-      <div id="accountHome" hidden>
-        <h1 style="font-size:1.5rem;margin-bottom:8px;">Your account</h1>
-        <p id="accountEmail" style="color:#888;font-size:0.9rem;margin-bottom:24px;"></p>
-        <div id="accountOrders" class="rte" style="margin-bottom:24px;"></div>
-        <button type="button" id="logoutBtn" class="btn btn-outline btn-block">Log out</button>
-      </div>
+      <section class="account-card account-orders-card">
+        <h2>Order history</h2>
+        <div id="accountOrders"></div>
+      </section>
     </div>
   </main>
   <Footer />
 </Base>
 <style>
+  html.has-account #accountGuest { display: none !important; }
+  html.has-account #accountHome { display: block !important; }
+  .account-page { padding: 40px 0 80px; min-height: 60vh; }
+  .account-guest { width: 100%; max-width: 460px; margin: 0 auto; }
+  .account-title { font-size: 1.5rem; margin-bottom: 12px; }
+  .account-sub { font-size: 0.85rem; color: #888; margin-bottom: 24px; }
+  .account-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--color-border); }
   .account-tab {
     flex: 1;
     background: none;
@@ -58,10 +107,84 @@ import Footer from "../components/Footer.astro"
     margin-bottom: -1px;
   }
   .account-tab.is-on { color: #fff; border-bottom-color: #fff; }
+  #accountForm { display: flex; flex-direction: column; gap: 16px; }
+  .account-error { font-size: 0.82rem; color: #e53935; }
+  .account-legal { font-size: 0.72rem; color: #666; text-align: center; margin-top: 20px; line-height: 18px; }
+  .account-legal a { text-decoration: underline; }
+  .account-home { width: 100%; max-width: 920px; margin: 0 auto; }
+  .account-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .account-head h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  .account-hello { color: #888; font-size: 0.95rem; }
+  .account-logout { width: auto; padding: 0.7rem 1.2rem; }
+  .account-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 800px) {
+    .account-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .account-card {
+    border: 1px solid var(--color-border);
+    border-radius: 0.45rem;
+    padding: 22px 20px;
+    background: #0a0a0a;
+  }
+  .account-card h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    color: #aaa;
+    margin: 0 0 16px;
+  }
+  .account-dl { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+  .account-dl div { display: grid; grid-template-columns: 88px 1fr; gap: 8px; align-items: baseline; }
+  .account-dl dt { font-size: 0.75rem; color: #777; text-transform: uppercase; letter-spacing: 0.08em; }
+  .account-dl dd { margin: 0; color: #fff; font-size: 0.95rem; word-break: break-word; }
+  .account-text-btn {
+    margin-top: 16px;
+    background: none;
+    border: none;
+    color: #ccc;
+    text-decoration: underline;
+    padding: 0;
+    font-size: 0.85rem;
+  }
+  .account-edit { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .account-edit-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .account-edit-actions .btn { width: auto; padding: 0.7rem 1.2rem; }
+  .account-addr { font-size: 0.9rem; color: #ddd; line-height: 1.55; }
+  .account-addr + .account-addr { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+  .account-muted { color: #888; font-size: 0.88rem; }
+  .account-order {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+  }
+  .account-order:last-child { border-bottom: 0; }
+  .account-order b { color: #fff; letter-spacing: 0.04em; }
+  .account-order .meta { color: #888; font-size: 0.82rem; }
+  .account-order .amt { font-style: italic; }
+  @media (max-width: 749px) {
+    .account-head { flex-direction: column; }
+    .account-logout { width: 100%; }
+    .account-dl div { grid-template-columns: 1fr; gap: 2px; }
+  }
 </style>
 <script>
   const TOKEN_KEY = "toonhub_token"
   const EMAIL_KEY = "toonhub_email"
+  const CUSTOMER_KEY = "toonhub_customer"
   const form = document.getElementById("accountForm") as HTMLFormElement
   const loginBtn = document.getElementById("loginBtn") as HTMLButtonElement
   const loginError = document.getElementById("loginError") as HTMLElement
@@ -73,18 +196,36 @@ import Footer from "../components/Footer.astro"
   const sub = document.querySelector(".account-sub") as HTMLElement
   let mode = new URLSearchParams(location.search).get("mode") === "register" ? "register" : "login"
 
-  function cfg() {
-    const w = (window as any).toonhubMedusa
-    return {
-      baseUrl: String(w?.baseUrl || "https://medusa.toonhubshop.com").replace(/\/$/, ""),
-      publishableKey: String(w?.publishableKey || ""),
-    }
-  }
-
   function tokenOf(data: any): string {
     if (!data) return ""
     if (typeof data === "string") return data
     return data.token || data.access_token || (typeof data.raw === "string" ? data.raw : "")
+  }
+
+  function cookieSet(on: boolean) {
+    document.cookie = on
+      ? "toonhub_signed_in=1; path=/; max-age=2592000; samesite=lax"
+      : "toonhub_signed_in=; path=/; max-age=0; samesite=lax"
+  }
+
+  function persist(token: string, email: string, customer?: any) {
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(EMAIL_KEY, email)
+    if (customer) localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer))
+    cookieSet(true)
+    document.documentElement.classList.add("has-account")
+  }
+
+  function clearSession() {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(EMAIL_KEY)
+    localStorage.removeItem(CUSTOMER_KEY)
+    cookieSet(false)
+    document.documentElement.classList.remove("has-account")
+  }
+
+  function cachedCustomer() {
+    try { return JSON.parse(localStorage.getItem(CUSTOMER_KEY) || "null") } catch { return null }
   }
 
   async function postJson(url: string, body: any, headers: Record<string, string> = {}) {
@@ -92,7 +233,7 @@ import Footer from "../components/Footer.astro"
       method: "POST",
       headers: { "Content-Type": "application/json", accept: "application/json", ...headers },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(15000),
     })
     const text = await res.text()
     let data: any = {}
@@ -101,6 +242,7 @@ import Footer from "../components/Footer.astro"
   }
 
   function showError(msg: string) {
+    loginError.hidden = false
     loginError.style.display = "block"
     loginError.textContent = msg
   }
@@ -126,58 +268,164 @@ import Footer from "../components/Footer.astro"
   })
   setMode(mode)
 
+  function money(n: number, code = "usd") {
+    try {
+      if ((window as any).toonhub?.formatMoney) return (window as any).toonhub.formatMoney(n, code)
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: (code || "usd").toUpperCase() }).format((n || 0) / 100)
+    } catch {
+      return `$${((n || 0) / 100).toFixed(2)}`
+    }
+  }
+
+  function displayName(c: any, email: string) {
+    const n = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim()
+    return n || email.split("@")[0] || "collector"
+  }
+
+  function localOrders(email: string) {
+    try {
+      const all = JSON.parse(localStorage.getItem("toonhub_orders") || "[]")
+      if (!Array.isArray(all)) return []
+      return all.filter((o: any) => !email || !o.email || String(o.email).toLowerCase() === email.toLowerCase())
+    } catch { return [] }
+  }
+
+  function savedCheckout() {
+    try { return JSON.parse(localStorage.getItem("toonhub_checkout") || "null") } catch { return null }
+  }
+
+  function formatAddr(a: any) {
+    if (!a) return ""
+    if (typeof a === "string") return a
+    const lines = [
+      [a.first_name, a.last_name].filter(Boolean).join(" ") || a.name,
+      a.address_1 || a.address || a.street,
+      a.address_2 || a.apartment,
+      [a.city, a.province || a.province_code || a.state, a.postal_code || a.postal].filter(Boolean).join(", "),
+      a.country_code || a.country,
+      a.phone,
+    ].filter(Boolean)
+    return lines.join("\n")
+  }
+
+  function renderAddresses(addresses: any[], email: string) {
+    const box = document.getElementById("accountAddresses")!
+    const list = Array.isArray(addresses) ? addresses.filter(Boolean) : []
+    if (list.length) {
+      box.innerHTML = list.map((a) => `<div class="account-addr">${formatAddr(a).replace(/\n/g, "<br>")}</div>`).join("")
+      return
+    }
+    const saved = savedCheckout()
+    if (saved?.address) {
+      const line = [saved.name, saved.address, saved.apartment, [saved.city, saved.province, saved.postal].filter(Boolean).join(", "), saved.country === "OTHER" ? saved.countryOther : saved.country, saved.phone].filter(Boolean)
+      box.innerHTML = `<div class="account-addr">${line.join("<br>")}</div><p class="account-muted" style="margin-top:10px;">From your last checkout.</p>`
+      return
+    }
+    box.innerHTML = `<p class="account-muted">No saved address yet. Addresses appear after you place an order.</p>`
+  }
+
+  function renderOrders(remote: any[], email: string) {
+    const box = document.getElementById("accountOrders")!
+    const local = localOrders(email)
+    const seen = new Set<string>()
+    const rows: any[] = []
+    for (const o of [...(remote || []), ...local]) {
+      const id = String(o.display_id || o.id || "")
+      if (id && seen.has(id)) continue
+      if (id) seen.add(id)
+      rows.push(o)
+    }
+    if (!rows.length) {
+      box.innerHTML = `<p class="account-muted">You haven’t placed an order yet. <a href="/collections" style="text-decoration:underline;color:#fff;">Browse figures</a></p>`
+      return
+    }
+    box.innerHTML = rows.map((o) => {
+      const id = o.display_id || o.id || "Order"
+      const when = o.created_at || o.created
+      const date = when ? new Date(when).toLocaleDateString() : ""
+      const status = o.status || o.fulfillment_status || "placed"
+      const total = Number(o.total ?? o.summary?.total ?? 0)
+      const cur = o.currency_code || o.currency || "usd"
+      const items = o.items || o.line_items || []
+      const titles = items.map((i: any) => i.title).filter(Boolean).slice(0, 3).join(", ")
+      return `<div class="account-order">
+        <div>
+          <b>#${id}</b>
+          <div class="meta">${[date, status].filter(Boolean).join(" · ")}${titles ? `<br>${titles}` : ""}</div>
+        </div>
+        <div class="amt">${total ? money(total, cur) : ""}</div>
+      </div>`
+    }).join("")
+  }
+
+  function fillProfile(customer: any, email: string) {
+    const name = [customer?.first_name, customer?.last_name].filter(Boolean).join(" ").trim()
+    document.getElementById("accountHello")!.textContent = `Welcome back, ${displayName(customer, email)}`
+    document.getElementById("infoName")!.textContent = name || "—"
+    document.getElementById("infoEmail")!.textContent = customer?.email || email
+    document.getElementById("infoPhone")!.textContent = customer?.phone || "—"
+    ;(document.getElementById("editFirst") as HTMLInputElement).value = customer?.first_name || ""
+    ;(document.getElementById("editLast") as HTMLInputElement).value = customer?.last_name || ""
+    ;(document.getElementById("editPhone") as HTMLInputElement).value = customer?.phone || ""
+  }
+
+  function showHome() {
+    guest.hidden = true
+    home.hidden = false
+    document.documentElement.classList.add("has-account")
+  }
+
+  function showGuest() {
+    guest.hidden = false
+    home.hidden = true
+    document.documentElement.classList.remove("has-account")
+  }
+
+  function renderDashboard(opts: { email: string; customer?: any; orders?: any[]; addresses?: any[] }) {
+    showHome()
+    fillProfile(opts.customer || {}, opts.email)
+    renderAddresses(opts.addresses || opts.customer?.addresses || [], opts.email)
+    renderOrders(opts.orders || [], opts.email)
+  }
+
   async function authViaApi(payload: any) {
     const res = await postJson("/api/auth/login", payload)
     if (!res.ok || !tokenOf(res.data)) throw new Error(res.data.error || "Invalid email or password")
     return { token: tokenOf(res.data), email: payload.email, customer: res.data.customer }
   }
 
-  async function authDirect(payload: any) {
-    const { baseUrl, publishableKey } = cfg()
-    const headers = { "x-publishable-api-key": publishableKey }
-    if (payload.mode === "register") {
-      const reg = await postJson(`${baseUrl}/auth/customer/emailpass/register`, { email: payload.email, password: payload.password }, headers)
-      const t = tokenOf(reg.data)
-      if (reg.ok && t) {
-        await postJson(`${baseUrl}/store/customers`, {
-          email: payload.email,
-          first_name: payload.first_name || "",
-          last_name: payload.last_name || "",
-        }, { ...headers, Authorization: `Bearer ${t}` })
-      }
-    }
-    const login = await postJson(`${baseUrl}/auth/customer/emailpass`, { email: payload.email, password: payload.password }, headers)
-    const token = tokenOf(login.data)
-    if (!login.ok || !token) throw new Error(login.data.message || login.data.error || "Invalid email or password")
-    return { token, email: payload.email, customer: null }
-  }
-
-  function signedIn(email: string) {
-    guest.hidden = true
-    home.hidden = false
-    document.getElementById("accountEmail")!.textContent = `Signed in as ${email}`
+  async function loadAccount(token: string) {
+    const res = await fetch("/api/account", {
+      headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(12000),
+    })
+    const data = await res.json().catch(() => ({}))
+    return { status: res.status, ok: res.ok, data }
   }
 
   async function boot() {
     const token = localStorage.getItem(TOKEN_KEY)
-    const email = localStorage.getItem(EMAIL_KEY)
-    if (!token || !email) return
-    signedIn(email)
+    const email = localStorage.getItem(EMAIL_KEY) || ""
+    if (!token) return
+    renderDashboard({ email, customer: cachedCustomer() })
     try {
-      const { baseUrl, publishableKey } = cfg()
-      const res = await fetch(`${baseUrl}/store/customers/me`, {
-        headers: { accept: "application/json", "x-publishable-api-key": publishableKey, Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(8000),
-      })
-      if (!res.ok) {
-        const proxy = await fetch("/api/auth/login", { headers: { Authorization: `Bearer ${token}` } })
-        if (!proxy.ok) throw new Error("expired")
+      const res = await loadAccount(token)
+      if (res.status === 401) {
+        clearSession()
+        showGuest()
+        return
+      }
+      if (res.ok && res.data?.customer) {
+        persist(token, res.data.customer.email || email, res.data.customer)
+        renderDashboard({
+          email: res.data.customer.email || email,
+          customer: res.data.customer,
+          orders: res.data.orders,
+          addresses: res.data.addresses,
+        })
       }
     } catch {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(EMAIL_KEY)
-      guest.hidden = false
-      home.hidden = true
+      /* keep local session if Medusa is unreachable */
     }
   }
 
@@ -187,6 +435,7 @@ import Footer from "../components/Footer.astro"
     const password = (document.getElementById("loginPassword") as HTMLInputElement).value
     const first_name = (document.getElementById("firstName") as HTMLInputElement).value.trim()
     const last_name = (document.getElementById("lastName") as HTMLInputElement).value.trim()
+    loginError.hidden = true
     loginError.style.display = "none"
     if (mode === "register" && password !== pass2.value) {
       showError("Passwords do not match")
@@ -194,17 +443,20 @@ import Footer from "../components/Footer.astro"
     }
     loginBtn.disabled = true
     loginBtn.textContent = "Loading..."
-    const payload = { email, password, mode, first_name, last_name }
     try {
-      let result: any
-      try {
-        result = await authDirect(payload)
-      } catch {
-        result = await authViaApi(payload)
+      const result = await authViaApi({ email, password, mode, first_name, last_name })
+      persist(result.token, result.email, result.customer || { email, first_name, last_name })
+      renderDashboard({ email: result.email, customer: result.customer || { email, first_name, last_name } })
+      const extra = await loadAccount(result.token).catch(() => null)
+      if (extra?.ok && extra.data?.customer) {
+        persist(result.token, extra.data.customer.email || result.email, extra.data.customer)
+        renderDashboard({
+          email: extra.data.customer.email || result.email,
+          customer: extra.data.customer,
+          orders: extra.data.orders,
+          addresses: extra.data.addresses,
+        })
       }
-      localStorage.setItem(TOKEN_KEY, result.token)
-      localStorage.setItem(EMAIL_KEY, result.email)
-      signedIn(result.email)
     } catch (err: any) {
       showError(err.message || "Could not sign in. Check your email and password.")
     }
@@ -213,9 +465,50 @@ import Footer from "../components/Footer.astro"
   }
 
   document.getElementById("logoutBtn")!.onclick = () => {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(EMAIL_KEY)
+    clearSession()
     location.href = "/account"
+  }
+
+  const profileForm = document.getElementById("profileForm") as HTMLFormElement
+  const editBtn = document.getElementById("editProfileBtn") as HTMLButtonElement
+  editBtn.onclick = () => {
+    profileForm.hidden = false
+    editBtn.hidden = true
+  }
+  document.getElementById("profileCancel")!.onclick = () => {
+    profileForm.hidden = true
+    editBtn.hidden = false
+  }
+  profileForm.onsubmit = async (e) => {
+    e.preventDefault()
+    const token = localStorage.getItem(TOKEN_KEY)
+    const err = document.getElementById("profileError")!
+    err.hidden = true
+    if (!token) return
+    const btn = document.getElementById("profileSave") as HTMLButtonElement
+    btn.disabled = true
+    try {
+      const res = await postJson("/api/account", {
+        first_name: (document.getElementById("editFirst") as HTMLInputElement).value.trim(),
+        last_name: (document.getElementById("editLast") as HTMLInputElement).value.trim(),
+        phone: (document.getElementById("editPhone") as HTMLInputElement).value.trim(),
+      }, { Authorization: `Bearer ${token}` })
+      if (res.status === 401) {
+        clearSession()
+        location.href = "/account"
+        return
+      }
+      if (!res.ok) throw new Error(res.data.error || "Could not save")
+      const email = localStorage.getItem(EMAIL_KEY) || res.data.customer?.email || ""
+      persist(token, email, res.data.customer)
+      fillProfile(res.data.customer, email)
+      profileForm.hidden = true
+      editBtn.hidden = false
+    } catch (ex: any) {
+      err.hidden = false
+      err.textContent = ex.message || "Could not save profile"
+    }
+    btn.disabled = false
   }
 
   boot()

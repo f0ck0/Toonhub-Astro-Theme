@@ -4,6 +4,7 @@ import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
 import CollectionCard from "../components/CollectionCard.astro"
+import ReviewMedals from "../components/ReviewMedals.astro"
 import { getProducts, getAllCategories, productImageUrl } from "../lib/medusa"
 import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
 
@@ -92,10 +93,7 @@ const moreCols = shopByList.slice(18)
       </div>
     </div>
 
-    <div class="trust-strip" data-hydrate-reviews aria-live="polite">
-      <div class="big-stars" data-review-stars></div>
-      <div class="count" data-review-count></div>
-    </div>
+    <ReviewMedals />
 
     <section class="page-width" style="padding:48px 0 8px;" data-slider>
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:24px;">

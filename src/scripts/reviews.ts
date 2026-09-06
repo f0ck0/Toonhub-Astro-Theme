@@ -78,18 +78,60 @@ async function fetchReviews(productId?: string): Promise<ReviewPayload> {
   }
 }
 
-function fillTrust(count: number, average: number) {
+function medalSvg(center: string, kind: "verified" | "month" | "shop") {
+  const accent = "#B5C771"
+  const jewel = kind === "shop" ? "M40 10 L46 18 L40 21 L34 18 Z" : "M40 9 L47 18.5 L40 22 L33 18.5 Z"
+  const inner = kind === "shop"
+    ? `<text x="40" y="45" text-anchor="middle" fill="${accent}" font-family="Georgia,serif" font-size="13" font-weight="700">★</text>`
+    : `<text x="40" y="46" text-anchor="middle" fill="${accent}" font-family="Georgia,serif" font-size="${String(center).length > 3 ? 11 : 14}" font-weight="700">${center}</text>`
+  return `<svg viewBox="0 0 80 80" aria-hidden="true">
+    <path d="M18 26c2-8 8-14 14-16M62 26c-2-8-8-14-14-16" stroke="${accent}" stroke-width="1.4" fill="none"/>
+    <path d="M16 32c-2 6-2 14 1 22M64 32c2 6 2 14-1 22" stroke="${accent}" stroke-width="1.4" fill="none"/>
+    <path d="M22 22c4-6 10-10 18-11M58 22c-4-6-10-10-18-11" stroke="${accent}" stroke-width="1.1" fill="none" opacity=".85"/>
+    <ellipse cx="18" cy="30" rx="3.2" ry="5" stroke="${accent}" fill="none" stroke-width="1"/>
+    <ellipse cx="62" cy="30" rx="3.2" ry="5" stroke="${accent}" fill="none" stroke-width="1"/>
+    <ellipse cx="16" cy="42" rx="3" ry="5.2" stroke="${accent}" fill="none" stroke-width="1"/>
+    <ellipse cx="64" cy="42" rx="3" ry="5.2" stroke="${accent}" fill="none" stroke-width="1"/>
+    <ellipse cx="19" cy="54" rx="2.8" ry="4.8" stroke="${accent}" fill="none" stroke-width="1"/>
+    <ellipse cx="61" cy="54" rx="2.8" ry="4.8" stroke="${accent}" fill="none" stroke-width="1"/>
+    <circle cx="40" cy="42" r="16.5" stroke="${accent}" stroke-width="1.6" fill="none"/>
+    <circle cx="40" cy="42" r="13.5" stroke="${accent}" stroke-width=".7" fill="none" opacity=".7"/>
+    <path d="${jewel}" fill="${accent}"/>
+    ${inner}
+  </svg>`
+}
+
+function monthCount(reviews: any[]) {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  return reviews.filter((r) => {
+    const d = r?.created_at || r?.createdAt || r?.updated_at
+    if (!d) return false
+    const dt = new Date(d)
+    return dt.getFullYear() === y && dt.getMonth() === m
+  }).length
+}
+
+function fillTrust(count: number, average: number, reviews: any[] = []) {
   const strip = document.querySelector("[data-hydrate-reviews]")
   if (!strip) return
-  const starsEl = strip.querySelector("[data-review-stars]")
+  const fill = strip.querySelector<HTMLElement>("[data-review-fill]")
+  const avgEl = strip.querySelector("[data-review-avg]")
   const countEl = strip.querySelector("[data-review-count]")
-  if (!count) {
-    if (starsEl) starsEl.textContent = ""
-    if (countEl) countEl.textContent = ""
-    return
-  }
-  if (starsEl && average > 0) starsEl.textContent = glyphs(average)
+  const pct = average > 0 ? Math.max(0, Math.min(100, (average / 5) * 100)) : 0
+  if (fill) fill.style.width = `${pct}%`
+  if (avgEl) avgEl.textContent = average > 0 ? average.toFixed(2).replace(/0$/, "") : ""
   if (countEl) countEl.textContent = `${count.toLocaleString()} review${count === 1 ? "" : "s"}`
+  const medals = strip.querySelectorAll("[data-medal]")
+  medals.forEach((el) => {
+    const kind = (el.getAttribute("data-medal") || "shop") as "verified" | "month" | "shop"
+    const art = el.querySelector("[data-medal-art]")
+    if (!art) return
+    if (kind === "verified") art.innerHTML = medalSvg(String(count), "verified")
+    else if (kind === "month") art.innerHTML = medalSvg(String(monthCount(reviews)), "month")
+    else art.innerHTML = medalSvg("★", "shop")
+  })
 }
 
 function fillStarSlot(el: Element, count: number, average: number) {
@@ -167,6 +209,7 @@ function fillPdpList(payload: ReviewPayload) {
 }
 
 async function hydrate() {
+  if (!document.querySelector("[data-medal-art] svg")) fillTrust(0, 0, [])
   const pdpId = document.querySelector("[data-pdp-product]")?.getAttribute("data-pdp-product") || ""
   try {
     if (pdpId) {
@@ -186,7 +229,7 @@ async function hydrate() {
 
   try {
     const store = await fetchReviews()
-    fillTrust(store.count, store.average)
+    fillTrust(store.count, store.average, store.reviews)
     fillProductCards(store.reviews)
   } catch (e) {
     console.warn("[toonhub reviews]", e)
