@@ -75,7 +75,14 @@ const options = product?.options || []
             {allImages.length > 1 && (
               <div class="thumb-row">
                 {allImages.map((img: string, idx: number) => (
-                  <img src={productImageUrl(img)} alt={`Image ${idx + 1}`} data-idx={idx} class:list={["thumb-img", idx === 0 && "is-on"]} loading="lazy" decoding="async" />
+                  <button
+                    type="button"
+                    class:list={["thumb-img", idx === 0 && "is-on"]}
+                    data-full-src={productImageUrl(img)}
+                    aria-label={`View image ${idx + 1}`}
+                  >
+                    <img src={productImageUrl(img)} alt="" loading="lazy" decoding="async" draggable="false" />
+                  </button>
                 ))}
               </div>
             )}
@@ -237,16 +244,23 @@ const options = product?.options || []
   <Footer />
 </Base>
 
-<script define:vars={{ allImages: allImages.map((i: string) => i) }}>
-  const thumbs = document.querySelectorAll<HTMLImageElement>(".thumb-img")
+<script is:inline>
+  document.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest && e.target.closest(".thumb-img")
+    if (!t || !document.getElementById("mainImage")) return
+    var src = t.getAttribute("data-full-src")
+    if (!src) {
+      var inner = t.tagName === "IMG" ? t : t.querySelector("img")
+      src = inner && (inner.currentSrc || inner.src)
+    }
+    var main = document.getElementById("mainImage")
+    if (main && src) main.src = src
+    document.querySelectorAll(".thumb-img").forEach(function (x) { x.classList.remove("is-on") })
+    t.classList.add("is-on")
+  }, true)
+</script>
+<script>
   const mainImg = document.getElementById("mainImage") as HTMLImageElement | null
-  thumbs.forEach((t) => {
-    t.addEventListener("click", () => {
-      if (mainImg) mainImg.src = t.src
-      thumbs.forEach((x) => x.classList.remove("is-on"))
-      t.classList.add("is-on")
-    })
-  })
   const lb = document.getElementById("lightbox")
   const lbImg = document.getElementById("lightboxImg") as HTMLImageElement | null
   mainImg?.addEventListener("click", () => {

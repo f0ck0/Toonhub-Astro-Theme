@@ -65,6 +65,13 @@ export const GET: APIRoute = async ({ url }) => {
         shipping_options = so?.shipping_options || []
       } catch { /* none */ }
     }
+    shipping_options = (shipping_options || []).filter((s: any) => {
+      const n = Number(s?.amount ?? s?.calculated_price?.calculated_amount ?? 0)
+      if (!n) return true
+      if (n > 0 && n < 1) return false
+      if (n > 0 && n <= 10) return false
+      return true
+    })
     let payment_providers: any[] = []
     try {
       const regionId = cart.region_id || cart.region?.id
