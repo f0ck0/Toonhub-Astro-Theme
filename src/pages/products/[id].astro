@@ -125,6 +125,14 @@ const options = product?.options || []
                 id="buyNowBtn"
                 class="btn btn-primary"
                 type="button"
+                data-action="buynow"
+                data-variant-id={variantId}
+                data-title={product.title}
+                data-thumbnail={productImageUrl(allImages[0] || "")}
+                data-handle={product.handle}
+                data-price={usdPrice}
+                data-vtitle={variants[0]?.title || ""}
+                data-qty="1"
               >Buy now — checkout</button>
               <button
                 id="addToCartBtn"
@@ -217,7 +225,7 @@ const options = product?.options || []
           <div class="pdp-sticky-title">{product.title}</div>
           <div class="pdp-sticky-price"><span class="pc-from">From</span>{saleFmt}</div>
         </div>
-        <button type="button" class="btn btn-primary" id="stickyAdd">Buy now</button>
+        <button type="button" class="btn btn-primary" id="stickyAdd" data-action="buynow">Buy now</button>
       </div>
     </main>
   ) : (
@@ -257,31 +265,14 @@ const options = product?.options || []
       addBtn.dataset.variantId = btn.dataset.variant
       addBtn.dataset.vtitle = btn.dataset.vtitle
     }
+    const buyBtn = document.getElementById("buyNowBtn") as HTMLButtonElement | null
+    if (buyBtn) {
+      buyBtn.dataset.variantId = btn.dataset.variant
+      buyBtn.dataset.vtitle = btn.dataset.vtitle
+    }
   })
 
-  function pdpPayload() {
-    const addBtn = document.getElementById("addToCartBtn") as HTMLButtonElement | null
-    return {
-      variantId: addBtn?.dataset.variantId || "",
-      title: addBtn?.dataset.title || "",
-      thumbnail: addBtn?.dataset.thumbnail,
-      handle: addBtn?.dataset.handle,
-      unit_price: Number(addBtn?.dataset.price || 0),
-      variant_title: addBtn?.dataset.vtitle,
-      quantity: Number(addBtn?.dataset.qty || 1),
-    }
-  }
-  document.getElementById("buyNowBtn")?.addEventListener("click", async () => {
-    const wait = () => new Promise<void>((r) => {
-      const t = () => window.toonhub ? r() : setTimeout(t, 20)
-      t()
-    })
-    await wait()
-    await window.toonhub.addToCart(pdpPayload(), { goCheckout: true })
-  })
-  document.getElementById("stickyAdd")?.addEventListener("click", () => {
-    document.getElementById("buyNowBtn")?.click()
-  })
+
 
   document.getElementById("pdpQtyRow")?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-pdp-qty]")
@@ -291,6 +282,8 @@ const options = product?.options || []
     const n = Math.max(1, Number(span.textContent || 1) + Number(btn.dataset.pdpQty))
     span.textContent = String(n)
     if (addBtn) addBtn.dataset.qty = String(n)
+    const buyBtn = document.getElementById("buyNowBtn") as HTMLButtonElement | null
+    if (buyBtn) buyBtn.dataset.qty = String(n)
   })
 
   const stars = document.querySelectorAll<HTMLElement>("[data-rating]")

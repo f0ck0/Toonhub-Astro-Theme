@@ -274,9 +274,15 @@ function addLocal(payload: AddPayload) {
 let adding = false
 
 async function addToCart(payload: AddPayload, opts?: { goCheckout?: boolean }) {
+  const qty = payload.quantity || 1
+  if (opts?.goCheckout) {
+    addLocal({ ...payload, quantity: qty })
+    renderCart()
+    window.location.assign("/checkout")
+    return
+  }
   if (adding) return
   adding = true
-  const qty = payload.quantity || 1
   try {
     try {
       const cartId = await ensureCartId()
@@ -288,10 +294,6 @@ async function addToCart(payload: AddPayload, opts?: { goCheckout?: boolean }) {
         })
         if (res.ok) {
           await refresh()
-          if (opts?.goCheckout) {
-            window.location.href = "/checkout"
-            return
-          }
           openCart(true)
           return
         }
@@ -301,10 +303,6 @@ async function addToCart(payload: AddPayload, opts?: { goCheckout?: boolean }) {
     }
     addLocal(payload)
     renderCart()
-    if (opts?.goCheckout) {
-      window.location.href = "/checkout"
-      return
-    }
     openCart(true)
   } finally {
     adding = false

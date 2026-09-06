@@ -58,6 +58,42 @@ const jsonLd = {
   <script is:inline define:vars={{ baseUrl: medusa.baseUrl, publishableKey: medusa.publishableKey }}>
     window.toonhubMedusa = { baseUrl: baseUrl, publishableKey: publishableKey }
   </script>
+  <script is:inline>
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest && e.target.closest("[data-action='buynow']")
+      if (!t) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation()
+      var src = t
+      if (t.id === "qvBuy") src = document.getElementById("qvAdd") || t
+      else if (!t.getAttribute("data-title")) src = document.getElementById("addToCartBtn") || document.getElementById("buyNowBtn") || t
+      var variantId = src.getAttribute("data-variant-id") || ""
+      var title = src.getAttribute("data-title") || "Figure"
+      var qty = parseInt(src.getAttribute("data-qty") || "1", 10) || 1
+      var item = {
+        id: (variantId || "item") + "-" + Date.now(),
+        title: title,
+        thumbnail: src.getAttribute("data-thumbnail") || "",
+        variant_id: variantId,
+        quantity: qty,
+        unit_price: Number(src.getAttribute("data-price") || 0),
+        handle: src.getAttribute("data-handle") || "",
+        variant_title: src.getAttribute("data-vtitle") || "",
+      }
+      try {
+        var local = JSON.parse(localStorage.getItem("toonhub_local_cart") || "[]")
+        if (!Array.isArray(local)) local = []
+        var existing = local.find(function (i) { return i.variant_id && i.variant_id === variantId })
+        if (existing) existing.quantity += qty
+        else local.push(item)
+        localStorage.setItem("toonhub_local_cart", JSON.stringify(local))
+      } catch (err) {}
+      t.textContent = "Going to checkout…"
+      if (t.disabled !== undefined) t.disabled = true
+      window.location.href = "/checkout"
+    }, true)
+  </script>
   <script>
     import "../scripts/storefront"
     import "../scripts/catalog"

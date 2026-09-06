@@ -14,7 +14,21 @@ export const prerender = false
   <meta name="theme-color" content="#000000" />
   <title>Checkout — {SITE.name}</title>
   <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
-  <style>html,body{background:#000!important;color:#fff;color-scheme:dark}</style>
+  <link rel="stylesheet" href="/checkout.css?v=mobile4" />
+  <style>
+    html,body{background:#000!important;color:#fff;color-scheme:dark}
+    .co-wrap{display:flex!important;flex-direction:column!important;width:100%;max-width:100%;overflow-x:clip}
+    .co-aside{order:-1;width:100%;min-width:0;border-left:0;padding:0}
+    .co-main{width:100%;min-width:0;max-width:none;margin:0;padding:20px 1.35rem 120px}
+    .co-row,.co-row.two{display:grid!important;grid-template-columns:1fr!important;min-width:0}
+    .co-field{width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;min-height:48px}
+    @media (min-width: 1100px) {
+      .co-wrap{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(320px,.9fr)!important;flex-direction:unset}
+      .co-aside{order:0;padding:36px 8% 80px;border-left:1px solid #2a2a2a}
+      .co-main{max-width:720px;margin-left:auto;padding:36px 8% 80px}
+      .co-row.two{grid-template-columns:1fr 1fr!important}
+    }
+  </style>
 </head>
 <body class="co-body" style="background:#000;color:#fff">
   <div class="co-wrap">
@@ -66,11 +80,13 @@ export const prerender = false
         <div class="co-row" id="aptRow" hidden>
           <input class="co-field" name="apartment" placeholder="Apartment, suite, etc." autocomplete="address-line2" />
         </div>
-        <div class="co-row two">
+        <div class="co-row">
           <input class="co-field" name="city" placeholder="City" required autocomplete="address-level2" />
+        </div>
+        <div class="co-row">
           <input class="co-field" name="postal" placeholder="Postal code" required autocomplete="postal-code" />
         </div>
-        <div class="co-row two" id="regionPhoneRow">
+        <div class="co-row" id="regionPhoneRow">
           <select class="co-field" name="province" id="provinceSelect" autocomplete="address-level1">
             <option value="">Province / state</option>
           </select>
