@@ -109,16 +109,22 @@ export const prerender = false
     </main>
 
     <aside class="co-aside">
-      <div id="coLines"></div>
-      <div class="co-discount">
-        <input class="co-field" id="discountCode" placeholder="Discount code" />
-        <button type="button" id="discountBtn">Apply</button>
-      </div>
-      <div class="co-totals">
-        <div class="co-tot-row"><span>Subtotal</span><span id="coSub">—</span></div>
-        <div class="co-tot-row"><span>Shipping</span><span id="coShip">Free</span></div>
-        <div class="co-tot-row" id="coDiscRow" hidden><span>Buy 1 get 2nd 50% off</span><span id="coDisc">—</span></div>
-        <div class="co-tot-row grand"><span>Total</span><span id="coTotal">—</span></div>
+      <button type="button" class="co-fold-toggle" id="foldToggle" aria-expanded="false">
+        <span>Order summary</span>
+        <b id="coTotalMini">—</b>
+      </button>
+      <div class="co-aside-body" id="asideBody">
+        <div id="coLines"></div>
+        <div class="co-discount">
+          <input class="co-field" id="discountCode" placeholder="Discount code" />
+          <button type="button" id="discountBtn">Apply</button>
+        </div>
+        <div class="co-totals">
+          <div class="co-tot-row"><span>Subtotal</span><span id="coSub">—</span></div>
+          <div class="co-tot-row"><span>Shipping</span><span id="coShip">Free</span></div>
+          <div class="co-tot-row" id="coDiscRow" hidden><span>Buy 1 get 2nd 50% off</span><span id="coDisc">—</span></div>
+          <div class="co-tot-row grand"><span>Total</span><span id="coTotal">—</span></div>
+        </div>
       </div>
     </aside>
   </div>
@@ -241,7 +247,10 @@ export const prerender = false
       const row = document.getElementById("coDiscRow")!
       row.hidden = !disc
       if (disc) document.getElementById("coDisc")!.textContent = `−${fmt(disc, currency)}`
-      document.getElementById("coTotal")!.textContent = fmt(cart?.total ?? Math.max(0, sum - disc), currency)
+      const totalTxt = fmt(cart?.total ?? Math.max(0, sum - disc), currency)
+      document.getElementById("coTotal")!.textContent = totalTxt
+      const mini = document.getElementById("coTotalMini")
+      if (mini) mini.textContent = totalTxt
     }
 
     function renderShipping() {
@@ -493,6 +502,11 @@ export const prerender = false
       await payFlow(selectedPay)
     })
 
+    document.getElementById("foldToggle")?.addEventListener("click", () => {
+      const aside = document.querySelector(".co-aside")
+      aside?.classList.toggle("is-open")
+      document.getElementById("foldToggle")?.setAttribute("aria-expanded", aside?.classList.contains("is-open") ? "true" : "false")
+    })
     countrySelect.addEventListener("change", () => fillProvinces(countrySelect.value))
     document.getElementById("editAddr")?.addEventListener("click", () => setCompact(false))
     document.getElementById("toggleApt")?.addEventListener("click", () => {

@@ -4,6 +4,7 @@ import Header from "../../components/Header.astro"
 import Footer from "../../components/Footer.astro"
 import ProductCard from "../../components/ProductCard.astro"
 import Stars from "../../components/Stars.astro"
+import TrustIcons from "../../components/TrustIcons.astro"
 import { getProduct, getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
 import { salePrice, formatCurrency, currencyFromCookies } from "../../lib/currency"
 import { productReviews, SITE } from "../../lib/site"
@@ -64,11 +65,11 @@ const options = product?.options || []
         </nav>
       </section>
 
-      <section class="page-width" style="padding:8px 0 40px;">
+      <section class="page-width pdp-top" style="padding:8px 0 40px;">
         <div class="pdp-grid">
-          <div>
-            <div style="position:relative;background:#111;overflow:hidden;border-radius:var(--radius-card);">
-              <img id="mainImage" src={productImageUrl(allImages[0] || "")} alt={product.title} decoding="async" width="1000" height="1000" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:zoom-in;" />
+          <div class="pdp-hero">
+            <div class="pdp-media">
+              <img id="mainImage" src={productImageUrl(allImages[0] || "")} alt={product.title} decoding="async" width="1000" height="1000" />
               <span class="sale-badge">Sale</span>
             </div>
             {allImages.length > 1 && (
@@ -80,13 +81,13 @@ const options = product?.options || []
             )}
           </div>
 
-          <div>
+          <div class="pdp-info">
             <Stars rating={rating} count={count} size="0.95rem" productId={product.id} />
-            <h1 class="pdp-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.02em;">{product.title}</h1>
-            {product.subtitle && <p style="font-size:0.95rem;color:#999;margin-top:8px;">{product.subtitle}</p>}
+            <h1 class="pdp-title">{product.title}</h1>
+            {product.subtitle && <p class="pdp-sub">{product.subtitle}</p>}
 
             <div class="limited-banner">
-              <strong>Limited Offer</strong> 🎁 Buy 1 Get 2ND 50% OFF. Add 2 items and the deal applies automatically.
+              <strong>Limited Offer</strong> Buy 1 get 2nd 50% off. Add 2 items and the deal applies automatically.
             </div>
 
             <div class="pc-price-row" style="margin-top:16px;">
@@ -110,8 +111,8 @@ const options = product?.options || []
               </div>
             )}
 
-            <div style="margin-top:22px;display:flex;align-items:center;gap:12px;">
-              <span style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Quantity</span>
+            <div class="pdp-qty">
+              <span class="pdp-label">Quantity</span>
               <div class="qty-row" id="pdpQtyRow">
                 <button type="button" data-pdp-qty="-1" aria-label="Decrease">−</button>
                 <span id="pdpQty">1</span>
@@ -119,12 +120,11 @@ const options = product?.options || []
               </div>
             </div>
 
-            <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
+            <div class="pdp-buy">
               <button
                 id="buyNowBtn"
                 class="btn btn-primary"
                 type="button"
-                style="flex:1;"
               >Buy now — checkout</button>
               <button
                 id="addToCartBtn"
@@ -138,7 +138,6 @@ const options = product?.options || []
                 data-price={usdPrice}
                 data-vtitle={variants[0]?.title || ""}
                 data-qty="1"
-                style="flex:1;"
               >Add to cart</button>
               <button
                 class="pdp-wish"
@@ -152,17 +151,12 @@ const options = product?.options || []
                 aria-label="Add to wishlist"
               >♡</button>
             </div>
-            <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px;font-size:0.85rem;color:#999;">
-              <div>🚚 Worldwide shipping · Trackable delivery</div>
-              <div>↩️ 30-day returns</div>
-              <div>🔒 Secure payment · SSL encrypted</div>
-              <div>🎁 Buy 1 get 2nd 50% off</div>
-            </div>
+            <TrustIcons gift list />
           </div>
         </div>
       </section>
 
-      <section class="page-width" style="padding:8px 0 32px;">
+      <section class="page-width pdp-details" style="padding:8px 0 32px;">
         <div class="pdp-accordion">
           <details open>
             <summary>Product Details</summary>

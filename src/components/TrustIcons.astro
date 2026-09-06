@@ -1,7 +1,7 @@
 ---
-const { gift = false } = Astro.props as { gift?: boolean }
+const { gift = false, list = false } = Astro.props as { gift?: boolean; list?: boolean }
 ---
-<div class:list={["trust-icons", gift && "four"]}>
+<div class:list={["trust-icons", gift && "four", list && "list"]}>
   <span>
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 7h12v9H3z"></path>
@@ -71,7 +71,30 @@ const { gift = false } = Astro.props as { gift?: boolean }
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .trust-icons.list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .trust-icons.list span {
+    flex-direction: row;
+    justify-content: flex-start;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    gap: 10px;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    color: #bbb;
+  }
+  .trust-icons.list svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
   @media (max-width: 600px) {
-    .trust-icons:not(.four) { grid-template-columns: 1fr; }
+    .trust-icons:not(.four):not(.list) { grid-template-columns: 1fr; }
   }
 </style>
