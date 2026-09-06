@@ -78,42 +78,14 @@ async function fetchReviews(productId?: string): Promise<ReviewPayload> {
   }
 }
 
-function monthCount(reviews: any[]) {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  return reviews.filter((r) => {
-    const d = r?.created_at || r?.createdAt || r?.updated_at
-    if (!d) return false
-    const dt = new Date(d)
-    return dt.getFullYear() === y && dt.getMonth() === m
-  }).length
-}
-
-function setMedalNum(el: Element, value: string) {
-  const num = el.querySelector("[data-medal-num]")
-  if (!num) return
-  num.textContent = value
-  const n = value.length
-  num.setAttribute("font-size", n >= 5 ? "10" : n === 4 ? "11.5" : n === 3 ? "13" : "15")
-}
-
-function fillTrust(count: number, average: number, reviews: any[] = []) {
+function fillTrust(count: number, average: number) {
   const strip = document.querySelector("[data-hydrate-reviews]")
   if (!strip) return
   const fill = strip.querySelector<HTMLElement>("[data-review-fill]")
-  const avgEl = strip.querySelector("[data-review-avg]")
   const countEl = strip.querySelector("[data-review-count]")
   const pct = average > 0 ? Math.max(0, Math.min(100, (average / 5) * 100)) : 0
   if (fill) fill.style.width = `${pct}%`
-  if (avgEl) avgEl.textContent = average > 0 ? average.toFixed(2).replace(/0$/, "") : ""
   if (countEl) countEl.textContent = `${count.toLocaleString()} review${count === 1 ? "" : "s"}`
-  strip.querySelectorAll("[data-medal]").forEach((el) => {
-    const kind = el.getAttribute("data-medal")
-    if (kind === "verified") setMedalNum(el, String(count))
-    else if (kind === "month") setMedalNum(el, String(monthCount(reviews)))
-    else setMedalNum(el, "✓")
-  })
 }
 
 function fillStarSlot(el: Element, count: number, average: number) {
@@ -191,7 +163,6 @@ function fillPdpList(payload: ReviewPayload) {
 }
 
 async function hydrate() {
-  if (!document.querySelector("[data-medal-art] svg")) fillTrust(0, 0, [])
   const pdpId = document.querySelector("[data-pdp-product]")?.getAttribute("data-pdp-product") || ""
   try {
     if (pdpId) {
@@ -211,7 +182,7 @@ async function hydrate() {
 
   try {
     const store = await fetchReviews()
-    fillTrust(store.count, store.average, store.reviews)
+    fillTrust(store.count, store.average)
     fillProductCards(store.reviews)
   } catch (e) {
     console.warn("[toonhub reviews]", e)
