@@ -6,14 +6,17 @@ import TrustIcons from "../components/TrustIcons.astro"
 export const prerender = false
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#000;color-scheme:dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#000000" />
   <title>Checkout — {SITE.name}</title>
   <link rel="stylesheet" href="/fonts/fonts.css" />
+  <style>html,body{background:#000!important;color:#fff;color-scheme:dark}</style>
 </head>
-<body class="co-body">
+<body class="co-body" style="background:#000;color:#fff">
   <div class="co-wrap">
     <main class="co-main">
       <a href="/" class="co-logo">{SITE.name}</a>
@@ -46,7 +49,12 @@ export const prerender = false
         <div class="co-row">
           <select class="co-field" name="country" id="countrySelect" required autocomplete="country-name">
             {COUNTRIES.map((c) => <option value={c.code}>{c.name}</option>)}
+            <option value="OTHER">Other / not listed</option>
           </select>
+        </div>
+        <div class="co-row" id="countryOtherRow" hidden>
+          <input class="co-field" name="countryOther" id="countryOther" placeholder="Country name" autocomplete="country-name" />
+          <p class="co-ship-line" style="margin:4px 0 0;">We’ll use this to ship to you. If it isn’t a standard country code, we’ll email to confirm.</p>
         </div>
         <div class="co-row">
           <input class="co-field" name="name" id="coName" placeholder="Full name" required autocomplete="name" />
@@ -116,7 +124,7 @@ export const prerender = false
   </div>
 
   <script>
-    import { provincesOf, countryFromCurrency, countryFromTimezone, COUNTRIES } from "../lib/regions"
+    import { provincesOf, countryFromCurrency, countryFromTimezone, COUNTRIES, countryName } from "../lib/regions"
 
     const form = document.getElementById("coForm") as HTMLFormElement
     const countrySelect = document.getElementById("countrySelect") as HTMLSelectElement
@@ -152,9 +160,19 @@ export const prerender = false
     }
 
     const provinceText = document.getElementById("provinceText") as HTMLInputElement
+    const countryOther = document.getElementById("countryOther") as HTMLInputElement
+    const countryOtherRow = document.getElementById("countryOtherRow") as HTMLElement
     const COUNTRY_SET = new Set(COUNTRIES.map((c) => c.code))
 
+    function syncCountryExtra() {
+      const other = countrySelect.value === "OTHER"
+      countryOtherRow.hidden = !other
+      countryOther.required = other
+      if (!other) countryOther.value = ""
+    }
+
     function fillProvinces(country: string, selected = "") {
+      syncCountryExtra()
       const list = provincesOf(country)
       if (!list.length) {
         provinceSelect.hidden = true
@@ -314,6 +332,7 @@ export const prerender = false
         city: String(fd.get("city") || ""),
         postal: String(fd.get("postal") || ""),
         country: String(fd.get("country") || "US"),
+        countryOther: String(fd.get("countryOther") || "").trim(),
         province: String(fd.get("province") || fd.get("provinceText") || ""),
         phone: String(fd.get("phone") || ""),
         newsletter: true,
@@ -337,7 +356,8 @@ export const prerender = false
       if (on) {
         const p = formPayload()
         document.getElementById("savedName")!.textContent = p.name
-        document.getElementById("savedLine")!.textContent = [p.address, p.city, p.postal, p.country].filter(Boolean).join(", ")
+        const countryLabel = p.country === "OTHER" ? (p.countryOther || "Other") : countryName(p.country)
+        document.getElementById("savedLine")!.textContent = [p.address, p.city, p.postal, countryLabel].filter(Boolean).join(", ")
         document.getElementById("savedMail")!.textContent = p.email
       }
     }
@@ -363,8 +383,15 @@ export const prerender = false
       }
       const guessed = countryFromTimezone() || countryFromCurrency(cookieCurrency())
       const country = saved.country || guessed
-      countrySelect.value = COUNTRY_SET.has(country) ? country : "US"
+      if (country === "OTHER" || (country && !COUNTRY_SET.has(country))) {
+        countrySelect.value = "OTHER"
+      } else {
+        countrySelect.value = COUNTRY_SET.has(country) ? country : "US"
+      }
       fillProvinces(countrySelect.value, saved.province || "")
+      if (countrySelect.value === "OTHER") {
+        countryOther.value = saved.countryOther || (!COUNTRY_SET.has(country) ? String(country) : "")
+      }
       const needsProv = provincesOf(countrySelect.value).length > 0
       const complete = Boolean(saved.email && saved.name && saved.address && saved.city && saved.postal && (!needsProv || saved.province))
       setCompact(complete)
@@ -453,6 +480,11 @@ export const prerender = false
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault()
+      if (countrySelect.value === "OTHER" && !countryOther.value.trim()) {
+        showError("Please enter your country name.")
+        countryOther.focus()
+        return
+      }
       if (provinceSelect.required && !provinceSelect.value) {
         showError("Please select your province / state.")
         provinceSelect.focus()

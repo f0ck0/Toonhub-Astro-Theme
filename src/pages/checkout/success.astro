@@ -7,14 +7,17 @@ const order = Astro.url.searchParams.get("order") || ""
 const email = Astro.url.searchParams.get("email") || ""
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#000;color-scheme:dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#000000" />
   <title>Thank you — {SITE.name}</title>
   <link rel="stylesheet" href="/fonts/fonts.css" />
+  <style>html,body{background:#000!important;color:#fff;color-scheme:dark}</style>
 </head>
-<body class="co-body">
+<body class="co-body" style="background:#000;color:#fff">
   <main class="co-main" style="margin:0 auto;padding-top:64px;text-align:center;max-width:560px;">
     <a href="/" class="co-logo">{SITE.name}</a>
     <h1 class="co-h" style="margin-top:36px;font-size:1.6rem;">Thank you for your order</h1>

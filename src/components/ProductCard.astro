@@ -1,6 +1,6 @@
 ---
 import { getProductImage, getProductUsdPrice, productImageUrl } from "../lib/medusa"
-import { salePrice, formatPriceFrom, formatCurrency, currencyFromCookies } from "../lib/currency"
+import { salePrice, formatCurrency, currencyFromCookies } from "../lib/currency"
 import { productReviews } from "../lib/site"
 import Stars from "./Stars.astro"
 
@@ -10,7 +10,7 @@ const hoverRaw = (product?.images || []).map((i: any) => i.url || i).find((u: st
 const usdPrice = getProductUsdPrice(product) || 0
 const currency = currencyFromCookies(Astro.cookies)
 const { original, sale } = salePrice(usdPrice, currency)
-const priceFrom = formatPriceFrom(sale, currency)
+const saleFmt = formatCurrency(sale, currency)
 const originalFmt = formatCurrency(original, currency)
 const { rating, count } = productReviews(product)
 const variants = (product?.variants || []).map((v: any) => ({ id: v.id, title: v.title || v.options?.map((o: any) => o.value).join(" / ") || "Default" }))
@@ -59,7 +59,7 @@ const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
     <div class="pc-title">{product.title}</div>
     <Stars rating={rating} count={count} productId={product?.id || ""} />
     <div class="pc-price-row">
-      <span class="pc-price product-card-price">{priceFrom}</span>
+      <span class="pc-price product-card-price"><span class="pc-from">From</span>{saleFmt}</span>
       <span class="pc-compare" data-price-strike>{originalFmt}</span>
     </div>
   </a>

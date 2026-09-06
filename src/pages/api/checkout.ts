@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro"
 import { getStoreSdk } from "../../lib/medusa-config"
 import { medusaFetch, json, medusaEnv, providerLabel } from "../../lib/server-medusa"
+import { resolveCountryCode } from "../../lib/regions"
 
 export const prerender = false
 
@@ -91,14 +92,17 @@ export const POST: APIRoute = async ({ request }) => {
       const name = String(body.name || "").trim()
       const [first_name, ...rest] = name.split(" ")
       const last_name = rest.join(" ") || first_name || "Customer"
+      const otherName = String(body.countryOther || "").trim()
+      const country_code = resolveCountryCode(body.country, otherName)
+      const aptParts = [otherName && String(body.country || "").toUpperCase() === "OTHER" ? `Country: ${otherName}` : "", body.apartment || ""].filter(Boolean)
       const address = {
         first_name,
         last_name,
         address_1: body.address,
-        address_2: body.apartment || "",
+        address_2: aptParts.join(" · "),
         city: body.city,
         postal_code: body.postal,
-        country_code: String(body.country || "us").toLowerCase(),
+        country_code,
         province: body.province || "",
         phone: body.phone || "",
       }
@@ -107,7 +111,11 @@ export const POST: APIRoute = async ({ request }) => {
         shipping_address: address,
         billing_address: address,
       }
-      if (body.newsletter) payload.metadata = { newsletter: true }
+      payload.metadata = {
+        ...(body.newsletter ? { newsletter: true } : {}),
+        ...(otherName ? { country_other: otherName } : {}),
+      }
+      if (!Object.keys(payload.metadata).length) delete payload.metadata
       let cart
       try {
         const out = await getStoreSdk().store.cart.update(cartId, payload)

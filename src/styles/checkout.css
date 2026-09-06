@@ -10,13 +10,22 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; }
+html, body {
+  margin: 0;
+  background: #000 !important;
+  color: #fff;
+  color-scheme: dark;
+}
 body.co-body {
   font-family: "Quattrocento Sans", "Helvetica Neue", Arial, sans-serif;
   color: var(--co-text);
-  background: var(--co-bg);
+  background: #000 !important;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+input, select, textarea {
+  color-scheme: dark;
+  font-family: "Quattrocento Sans", "Helvetica Neue", Arial, sans-serif;
 }
 .co-wrap {
   display: grid;
@@ -67,10 +76,11 @@ body.co-body {
 .co-offer strong { color: #fff; }
 .co-h {
   font-family: "Asul", Georgia, serif;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  text-transform: none;
   margin: 22px 0 12px;
 }
 .co-saved {
@@ -219,11 +229,41 @@ body.co-body {
   justify-content: center;
   padding: 0 5px;
 }
-.co-title { font-size: 0.82rem; font-weight: 700; flex: 1; text-transform: uppercase; letter-spacing: 0.03em; }
-.co-price { font-size: 0.88rem; font-weight: 700; }
+.co-title {
+  font-family: "Asul", Georgia, serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-style: normal;
+  flex: 1;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+.co-price {
+  font-family: "Quattrocento Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 400;
+  font-style: italic;
+}
 .co-totals { border-top: 1px solid var(--co-border); padding-top: 14px; margin-top: 8px; }
-.co-tot-row { display: flex; justify-content: space-between; font-size: 0.88rem; margin: 8px 0; color: #aaa; }
-.co-tot-row.grand { font-size: 1.15rem; font-weight: 700; color: #fff; padding-top: 10px; border-top: 1px solid var(--co-border); margin-top: 10px; }
+.co-tot-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 8px 0;
+  color: #aaa;
+}
+.co-tot-row.grand {
+  font-family: "Asul", Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-style: normal;
+  color: #fff;
+  padding-top: 10px;
+  border-top: 1px solid var(--co-border);
+  margin-top: 10px;
+}
 .co-error { color: #e53935; font-size: 0.85rem; margin: 10px 0; }
 .co-discount { display: flex; gap: 8px; margin: 8px 0 18px; }
 .co-discount .co-field { flex: 1; }

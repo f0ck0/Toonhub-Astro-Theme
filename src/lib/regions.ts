@@ -39,6 +39,80 @@ export const COUNTRIES: { code: string; name: string }[] = [
   { code: "CL", name: "Chile" },
   { code: "CO", name: "Colombia" },
   { code: "ZA", name: "South Africa" },
+  { code: "FI", name: "Finland" },
+  { code: "CZ", name: "Czechia" },
+  { code: "HU", name: "Hungary" },
+  { code: "GR", name: "Greece" },
+  { code: "RO", name: "Romania" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "HR", name: "Croatia" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SI", name: "Slovenia" },
+  { code: "LT", name: "Lithuania" },
+  { code: "LV", name: "Latvia" },
+  { code: "EE", name: "Estonia" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "IS", name: "Iceland" },
+  { code: "MT", name: "Malta" },
+  { code: "CY", name: "Cyprus" },
+  { code: "UA", name: "Ukraine" },
+  { code: "RS", name: "Serbia" },
+  { code: "BA", name: "Bosnia and Herzegovina" },
+  { code: "MK", name: "North Macedonia" },
+  { code: "AL", name: "Albania" },
+  { code: "MD", name: "Moldova" },
+  { code: "GE", name: "Georgia" },
+  { code: "AM", name: "Armenia" },
+  { code: "AZ", name: "Azerbaijan" },
+  { code: "TR", name: "Turkey" },
+  { code: "IL", name: "Israel" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "QA", name: "Qatar" },
+  { code: "KW", name: "Kuwait" },
+  { code: "BH", name: "Bahrain" },
+  { code: "OM", name: "Oman" },
+  { code: "JO", name: "Jordan" },
+  { code: "LB", name: "Lebanon" },
+  { code: "EG", name: "Egypt" },
+  { code: "MA", name: "Morocco" },
+  { code: "TN", name: "Tunisia" },
+  { code: "DZ", name: "Algeria" },
+  { code: "NG", name: "Nigeria" },
+  { code: "KE", name: "Kenya" },
+  { code: "GH", name: "Ghana" },
+  { code: "TZ", name: "Tanzania" },
+  { code: "UG", name: "Uganda" },
+  { code: "ET", name: "Ethiopia" },
+  { code: "PK", name: "Pakistan" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "NP", name: "Nepal" },
+  { code: "KH", name: "Cambodia" },
+  { code: "LA", name: "Laos" },
+  { code: "MM", name: "Myanmar" },
+  { code: "MN", name: "Mongolia" },
+  { code: "KZ", name: "Kazakhstan" },
+  { code: "UZ", name: "Uzbekistan" },
+  { code: "PE", name: "Peru" },
+  { code: "UY", name: "Uruguay" },
+  { code: "EC", name: "Ecuador" },
+  { code: "BO", name: "Bolivia" },
+  { code: "PY", name: "Paraguay" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "PA", name: "Panama" },
+  { code: "GT", name: "Guatemala" },
+  { code: "HN", name: "Honduras" },
+  { code: "SV", name: "El Salvador" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "DO", name: "Dominican Republic" },
+  { code: "PR", name: "Puerto Rico" },
+  { code: "JM", name: "Jamaica" },
+  { code: "TT", name: "Trinidad and Tobago" },
+  { code: "MO", name: "Macao" },
+  { code: "BN", name: "Brunei" },
+  { code: "FJ", name: "Fiji" },
+  { code: "PG", name: "Papua New Guinea" },
+  { code: "MU", name: "Mauritius" },
 ]
 
 const P: Record<string, { code: string; name: string }[]> = {
@@ -165,6 +239,26 @@ const P: Record<string, { code: string; name: string }[]> = {
 
 export function provincesOf(country: string) {
   return P[String(country || "").toUpperCase()] || []
+}
+
+/** ISO-2 for Medusa. "OTHER" matches a typed name, else falls back to us. */
+export function resolveCountryCode(code: string, otherName = "") {
+  const c = String(code || "").trim().toUpperCase()
+  if (c && c !== "OTHER" && c !== "XX") {
+    const hit = COUNTRIES.find((x) => x.code === c)
+    if (hit) return hit.code.toLowerCase()
+  }
+  const n = String(otherName || "").trim().toLowerCase()
+  if (!n) return "us"
+  const exact = COUNTRIES.find((x) => x.name.toLowerCase() === n || x.code.toLowerCase() === n)
+  if (exact) return exact.code.toLowerCase()
+  const part = COUNTRIES.find((x) => x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()))
+  return (part?.code || "us").toLowerCase()
+}
+
+export function countryName(code: string) {
+  const hit = COUNTRIES.find((x) => x.code === String(code || "").toUpperCase())
+  return hit?.name || code
 }
 
 export function countryFromCurrency(code: string) {

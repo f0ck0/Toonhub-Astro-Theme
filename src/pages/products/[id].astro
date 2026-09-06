@@ -5,7 +5,7 @@ import Footer from "../../components/Footer.astro"
 import ProductCard from "../../components/ProductCard.astro"
 import Stars from "../../components/Stars.astro"
 import { getProduct, getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
-import { salePrice, formatPriceFrom, formatCurrency, currencyFromCookies } from "../../lib/currency"
+import { salePrice, formatCurrency, currencyFromCookies } from "../../lib/currency"
 import { productReviews, SITE } from "../../lib/site"
 
 const { id } = Astro.params
@@ -25,8 +25,8 @@ const allImages = [product?.thumbnail, ...images.map((i: any) => i.url)].filter(
 const usdPrice = getProductUsdPrice(product) || 0
 const currency = currencyFromCookies(Astro.cookies)
 const { original, sale } = salePrice(usdPrice, currency)
-const priceFrom = formatPriceFrom(sale, currency)
 const originalFmt = formatCurrency(original, currency)
+const saleFmt = formatCurrency(sale, currency)
 const variants = product?.variants || []
 const variantId = variants[0]?.id || ""
 const cat = product?.categories?.[0]
@@ -82,7 +82,7 @@ const options = product?.options || []
 
           <div>
             <Stars rating={rating} count={count} size="0.95rem" productId={product.id} />
-            <h1 style="font-size:1.6rem;font-weight:700;line-height:1.25;color:#fff;margin-top:10px;">{product.title}</h1>
+            <h1 class="pdp-title">{product.title}</h1>
             {product.subtitle && <p style="font-size:0.95rem;color:#999;margin-top:8px;">{product.subtitle}</p>}
 
             <div class="limited-banner">
@@ -90,8 +90,8 @@ const options = product?.options || []
             </div>
 
             <div class="pc-price-row" style="margin-top:16px;">
-              <span class="pdp-price" style="font-size:1.5rem;font-weight:700;">{priceFrom}</span>
-              <span class="pdp-original pc-compare" style="font-size:1rem;">{originalFmt}</span>
+              <span class="pdp-price pc-price"><span class="pc-from">From</span>{formatCurrency(sale, currency)}</span>
+              <span class="pdp-original pc-compare">{originalFmt}</span>
             </div>
             <p style="font-size:0.78rem;color:#888;margin-top:4px;">Sale · Taxes included. Free worldwide shipping.</p>
 
@@ -221,7 +221,7 @@ const options = product?.options || []
       <div class="pdp-sticky" id="pdpSticky">
         <div>
           <div class="pdp-sticky-title">{product.title}</div>
-          <div class="pdp-sticky-price">{priceFrom}</div>
+          <div class="pdp-sticky-price"><span class="pc-from">From</span>{saleFmt}</div>
         </div>
         <button type="button" class="btn btn-primary" id="stickyAdd">Buy now</button>
       </div>

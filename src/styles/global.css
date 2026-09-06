@@ -24,10 +24,16 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; overflow-x: clip; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  background: #000;
+  color-scheme: dark;
+}
 
 body {
   font-family: var(--font-body);
+  font-style: normal;
   background: var(--color-background);
   color: var(--color-foreground);
   font-weight: 400;
@@ -43,9 +49,32 @@ body.drawer-open { overflow: hidden; }
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
+  font-style: normal;
   line-height: 1.15;
   letter-spacing: 0.01em;
   text-transform: uppercase;
+}
+.pdp-title {
+  font-family: var(--font-heading);
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.25;
+  color: #fff;
+  margin-top: 10px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+.pdp-price {
+  font-size: 1.45rem !important;
+  font-weight: 400;
+  font-style: italic;
+}
+.pdp-sticky-price {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 400;
+  font-style: italic;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -231,12 +260,14 @@ input, select, textarea { font-family: inherit; }
 }
 .product-card .pc-info { padding: 12px 0 0; }
 .product-card .pc-title {
-  font-size: 0.95rem;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
   font-weight: 700;
+  font-style: normal;
   color: #fff;
-  line-height: 1.35;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-transform: none;
+  letter-spacing: 0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -249,8 +280,28 @@ input, select, textarea { font-family: inherit; }
   margin-top: 6px;
   flex-wrap: wrap;
 }
-.pc-price { font-size: 1rem; font-weight: 700; color: #fff; }
-.pc-compare { font-size: 0.85rem; color: #888; text-decoration: line-through; }
+.pc-price {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 400;
+  font-style: italic;
+  color: #f2f2f2;
+  letter-spacing: 0.02em;
+}
+.pc-price .pc-from {
+  font-style: italic;
+  font-weight: 400;
+  margin-right: 0.28em;
+  color: #aaa;
+}
+.pc-compare {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 400;
+  font-style: italic;
+  color: #888;
+  text-decoration: line-through;
+}
 
 .stars {
   display: flex;
