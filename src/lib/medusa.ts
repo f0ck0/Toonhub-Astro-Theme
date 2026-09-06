@@ -6,7 +6,7 @@ import { getStoreSdk, medusaConfig } from "./medusa-config"
 
 export { getStoreSdk, medusaConfig }
 
-const PRODUCT_FIELDS = "*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,+description,*categories"
+const PRODUCT_FIELDS = "+id,+title,+handle,+thumbnail,+description,*variants,*variants.calculated_price,*variants.prices,*images,*categories"
 
 async function getRegionId(): Promise<string> {
   try {
@@ -224,12 +224,23 @@ export async function searchProducts(query: string, limit = 24) {
 }
 
 export function getProductUsdPrice(product: any): number | null {
-  const price = product?.variants?.[0]?.prices?.find((p: any) => p.currency_code === "usd")
-    ?? product?.variants?.[0]?.calculated_price?.calculated_amount
-    ?? product?.variants?.[0]?.prices?.[0]
-  if (price == null) return null
-  if (typeof price === "number") return Math.round(price * (price < 1000 ? 100 : 1))
-  return price.amount ?? null
+  const v = product?.variants?.[0]
+  if (!v) return null
+  const usd = (v.prices || []).find((p: any) => String(p.currency_code || "").toLowerCase() === "usd")
+  const candidates = [
+    v.calculated_price?.calculated_amount,
+    v.calculated_price?.original_amount,
+    usd?.amount,
+    v.prices?.[0]?.amount,
+    typeof v.calculated_price === "number" ? v.calculated_price : null,
+  ]
+  for (const raw of candidates) {
+    if (raw == null) continue
+    const n = Number(typeof raw === "object" ? (raw as any).amount : raw)
+    if (!Number.isFinite(n) || n <= 0) continue
+    return n > 0 && n < 1000 ? Math.round(n * 100) : Math.round(n)
+  }
+  return null
 }
 
 export function getProductPrice(product: any, currency = "usd"): string {

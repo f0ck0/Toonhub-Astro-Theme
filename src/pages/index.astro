@@ -17,30 +17,12 @@ try {
 } catch (e) {}
 
 try {
-  const leafCats = categories.filter((c: any) => c.parent_category_id && (c.products?.length || 0) > 0)
-  const mixed: any[] = []
-  for (const c of leafCats) {
-    const pool = [...(c.products || [])]
-    const take = Math.min(2, pool.length)
-    for (let i = 0; i < take; i++) {
-      const idx = Math.floor(Math.random() * pool.length)
-      const p = pool.splice(idx, 1)[0]
-      if (p) mixed.push(p)
-    }
-  }
-  if (mixed.length < 24) {
-    const extra = await getProducts(48, 0)
-    totalCount = extra.count
-    for (const p of extra.products) {
-      if (!mixed.some((m: any) => m.id === p.id)) mixed.push(p)
-    }
-  } else {
-    try {
-      const extra = await getProducts(1, 0)
-      totalCount = extra.count
-    } catch {}
-  }
-  products = [...mixed].sort(() => Math.random() - 0.5).slice(0, 24)
+  // Same /store/products payload as collection pages (title + variants/prices).
+  // Nested category.products are often id/thumbnail stubs, so names and prices
+  // never render — and those empty cards then block client hydration.
+  const extra = await getProducts(48, 0)
+  totalCount = extra.count
+  products = (extra.products || []).filter((p: any) => p && (p.title || p.handle)).slice(0, 24)
 } catch (e) {
   console.error("Failed to fetch products:", e)
 }
@@ -104,7 +86,7 @@ const moreCols = shopByList.slice(18)
         </div>
       </div>
       <div class="product-drag-slider">
-        <div class="slider-track" data-hydrate-products>
+        <div class="slider-track" data-hydrate-products="home">
           {products.length > 0 ? (
             products.map((product: any) => <ProductCard product={product} />)
           ) : (

@@ -5,6 +5,7 @@ import { productReviews } from "../lib/site"
 import Stars from "./Stars.astro"
 
 const { product } = Astro.props
+const title = product?.title || product?.handle || ""
 const img = getProductImage(product)
 const hoverRaw = (product?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img)
 const usdPrice = getProductUsdPrice(product) || 0
@@ -16,7 +17,7 @@ const { rating, count } = productReviews(product)
 const variants = (product?.variants || []).map((v: any) => ({ id: v.id, title: v.title || v.options?.map((o: any) => o.value).join(" / ") || "Default" }))
 const qv = encodeURIComponent(JSON.stringify({
   variantId: variants[0]?.id || "",
-  title: product.title,
+  title,
   thumbnail: productImageUrl(img),
   handle: product.handle,
   unit_price: usdPrice,
@@ -29,11 +30,11 @@ const cats = (product?.categories || []).map((c: any) => c.handle || c.id).filte
 const imgSrc = productImageUrl(img)
 const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
 ---
-<article class="product-card card" data-qv={qv} data-price-usd={usdPrice} data-title={product.title} data-cats={cats} data-id={product?.id || ""}>
+<article class="product-card card" data-qv={qv} data-price-usd={usdPrice} data-title={title} data-cats={cats} data-id={product?.id || ""}>
   <div class="pc-media">
-    <a href={href} aria-label={product.title} style="position:absolute;inset:0;z-index:1;">
+    <a href={href} aria-label={title} style="position:absolute;inset:0;z-index:1;">
       {imgSrc ? (
-        <img src={imgSrc} alt={product.title} loading="lazy" decoding="async" width="600" height="600" />
+        <img src={imgSrc} alt={title} loading="lazy" decoding="async" width="600" height="600" />
       ) : (
         <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;"><span style="font-size:48px;">📦</span></div>
       )}
@@ -45,7 +46,7 @@ const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
       data-wish
       data-wish-id={product?.id || ""}
       data-wish-handle={product.handle}
-      data-wish-title={product.title}
+      data-wish-title={title}
       data-wish-img={imgSrc}
       data-wish-price={usdPrice}
       aria-label="Add to wishlist"
@@ -56,11 +57,13 @@ const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
     </button>
   </div>
   <a href={href} class="pc-info">
-    <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">{product.title}</div>
+    <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">{title}</div>
     <Stars rating={rating} count={count} productId={product?.id || ""} />
-    <div class="pc-price-row">
-      <span class="pc-price product-card-price" style="font-family:'Quattrocento Sans','Helvetica Neue',Arial,sans-serif;font-weight:400;font-style:italic;"><span class="pc-from">From</span>{saleFmt}</span>
-      <span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">{originalFmt}</span>
-    </div>
+    {usdPrice > 0 && (
+      <div class="pc-price-row">
+        <span class="pc-price product-card-price" style="font-family:'Quattrocento Sans','Helvetica Neue',Arial,sans-serif;font-weight:400;font-style:italic;"><span class="pc-from">From</span>{saleFmt}</span>
+        <span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">{originalFmt}</span>
+      </div>
+    )}
   </a>
 </article>

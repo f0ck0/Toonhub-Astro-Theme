@@ -91,7 +91,9 @@ function productCard(p: any) {
   const img = imgOf(p)
   const hover = hoverOf(p, img)
   const usd = productUsdMinor(p)
-  const price = usd ? "From " + money(usd) : ""
+  const sale = usd ? Math.round(usd / 2) : 0
+  const price = sale ? `<span class="pc-from">From</span>${esc(money(sale))}` : ""
+  const compare = usd ? esc(money(usd)) : ""
   const cats = (p.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
   const variants = (p.variants || []).map((v: any) => ({
     id: v.id,
@@ -121,9 +123,9 @@ function productCard(p: any) {
       ${cta}
     </div>
     <a href="/products/${esc(p.handle)}" class="pc-info">
-      <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title)}</div>
+      <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title || p.handle || "")}</div>
       <div class="stars" data-review-product="${esc(p.id)}"></div>
-      <div class="pc-price-row"><span class="pc-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${esc(price)}</span></div>
+      ${price ? `<div class="pc-price-row"><span class="pc-price product-card-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${price}</span>${compare ? `<span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">${compare}</span>` : ""}</div>` : ""}
     </a>
   </article>`
 }
@@ -154,14 +156,26 @@ function fillCatGrids(categories: any[], products: any[]) {
   })
 }
 
+function cardMissingTitleOrPrice(el: Element) {
+  const title = (el.querySelector(".pc-title")?.textContent || "").trim()
+  const price = Number(el.getAttribute("data-price-usd") || 0)
+  return !title || !price
+}
+
 function fillProductGrids(products: any[]) {
   document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
-    if (el.querySelector(".product-card")) return
+    const cards = [...el.querySelectorAll(".product-card")]
+    const home = el.getAttribute("data-hydrate-products") === "home"
+    const incomplete = home && cards.length > 0 && cards.filter(cardMissingTitleOrPrice).length >= Math.ceil(cards.length / 2)
+    if (cards.length && !incomplete) return
     if (!products.length) {
-      el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products returned from Medusa</h3><p style="color:#888;margin-top:8px;">Check the publishable key is linked to a sales channel that has products.</p></div>`
+      if (!cards.length) {
+        el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products returned from Medusa</h3><p style="color:#888;margin-top:8px;">Check the publishable key is linked to a sales channel that has products.</p></div>`
+      }
       return
     }
-    el.innerHTML = products.map(productCard).join("")
+    const list = home ? products.slice(0, 24) : products
+    el.innerHTML = list.map(productCard).join("")
   })
 }
 
@@ -321,7 +335,7 @@ async function load() {
 
     const qs = new URLSearchParams({
       limit: onCollection ? "24" : "48",
-      fields: "*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,*categories,+handle,+title",
+      fields: "+id,+title,+handle,+thumbnail,*variants,*variants.calculated_price,*variants.prices,*images,*categories",
     })
     if (regionId) qs.set("region_id", regionId)
 

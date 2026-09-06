@@ -155,6 +155,9 @@ input, select, textarea { font-family: inherit; }
   overflow: hidden;
   background: transparent;
 }
+.product-card.card {
+  overflow: visible;
+}
 .card img { transition: opacity 220ms ease, transform 400ms ease; }
 
 .announcement-bar {
@@ -435,6 +438,7 @@ span.pc-price {
 .product-drag-slider.is-dragging { cursor: grabbing; }
 .product-drag-slider .slider-track {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   min-width: max-content;
 }
@@ -443,6 +447,8 @@ span.pc-price {
   width: min(46vw, 220px);
   max-width: 250px;
   min-width: 140px;
+  overflow: visible;
+  height: auto;
 }
 @media (min-width: 990px) {
   .product-drag-slider .slider-track { gap: 16px; }
