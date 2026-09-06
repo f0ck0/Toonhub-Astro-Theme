@@ -2,18 +2,28 @@
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+
+export const prerender = false
+
+const ssrToken = Astro.cookies.get("toonhub_token")?.value || ""
+const ssrEmail = Astro.cookies.get("toonhub_email")?.value || ""
+const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_in")?.value === "1")
 ---
 <Base title="Account — TOONHUB">
   <Header />
   <script is:inline>
     (function () {
       try {
-        if (localStorage.getItem("toonhub_token")) document.documentElement.classList.add("has-account")
+        var cookie = document.cookie || ""
+        var inCookie = /(?:^|; )toonhub_signed_in=1(?:;|$)/.test(cookie) || /(?:^|; )toonhub_token=/.test(cookie) || /(?:^|; )toonhub_email=/.test(cookie)
+        if (inCookie || localStorage.getItem("toonhub_token") || localStorage.getItem("toonhub_email")) {
+          document.documentElement.classList.add("has-account")
+        }
       } catch (e) {}
     })()
   </script>
-  <main id="MainContent" class="page-width account-page">
-    <div id="accountGuest" class="account-guest">
+  <main id="MainContent" class:list={["page-width", "account-page", ssrIn && "is-in"]}>
+    <div id="accountGuest" class="account-guest" hidden={ssrIn}>
       <h1 class="account-title">Login</h1>
       <p class="account-sub">Sign in to access your orders and member benefits.</p>
 
@@ -39,7 +49,7 @@ import Footer from "../components/Footer.astro"
       </p>
     </div>
 
-    <div id="accountHome" class="account-home" hidden>
+    <div id="accountHome" class="account-home" hidden={!ssrIn}>
       <header class="account-head">
         <div>
           <h1>Your account</h1>
@@ -80,14 +90,24 @@ import Footer from "../components/Footer.astro"
       <section class="account-card account-orders-card">
         <h2>Order history</h2>
         <div id="accountOrders"></div>
+        <form id="parcelForm" class="account-parcel">
+          <label for="parcelNo">Track a parcel</label>
+          <div class="account-parcel-row">
+            <input class="field" id="parcelNo" placeholder="Tracking number" autocomplete="off" />
+            <button type="submit" class="btn btn-primary">Track</button>
+          </div>
+          <p class="account-muted">Looks up carrier tracking (17track). You can also use <a href="/track-order">Track Order</a> with your order number.</p>
+        </form>
       </section>
     </div>
   </main>
   <Footer />
 </Base>
 <style>
-  html.has-account #accountGuest { display: none !important; }
-  html.has-account #accountHome { display: block !important; }
+  html.has-account #accountGuest,
+  .account-page.is-in #accountGuest { display: none !important; }
+  html.has-account #accountHome,
+  .account-page.is-in #accountHome { display: block !important; }
   .account-page { padding: 40px 0 80px; min-height: 60vh; }
   .account-guest { width: 100%; max-width: 460px; margin: 0 auto; }
   .account-title { font-size: 1.5rem; margin-bottom: 12px; }
@@ -175,6 +195,42 @@ import Footer from "../components/Footer.astro"
   .account-order b { color: #fff; letter-spacing: 0.04em; }
   .account-order .meta { color: #888; font-size: 0.82rem; }
   .account-order .amt { font-style: italic; }
+  .account-track {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  .account-track a, .account-track button {
+    background: none;
+    border: 1px solid #444;
+    color: #B5C771;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    border-radius: 0.3rem;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  .account-track a:hover, .account-track button:hover { border-color: #B5C771; color: #fff; }
+  .account-parcel {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-border);
+  }
+  .account-parcel label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .account-parcel-row { display: flex; gap: 10px; }
+  .account-parcel-row .field { flex: 1; min-width: 0; }
+  .account-parcel-row .btn { width: auto; padding: 0.7rem 1.1rem; flex-shrink: 0; }
+  .account-parcel .account-muted { margin-top: 8px; }
+  .account-parcel .account-muted a { color: #fff; text-decoration: underline; }
   @media (max-width: 749px) {
     .account-head { flex-direction: column; }
     .account-logout { width: 100%; }
@@ -202,26 +258,51 @@ import Footer from "../components/Footer.astro"
     return data.token || data.access_token || (typeof data.raw === "string" ? data.raw : "")
   }
 
-  function cookieSet(on: boolean) {
-    document.cookie = on
-      ? "toonhub_signed_in=1; path=/; max-age=2592000; samesite=lax"
-      : "toonhub_signed_in=; path=/; max-age=0; samesite=lax"
+  function cookieGet(name: string) {
+    try {
+      const m = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/[-.]/g, "\\$&") + "=([^;]*)"))
+      return m ? decodeURIComponent(m[1]) : ""
+    } catch { return "" }
+  }
+
+  function cookieSet(name: string, value: string, days = 30) {
+    const max = value ? `max-age=${days * 86400}` : "max-age=0"
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; ${max}; samesite=lax`
   }
 
   function persist(token: string, email: string, customer?: any) {
-    localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(EMAIL_KEY, email)
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    if (email) localStorage.setItem(EMAIL_KEY, email)
     if (customer) localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer))
-    cookieSet(true)
+    if (token) cookieSet("toonhub_token", token)
+    if (email) cookieSet("toonhub_email", email)
+    cookieSet("toonhub_signed_in", "1")
     document.documentElement.classList.add("has-account")
+    document.querySelector(".account-page")?.classList.add("is-in")
   }
 
   function clearSession() {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(EMAIL_KEY)
     localStorage.removeItem(CUSTOMER_KEY)
-    cookieSet(false)
+    cookieSet("toonhub_token", "")
+    cookieSet("toonhub_email", "")
+    cookieSet("toonhub_signed_in", "")
     document.documentElement.classList.remove("has-account")
+    document.querySelector(".account-page")?.classList.remove("is-in")
+    fetch("/api/account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "logout" }),
+    }).catch(() => {})
+  }
+
+  function sessionToken() {
+    return localStorage.getItem(TOKEN_KEY) || cookieGet("toonhub_token") || ""
+  }
+
+  function sessionEmail() {
+    return localStorage.getItem(EMAIL_KEY) || cookieGet("toonhub_email") || ""
   }
 
   function cachedCustomer() {
@@ -283,11 +364,18 @@ import Footer from "../components/Footer.astro"
   }
 
   function localOrders(email: string) {
+    const out: any[] = []
+    try {
+      const cached = JSON.parse(localStorage.getItem("toonhub_account_orders") || "[]")
+      if (Array.isArray(cached)) out.push(...cached)
+    } catch {}
     try {
       const all = JSON.parse(localStorage.getItem("toonhub_orders") || "[]")
-      if (!Array.isArray(all)) return []
-      return all.filter((o: any) => !email || !o.email || String(o.email).toLowerCase() === email.toLowerCase())
-    } catch { return [] }
+      if (Array.isArray(all)) {
+        out.push(...all.filter((o: any) => !email || !o.email || String(o.email).toLowerCase() === email.toLowerCase()))
+      }
+    } catch {}
+    return out
   }
 
   function savedCheckout() {
@@ -348,10 +436,27 @@ import Footer from "../components/Footer.astro"
       const cur = o.currency_code || o.currency || "usd"
       const items = o.items || o.line_items || []
       const titles = items.map((i: any) => i.title).filter(Boolean).slice(0, 3).join(", ")
+      const mail = o.email || email
+      const tracks = [].concat(o.tracking || o.tracking_numbers || []).map((t: any) => {
+        if (!t) return null
+        if (typeof t === "string") return { tracking_number: t, url: `https://t.17track.net/en#nums=${encodeURIComponent(t)}`, carrier: "Carrier" }
+        const num = t.tracking_number || t.number || ""
+        const href = t.url || t.tracking_url || (num ? `https://t.17track.net/en#nums=${encodeURIComponent(num)}` : "")
+        if (!num && !href) return null
+        return { tracking_number: num, url: href, carrier: t.carrier || "Carrier" }
+      }).filter(Boolean)
+      const trackBtns = tracks.length
+        ? tracks.map((t: any) => `<a href="${t.url}" target="_blank" rel="noopener">${t.carrier}${t.tracking_number ? " · " + t.tracking_number : " track"}</a>`).join("")
+        : `<span class="meta">Tracking appears here after the parcel ships.</span>`
+      const lookup = `/track-order?order=${encodeURIComponent(String(id))}&email=${encodeURIComponent(mail || "")}`
       return `<div class="account-order">
         <div>
           <b>#${id}</b>
           <div class="meta">${[date, status].filter(Boolean).join(" · ")}${titles ? `<br>${titles}` : ""}</div>
+          <div class="account-track">
+            ${trackBtns}
+            <a href="${lookup}">Track this order</a>
+          </div>
         </div>
         <div class="amt">${total ? money(total, cur) : ""}</div>
       </div>`
@@ -373,6 +478,7 @@ import Footer from "../components/Footer.astro"
     guest.hidden = true
     home.hidden = false
     document.documentElement.classList.add("has-account")
+    document.querySelector(".account-page")?.classList.add("is-in")
   }
 
   function showGuest() {
@@ -385,6 +491,9 @@ import Footer from "../components/Footer.astro"
     showHome()
     fillProfile(opts.customer || {}, opts.email)
     renderAddresses(opts.addresses || opts.customer?.addresses || [], opts.email)
+    if (opts.orders && opts.orders.length) {
+      try { localStorage.setItem("toonhub_account_orders", JSON.stringify(opts.orders)) } catch {}
+    }
     renderOrders(opts.orders || [], opts.email)
   }
 
@@ -396,6 +505,7 @@ import Footer from "../components/Footer.astro"
 
   async function loadAccount(token: string) {
     const res = await fetch("/api/account", {
+      credentials: "same-origin",
       headers: { accept: "application/json", Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(12000),
     })
@@ -404,17 +514,14 @@ import Footer from "../components/Footer.astro"
   }
 
   async function boot() {
-    const token = localStorage.getItem(TOKEN_KEY)
-    const email = localStorage.getItem(EMAIL_KEY) || ""
-    if (!token) return
+    const token = sessionToken()
+    const email = sessionEmail()
+    if (!token && !email) return
+    if (token && email) persist(token, email, cachedCustomer())
     renderDashboard({ email, customer: cachedCustomer() })
+    if (!token) return
     try {
       const res = await loadAccount(token)
-      if (res.status === 401) {
-        clearSession()
-        showGuest()
-        return
-      }
       if (res.ok && res.data?.customer) {
         persist(token, res.data.customer.email || email, res.data.customer)
         renderDashboard({
@@ -425,7 +532,7 @@ import Footer from "../components/Footer.astro"
         })
       }
     } catch {
-      /* keep local session if Medusa is unreachable */
+      /* keep local session — never bounce back to login */
     }
   }
 
@@ -493,11 +600,6 @@ import Footer from "../components/Footer.astro"
         last_name: (document.getElementById("editLast") as HTMLInputElement).value.trim(),
         phone: (document.getElementById("editPhone") as HTMLInputElement).value.trim(),
       }, { Authorization: `Bearer ${token}` })
-      if (res.status === 401) {
-        clearSession()
-        location.href = "/account"
-        return
-      }
       if (!res.ok) throw new Error(res.data.error || "Could not save")
       const email = localStorage.getItem(EMAIL_KEY) || res.data.customer?.email || ""
       persist(token, email, res.data.customer)
@@ -510,6 +612,16 @@ import Footer from "../components/Footer.astro"
     }
     btn.disabled = false
   }
+
+  document.getElementById("parcelForm")?.addEventListener("submit", (e) => {
+    e.preventDefault()
+    const num = (document.getElementById("parcelNo") as HTMLInputElement).value.trim()
+    if (!num) {
+      location.href = "/track-order"
+      return
+    }
+    window.open(`https://t.17track.net/en#nums=${encodeURIComponent(num)}`, "_blank", "noopener")
+  })
 
   boot()
 </script>

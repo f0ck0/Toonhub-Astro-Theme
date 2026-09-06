@@ -9,8 +9,10 @@ import Footer from "../components/Footer.astro"
     <h1>Track Order</h1>
     <p class="rte">Enter your order number and email to look up status. You can also track parcels at your carrier once a tracking number is emailed to you.</p>
     <form id="trackForm">
-      <input class="field" name="order" placeholder="Order number" required />
-      <input class="field" type="email" name="email" placeholder="Email" required />
+      <input class="field" name="order" id="trackOrder" placeholder="Order number" />
+      <input class="field" type="email" name="email" id="trackEmail" placeholder="Email" />
+      <p class="account-muted" style="margin:0;color:#888;font-size:0.85rem;">Or paste a carrier tracking number below.</p>
+      <input class="field" name="parcel" id="trackParcel" placeholder="Tracking number (optional)" />
       <button class="btn btn-primary" type="submit">Track</button>
     </form>
     <div id="trackResult" class="rte" style="margin-top:28px;max-width:520px;margin-left:auto;margin-right:auto;"></div>
@@ -18,12 +20,35 @@ import Footer from "../components/Footer.astro"
   <Footer />
 </Base>
 <script>
-  document.getElementById("trackForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault()
-    const fd = new FormData(e.target as HTMLFormElement)
+  const form = document.getElementById("trackForm") as HTMLFormElement
+  const box = document.getElementById("trackResult")!
+  const params = new URLSearchParams(location.search)
+  const preOrder = params.get("order") || ""
+  const preEmail = params.get("email") || localStorage.getItem("toonhub_email") || ""
+  const preParcel = params.get("tracking") || params.get("parcel") || ""
+  if (preOrder) (document.getElementById("trackOrder") as HTMLInputElement).value = preOrder
+  if (preEmail) (document.getElementById("trackEmail") as HTMLInputElement).value = preEmail
+  if (preParcel) (document.getElementById("trackParcel") as HTMLInputElement).value = preParcel
+
+  function lookupUrl(num: string, href = "") {
+    if (href && /^https?:\/\//i.test(href)) return href
+    return `https://t.17track.net/en#nums=${encodeURIComponent(num)}`
+  }
+
+  async function runTrack() {
+    const fd = new FormData(form)
     const id = String(fd.get("order") || "").trim()
     const email = String(fd.get("email") || "").trim().toLowerCase()
-    const box = document.getElementById("trackResult")!
+    const parcel = String(fd.get("parcel") || "").trim()
+    if (parcel && !id) {
+      window.open(lookupUrl(parcel), "_blank", "noopener")
+      box.innerHTML = `<p>Opening carrier tracking for <strong>${parcel}</strong>.</p>`
+      return
+    }
+    if (!id || !email) {
+      box.innerHTML = `<p>Enter an order number and email, or a tracking number.</p>`
+      return
+    }
     box.innerHTML = `<p>Looking up your order…</p>`
     try {
       const res = await fetch(`/api/track?order=${encodeURIComponent(id)}&email=${encodeURIComponent(email)}`)
@@ -32,16 +57,28 @@ import Footer from "../components/Footer.astro"
         const o = data.order
         const tracks = (o.tracking || []).map((t: any) => {
           const num = t.tracking_number || t.number || t.id || ""
-          const href = t.url || t.tracking_url || ""
+          const href = lookupUrl(num, t.url || t.tracking_url || "")
           if (!num && !href) return ""
-          return href
-            ? `<p>Tracking: <a href="${href}" target="_blank" rel="noopener">${num || href}</a></p>`
-            : `<p>Tracking: <strong>${num}</strong></p>`
+          return `<p>Tracking: <a href="${href}" target="_blank" rel="noopener">${num || "Open carrier"}</a></p>`
         }).join("")
-        box.innerHTML = `<h2>Order ${o.display_id || o.id}</h2><p>Status: <strong>${o.status}</strong></p><p>Placed ${o.created_at ? new Date(o.created_at).toLocaleString() : ""}.</p>${tracks || "<p>No carrier tracking number yet — it will appear here when your order ships.</p>"}<p>Updates will be emailed to ${o.email}.</p>`
+        const extra = parcel
+          ? `<p>Parcel: <a href="${lookupUrl(parcel)}" target="_blank" rel="noopener">${parcel}</a></p>`
+          : ""
+        box.innerHTML = `<h2>Order ${o.display_id || o.id}</h2><p>Status: <strong>${o.status}</strong></p><p>Placed ${o.created_at ? new Date(o.created_at).toLocaleString() : ""}.</p>${tracks || "<p>No carrier tracking number yet — it will appear here when your order ships.</p>"}${extra}<p>Updates will be emailed to ${o.email}.</p>`
         return
       }
     } catch {}
-    box.innerHTML = `<p>We couldn't find that Medusa order. Use the exact order number from your confirmation email.</p>`
+    if (parcel) {
+      box.innerHTML = `<p>We couldn't match that order in Medusa. Opening carrier tracking for <strong>${parcel}</strong>…</p>`
+      window.open(lookupUrl(parcel), "_blank", "noopener")
+      return
+    }
+    box.innerHTML = `<p>We couldn't find that order. Use the exact order number from your confirmation email, or paste a tracking number.</p>`
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault()
+    runTrack()
   })
+  if (preOrder && preEmail) runTrack()
 </script>
