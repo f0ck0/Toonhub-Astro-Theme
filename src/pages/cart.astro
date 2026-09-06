@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+import TrustIcons from "../components/TrustIcons.astro"
 import { SITE } from "../lib/site"
 ---
 <Base title="Your Shopping Cart — TOONHUB">
@@ -36,15 +37,11 @@ import { SITE } from "../lib/site"
           </div>
           <p style="font-size:0.72rem;color:#666;">Taxes included. Discounts and shipping calculated at checkout.</p>
           <p id="pageBogoNudge" class="offer-note" hidden style="margin-top:12px;"></p>
-          <a id="pageCheckout" href="/checkout" class="btn btn-primary btn-block" style="margin-top:12px;">Checkout — free shipping</a>
+          <a id="pageCheckout" href="/checkout" class="btn btn-primary btn-block cart-checkout-btn">Checkout — free shipping</a>
           <p style="font-size:0.72rem;color:#888;text-align:center;margin-top:10px;line-height:1.45;">
             By checking out you agree to the <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
           </p>
-          <div class="cart-trust" style="margin-top:14px;">
-            <span>🚚 Free shipping</span>
-            <span>↩️ 30-day returns</span>
-            <span>🔒 SSL encrypted</span>
-          </div>
+          <TrustIcons />
         </div>
       </div>
     </div>

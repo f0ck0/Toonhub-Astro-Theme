@@ -1,6 +1,7 @@
 ---
 import "../../styles/checkout.css"
 import { SITE } from "../../lib/site"
+import TrustIcons from "../../components/TrustIcons.astro"
 export const prerender = false
 const order = Astro.url.searchParams.get("order") || ""
 const email = Astro.url.searchParams.get("email") || ""
@@ -25,12 +26,7 @@ const email = Astro.url.searchParams.get("email") || ""
       <strong>What happens next</strong><br />
       We pack in 2–3 business days · Free worldwide shipping with tracking · 30-day returns
     </div>
-    <div class="co-trust" style="margin-top:18px;">
-      <span>🚚 Free shipping</span>
-      <span>↩️ 30-day returns</span>
-      <span>🔒 SSL encrypted</span>
-      <span>🎁 2nd figure 50% off</span>
-    </div>
+    <TrustIcons gift />
     <a href="/collections" class="co-btn pay" style="max-width:320px;margin:28px auto 0;">Continue shopping</a>
     <p class="co-lock"><a href="/track-order">Track this order</a> · <a href="/">Back to home</a></p>
   </main>

@@ -107,7 +107,18 @@ input, select, textarea { font-family: inherit; }
 .btn-primary:hover { background: var(--color-secondary-button-hover); }
 .btn-outline { background: transparent; color: #fff; border-color: #fff; }
 .btn-outline:hover { background: rgba(255,255,255,0.08); }
-.btn-block { width: 100%; }
+.btn-block,
+.btn.btn-block {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+.cart-checkout-btn {
+  margin-top: 12px;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  padding: 1rem 1.25rem;
+}
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .card {
@@ -1209,7 +1220,8 @@ button, a, summary { touch-action: manipulation; }
     font-size: 0.68rem;
     letter-spacing: 0.04em;
   }
-  .btn { padding: 0.85rem 1.2rem; font-size: 0.82rem; width: auto; }
+  .btn { padding: 0.85rem 1.2rem; font-size: 0.82rem; }
+  .btn.btn-block { width: 100%; }
   .product-card .pc-title { font-size: 0.78rem; }
   .pc-price { font-size: 0.88rem; }
   .pc-compare { font-size: 0.75rem; }

@@ -46,8 +46,11 @@ function sortProducts(list: any[]) {
 }
 initialProducts = sortProducts(initialProducts)
 
-const title = special ? "New Designs" : (category?.name || id)
-const heading = special ? title : `Collection: ${title}`
+const title = special ? "New Designs" : (category?.name || "")
+const heading = special ? title : title ? `Collection: ${title}` : "Collection"
+const rawDesc = String(category?.description || "").trim()
+const descText = rawDesc.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim()
+const showDesc = Boolean(descText)
 ---
 <Base title={`${title || "Collection"} — TOONHUB`}>
   <Header />
@@ -60,14 +63,11 @@ const heading = special ? title : `Collection: ${title}`
           <span style="color:#fff;">{title}</span>
         </nav>
         <h1 class="section-heading" style="margin-top:12px;font-size:2rem;" data-collection-title>{heading}</h1>
-        {category?.description ? (
-          <div class="rte" style="margin-top:12px;max-width:820px;" set:html={category.description} />
-        ) : (
-          <p style="margin-top:8px;font-size:0.9rem;color:#888;max-width:820px;">
-            {special
-              ? "The newest figures added to Toonhub."
-              : `Shop ${title} figures from this Medusa category.`}
-          </p>
+        {showDesc && (
+          <div class="rte" style="margin-top:12px;max-width:820px;" set:html={rawDesc} />
+        )}
+        {special && !showDesc && (
+          <p style="margin-top:8px;font-size:0.9rem;color:#888;max-width:820px;">The newest figures added to Toonhub.</p>
         )}
       </section>
 

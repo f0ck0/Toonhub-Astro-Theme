@@ -2,6 +2,7 @@
 import "../styles/checkout.css"
 import { SITE } from "../lib/site"
 import { COUNTRIES } from "../lib/regions"
+import TrustIcons from "../components/TrustIcons.astro"
 export const prerender = false
 ---
 <!DOCTYPE html>
@@ -87,12 +88,7 @@ export const prerender = false
           <div id="card-errors" class="co-error"></div>
         </div>
 
-        <div class="co-trust">
-          <span>🚚 Free worldwide shipping</span>
-          <span>↩️ 30-day returns</span>
-          <span>🔒 SSL encrypted</span>
-          <span>🎁 2nd figure 50% off</span>
-        </div>
+        <TrustIcons gift />
 
         <p id="coError" class="co-error" hidden></p>
         <button type="submit" class="co-btn pay" id="payBtn">Place order — free shipping</button>
