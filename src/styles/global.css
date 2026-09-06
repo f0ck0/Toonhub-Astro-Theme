@@ -249,11 +249,26 @@ input, select, textarea { font-family: inherit; }
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 1;
-  transform: none;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
   z-index: 3;
   cursor: pointer;
   text-align: center;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.product-card:hover .choose-options,
+.product-card:focus-within .choose-options {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .product-card .choose-options {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
 }
 @media (max-width: 749px) {
   .product-card .pc-hover { display: none; }
@@ -1449,16 +1464,6 @@ button, a, summary { touch-action: manipulation; }
   }
   .pdp-sticky-price { font-size: 0.88rem; font-weight: 700; margin-top: 2px; }
   main:has(.pdp-sticky) { padding-bottom: 76px; }
-}
-
-.hidden { display: none !important; }
-vetica Neue", Arial, sans-serif;
-    font-size: 0.92rem;
-    font-weight: 400;
-    font-style: italic;
-    margin-top: 2px;
-  }
-  main:has(.pdp-sticky) { padding-bottom: 84px; }
 }
 
 .hidden { display: none !important; }
