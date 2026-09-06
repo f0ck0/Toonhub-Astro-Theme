@@ -78,29 +78,6 @@ async function fetchReviews(productId?: string): Promise<ReviewPayload> {
   }
 }
 
-function medalSvg(center: string, kind: "verified" | "month" | "shop") {
-  const accent = "#B5C771"
-  const jewel = kind === "shop" ? "M40 10 L46 18 L40 21 L34 18 Z" : "M40 9 L47 18.5 L40 22 L33 18.5 Z"
-  const inner = kind === "shop"
-    ? `<text x="40" y="45" text-anchor="middle" fill="${accent}" font-family="Georgia,serif" font-size="13" font-weight="700">★</text>`
-    : `<text x="40" y="46" text-anchor="middle" fill="${accent}" font-family="Georgia,serif" font-size="${String(center).length > 3 ? 11 : 14}" font-weight="700">${center}</text>`
-  return `<svg viewBox="0 0 80 80" aria-hidden="true">
-    <path d="M18 26c2-8 8-14 14-16M62 26c-2-8-8-14-14-16" stroke="${accent}" stroke-width="1.4" fill="none"/>
-    <path d="M16 32c-2 6-2 14 1 22M64 32c2 6 2 14-1 22" stroke="${accent}" stroke-width="1.4" fill="none"/>
-    <path d="M22 22c4-6 10-10 18-11M58 22c-4-6-10-10-18-11" stroke="${accent}" stroke-width="1.1" fill="none" opacity=".85"/>
-    <ellipse cx="18" cy="30" rx="3.2" ry="5" stroke="${accent}" fill="none" stroke-width="1"/>
-    <ellipse cx="62" cy="30" rx="3.2" ry="5" stroke="${accent}" fill="none" stroke-width="1"/>
-    <ellipse cx="16" cy="42" rx="3" ry="5.2" stroke="${accent}" fill="none" stroke-width="1"/>
-    <ellipse cx="64" cy="42" rx="3" ry="5.2" stroke="${accent}" fill="none" stroke-width="1"/>
-    <ellipse cx="19" cy="54" rx="2.8" ry="4.8" stroke="${accent}" fill="none" stroke-width="1"/>
-    <ellipse cx="61" cy="54" rx="2.8" ry="4.8" stroke="${accent}" fill="none" stroke-width="1"/>
-    <circle cx="40" cy="42" r="16.5" stroke="${accent}" stroke-width="1.6" fill="none"/>
-    <circle cx="40" cy="42" r="13.5" stroke="${accent}" stroke-width=".7" fill="none" opacity=".7"/>
-    <path d="${jewel}" fill="${accent}"/>
-    ${inner}
-  </svg>`
-}
-
 function monthCount(reviews: any[]) {
   const now = new Date()
   const y = now.getFullYear()
@@ -113,6 +90,14 @@ function monthCount(reviews: any[]) {
   }).length
 }
 
+function setMedalNum(el: Element, value: string) {
+  const num = el.querySelector("[data-medal-num]")
+  if (!num) return
+  num.textContent = value
+  const n = value.length
+  num.setAttribute("font-size", n >= 5 ? "10" : n === 4 ? "11.5" : n === 3 ? "13" : "15")
+}
+
 function fillTrust(count: number, average: number, reviews: any[] = []) {
   const strip = document.querySelector("[data-hydrate-reviews]")
   if (!strip) return
@@ -123,14 +108,11 @@ function fillTrust(count: number, average: number, reviews: any[] = []) {
   if (fill) fill.style.width = `${pct}%`
   if (avgEl) avgEl.textContent = average > 0 ? average.toFixed(2).replace(/0$/, "") : ""
   if (countEl) countEl.textContent = `${count.toLocaleString()} review${count === 1 ? "" : "s"}`
-  const medals = strip.querySelectorAll("[data-medal]")
-  medals.forEach((el) => {
-    const kind = (el.getAttribute("data-medal") || "shop") as "verified" | "month" | "shop"
-    const art = el.querySelector("[data-medal-art]")
-    if (!art) return
-    if (kind === "verified") art.innerHTML = medalSvg(String(count), "verified")
-    else if (kind === "month") art.innerHTML = medalSvg(String(monthCount(reviews)), "month")
-    else art.innerHTML = medalSvg("★", "shop")
+  strip.querySelectorAll("[data-medal]").forEach((el) => {
+    const kind = el.getAttribute("data-medal")
+    if (kind === "verified") setMedalNum(el, String(count))
+    else if (kind === "month") setMedalNum(el, String(monthCount(reviews)))
+    else setMedalNum(el, "✓")
   })
 }
 

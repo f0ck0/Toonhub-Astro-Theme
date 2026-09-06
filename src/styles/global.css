@@ -516,19 +516,18 @@ span.pc-price {
 /* ---------- Trust / reviews strip (Judge.me medals layout) ---------- */
 .trust-strip {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 28px 1.5rem 32px;
+  justify-content: center;
+  padding: 22px 1.35rem 28px;
   background: #000;
-  min-height: 8rem;
 }
 .jdgm-widget {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 14px;
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
 }
 .jdgm-rating {
   display: flex;
@@ -572,34 +571,54 @@ span.pc-price {
   letter-spacing: 0.02em;
 }
 .jdgm-sep {
-  width: 1px;
-  height: 28px;
+  width: 48px;
+  height: 1px;
   background: #B5C771;
-  opacity: 0.4;
-  margin: 12px 0 10px;
+  opacity: 0.35;
+  flex-shrink: 0;
 }
 .jdgm-medals {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 28px;
-  flex-wrap: wrap;
+  gap: 18px;
 }
 .jdgm-medal {
-  width: 92px;
+  width: 88px;
   text-align: center;
   color: #B5C771;
 }
-.jdgm-medal-art { width: 80px; height: 80px; margin: 0 auto; }
-.jdgm-medal-art svg { width: 80px; height: 80px; display: block; }
+.jdgm-medal-art { width: 78px; height: 94px; margin: 0 auto; }
+.jdgm-medal-art svg { width: 78px; height: 94px; display: block; }
 .jdgm-medal span {
   display: block;
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 0.68rem;
   letter-spacing: 0.04em;
   line-height: 1.3;
   color: #B5C771;
   font-weight: 700;
+}
+@media (min-width: 750px) {
+  .jdgm-widget {
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+  }
+  .jdgm-sep {
+    width: 1px;
+    height: 72px;
+  }
+  .jdgm-medal { width: 96px; }
+  .jdgm-medal-art { width: 86px; height: 103px; }
+  .jdgm-medal-art svg { width: 86px; height: 103px; }
+}
+@media (max-width: 429px) {
+  .jdgm-medals { gap: 8px; }
+  .jdgm-medal { width: 72px; }
+  .jdgm-medal-art { width: 64px; height: 77px; }
+  .jdgm-medal-art svg { width: 64px; height: 77px; }
+  .jdgm-medal span { font-size: 0.6rem; }
 }
 .account-dot {
   position: absolute;

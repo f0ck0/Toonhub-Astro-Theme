@@ -1,5 +1,5 @@
 ---
-/** Judge.me-style medals row. Counts hydrate from Medusa — never invented. */
+import MedalBadge from "./MedalBadge.astro"
 ---
 <div class="trust-strip" data-hydrate-reviews aria-live="polite">
   <div class="jdgm-widget">
@@ -21,18 +21,9 @@
     </div>
     <div class="jdgm-sep" aria-hidden="true"></div>
     <div class="jdgm-medals">
-      <div class="jdgm-medal" data-medal="verified">
-        <div class="jdgm-medal-art" data-medal-art></div>
-        <span>Verified Reviews</span>
-      </div>
-      <div class="jdgm-medal" data-medal="month">
-        <div class="jdgm-medal-art" data-medal-art></div>
-        <span>This month</span>
-      </div>
-      <div class="jdgm-medal" data-medal="shop">
-        <div class="jdgm-medal-art" data-medal-art></div>
-        <span>Trusted shop</span>
-      </div>
+      <MedalBadge kind="verified" label="Verified Reviews" />
+      <MedalBadge kind="month" label="This month" />
+      <MedalBadge kind="shop" label="Trusted shop" />
     </div>
   </div>
 </div>
