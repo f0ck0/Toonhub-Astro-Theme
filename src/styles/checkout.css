@@ -43,11 +43,13 @@ input, select, textarea {
   min-width: 0;
 }
 .co-aside {
-  order: -1;
+  order: 0;
   background: var(--co-panel);
   border-left: 0;
-  border-bottom: 1px solid var(--co-border);
+  border-top: 1px solid var(--co-border);
+  border-bottom: 0;
   padding: 0;
+  margin: 18px 0 8px;
   width: 100%;
   min-width: 0;
 }
@@ -333,7 +335,7 @@ input, select, textarea {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 14px 1.35rem 8px;
+  padding: 14px 0 8px;
   color: #fff;
   font-size: 0.92rem;
 }
@@ -341,7 +343,7 @@ input, select, textarea {
 .co-aside-body {
   display: block;
   min-width: 0;
-  padding: 8px 1.35rem 20px;
+  padding: 8px 0 12px;
 }
 .co-qty-price {
   font-family: "Quattrocento Sans", "Helvetica Neue", Arial, sans-serif;
@@ -368,23 +370,31 @@ input, select, textarea {
 }
 
 @media (min-width: 1100px) {
-  .co-wrap {
+  .co-wrap { display: block; }
+  .co-main {
+    padding: 36px 5% 80px;
+    max-width: none;
+    margin: 0;
+  }
+  #coForm {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr);
+    column-gap: 8%;
+    align-items: start;
   }
+  .co-left { grid-column: 1; }
   .co-aside {
-    order: 0;
+    grid-column: 2;
+    grid-row: 1 / span 8;
+    margin: 0;
+    padding: 0 0 80px 8%;
+    border-top: 0;
     border-left: 1px solid var(--co-border);
-    border-bottom: 0;
-    padding: 36px 8% 80px;
+    background: transparent;
   }
   .co-summary-head { display: none; }
   .co-aside-body { display: block; padding: 0; }
-  .co-main {
-    padding: 36px 8% 80px;
-    max-width: 720px;
-    margin-left: auto;
-  }
+  #payBtn, .co-foot, .co-lock { grid-column: 1; }
   .co-row.two { grid-template-columns: 1fr 1fr; }
   .co-field { font-size: 0.92rem; min-height: 0; }
   .co-logo { font-size: 1.85rem; }

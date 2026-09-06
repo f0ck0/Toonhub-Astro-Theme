@@ -14,22 +14,26 @@ export const prerender = false
   <meta name="theme-color" content="#000000" />
   <title>Checkout — {SITE.name}</title>
   <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
-  <link rel="stylesheet" href="/checkout.css?v=mobile5" />
+  <link rel="stylesheet" href="/checkout.css?v=mobile6" />
   <style>
     html,body{background:#000!important;color:#fff;color-scheme:dark}
     .co-wrap{display:flex!important;flex-direction:column!important;width:100%;max-width:100%;overflow-x:clip}
-    .co-aside{order:-1;width:100%;min-width:0;border-left:0;padding:0}
+    .co-aside{order:0;width:100%;min-width:0;border-left:0;padding:0;margin:18px 0 8px;border-bottom:0;border-top:1px solid #2a2a2a}
     .co-main{width:100%;min-width:0;max-width:none;margin:0;padding:20px 1.35rem 120px}
     .co-row,.co-row.two{display:grid!important;grid-template-columns:1fr!important;min-width:0}
     .co-field{width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;min-height:48px}
-    .co-aside-body{display:block!important;padding:8px 1.35rem 20px}
+    .co-aside-body{display:block!important;padding:8px 0 12px}
+    .co-summary-head{padding-left:0;padding-right:0}
     .co-fold-toggle{display:none!important}
     @media (min-width: 1100px) {
-      .co-wrap{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(320px,.9fr)!important;flex-direction:unset}
-      .co-aside{order:0;padding:36px 8% 80px;border-left:1px solid #2a2a2a}
-      .co-main{max-width:720px;margin-left:auto;padding:36px 8% 80px}
-      .co-row.two{grid-template-columns:1fr 1fr!important}
+      .co-wrap{display:block!important}
+      .co-main{max-width:none;margin:0;padding:36px 5% 80px}
+      #coForm{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.9fr);column-gap:8%;align-items:start}
+      .co-left{grid-column:1}
+      .co-aside{grid-column:2;grid-row:1 / span 8;order:0;margin:0;padding:0 0 80px;border-top:0;border-left:1px solid #2a2a2a;padding-left:8%}
       .co-aside-body{padding:0!important}
+      #payBtn,.co-foot,.co-lock{grid-column:1}
+      .co-row.two{grid-template-columns:1fr 1fr!important}
     }
   </style>
 </head>
@@ -46,6 +50,7 @@ export const prerender = false
       </div>
 
       <form id="coForm" autocomplete="on">
+        <div class="co-left">
         <div id="savedBox" class="co-saved" hidden>
           <div>
             <div class="co-saved-k">Deliver to</div>
@@ -118,6 +123,28 @@ export const prerender = false
         <TrustIcons gift />
 
         <p id="coError" class="co-error" hidden></p>
+        </div>
+
+        <aside class="co-aside is-open">
+          <div class="co-summary-head">
+            <span>Your order</span>
+            <b id="coTotalMini">—</b>
+          </div>
+          <div class="co-aside-body" id="asideBody">
+            <div id="coLines"></div>
+            <div class="co-discount">
+              <input class="co-field" id="discountCode" placeholder="Discount code" />
+              <button type="button" id="discountBtn">Apply</button>
+            </div>
+            <div class="co-totals">
+              <div class="co-tot-row"><span>Subtotal</span><span id="coSub">—</span></div>
+              <div class="co-tot-row"><span>Shipping</span><span id="coShip">Free</span></div>
+              <div class="co-tot-row" id="coDiscRow" hidden><span>Buy 1 get 2nd 50% off</span><span id="coDisc">—</span></div>
+              <div class="co-tot-row grand"><span>Total</span><span id="coTotal">—</span></div>
+            </div>
+          </div>
+        </aside>
+
         <button type="submit" class="co-btn pay" id="payBtn">Place order — free shipping</button>
         <div class="co-foot">
           <a href="/cart">‹ Cart</a>
