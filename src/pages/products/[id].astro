@@ -139,6 +139,12 @@ const options = product?.options || []
                 style="flex:1;"
               >Add to cart</button>
               <button
+                id="buyNowBtn"
+                class="btn btn-outline"
+                type="button"
+                style="flex:1;"
+              >Buy now</button>
+              <button
                 class="pdp-wish"
                 type="button"
                 data-wish
@@ -216,6 +222,13 @@ const options = product?.options || []
         </section>
       )}
       <div id="lightbox" class="lightbox"><img id="lightboxImg" alt="" /></div>
+      <div class="pdp-sticky" id="pdpSticky">
+        <div>
+          <div class="pdp-sticky-title">{product.title}</div>
+          <div class="pdp-sticky-price">{priceFrom}</div>
+        </div>
+        <button type="button" class="btn btn-primary" id="stickyAdd">Add to cart</button>
+      </div>
     </main>
   ) : (
     <main id="MainContent" class="page-width" style="padding:80px 0;text-align:center;">
@@ -254,6 +267,30 @@ const options = product?.options || []
       addBtn.dataset.variantId = btn.dataset.variant
       addBtn.dataset.vtitle = btn.dataset.vtitle
     }
+  })
+
+  function pdpPayload() {
+    const addBtn = document.getElementById("addToCartBtn") as HTMLButtonElement | null
+    return {
+      variantId: addBtn?.dataset.variantId || "",
+      title: addBtn?.dataset.title || "",
+      thumbnail: addBtn?.dataset.thumbnail,
+      handle: addBtn?.dataset.handle,
+      unit_price: Number(addBtn?.dataset.price || 0),
+      variant_title: addBtn?.dataset.vtitle,
+      quantity: Number(addBtn?.dataset.qty || 1),
+    }
+  }
+  document.getElementById("buyNowBtn")?.addEventListener("click", async () => {
+    const wait = () => new Promise<void>((r) => {
+      const t = () => window.toonhub ? r() : setTimeout(t, 20)
+      t()
+    })
+    await wait()
+    await window.toonhub.addToCart(pdpPayload(), { goCheckout: true })
+  })
+  document.getElementById("stickyAdd")?.addEventListener("click", () => {
+    document.getElementById("addToCartBtn")?.click()
   })
 
   document.getElementById("pdpQtyRow")?.addEventListener("click", (e) => {

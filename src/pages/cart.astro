@@ -36,11 +36,16 @@ import { SITE } from "../lib/site"
             <span>Estimated total</span><span id="total">$0.00</span>
           </div>
           <p style="font-size:0.72rem;color:#666;">Taxes included. Discounts and shipping calculated at checkout.</p>
-          <label class="terms-row">
-            <input id="pageTerms" type="checkbox" />
-            <span>I accept the <a href="/policies/terms-of-service">terms of service</a> and <a href="/policies/privacy-policy">privacy policy</a>.</span>
-          </label>
-          <a id="pageCheckout" href="/checkout" class="btn btn-primary btn-block" style="margin-top:8px;">Check out</a>
+          <p id="pageBogoNudge" class="offer-note" hidden style="margin-top:12px;"></p>
+          <a id="pageCheckout" href="/checkout" class="btn btn-primary btn-block" style="margin-top:12px;">Checkout — free shipping</a>
+          <p style="font-size:0.72rem;color:#888;text-align:center;margin-top:10px;line-height:1.45;">
+            By checking out you agree to the <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
+          </p>
+          <div class="cart-trust" style="margin-top:14px;">
+            <span>🚚 Free shipping</span>
+            <span>↩️ 30-day returns</span>
+            <span>🔒 SSL encrypted</span>
+          </div>
         </div>
       </div>
     </div>
@@ -72,15 +77,24 @@ import { SITE } from "../lib/site"
     const fmt = window.toonhub.formatMoney
     const list = document.getElementById("itemsList")!
     list.innerHTML = items.map((item) => `
-      <div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--color-border);">
-        <div style="width:110px;height:110px;background:#111;flex-shrink:0;overflow:hidden;border-radius:0.3rem;">
-          ${item.thumbnail ? `<img src="${item.thumbnail}" style="width:100%;height:100%;object-fit:cover;" />` : ""}
-        </div>
-        <div style="flex:1;">
-          <div style="font-size:0.95rem;font-weight:700;text-transform:uppercase;">${item.title}</div>
+      <div class="cart-line" data-id="${item.id}" style="align-items:flex-start;">
+        <a href="${item.handle ? `/products/${item.handle}` : "#"}" style="flex-shrink:0;">
+          ${item.thumbnail
+            ? `<img src="${item.thumbnail}" alt="" style="width:110px;height:110px;object-fit:cover;border-radius:0.3rem;background:#111;" />`
+            : `<div class="ph" style="width:110px;height:110px;"></div>`}
+        </a>
+        <div style="flex:1;min-width:0;">
+          <a href="${item.handle ? `/products/${item.handle}` : "#"}" style="font-size:0.95rem;font-weight:700;text-transform:uppercase;">${item.title}</a>
           ${item.variant_title ? `<div style="font-size:0.8rem;color:#888;margin-top:4px;">${item.variant_title}</div>` : ""}
           <div style="font-size:0.9rem;font-weight:700;margin-top:8px;">${fmt(item.unit_price * item.quantity)}</div>
-          <div style="margin-top:10px;font-size:0.82rem;color:#888;">Qty: ${item.quantity}</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;">
+            <div class="qty-row">
+              <button type="button" data-qty="-1" data-id="${item.id}" aria-label="Decrease">−</button>
+              <span>${item.quantity}</span>
+              <button type="button" data-qty="1" data-id="${item.id}" aria-label="Increase">+</button>
+            </div>
+            <button type="button" data-remove="${item.id}" style="background:none;border:none;color:#888;font-size:0.78rem;text-decoration:underline;padding:0;">Remove</button>
+          </div>
         </div>
       </div>
     `).join("")
@@ -92,17 +106,28 @@ import { SITE } from "../lib/site"
     const dEl = document.getElementById("discount")!
     row.classList.toggle("hidden", disc <= 0)
     dEl.textContent = "−" + fmt(disc)
+    const units = items.reduce((s, i) => s + i.quantity, 0)
+    const nudge = document.getElementById("pageBogoNudge")!
+    if (units === 1) {
+      nudge.hidden = false
+      nudge.textContent = "Add one more figure — the 2nd is 50% off."
+    } else if (disc > 0) {
+      nudge.hidden = false
+      nudge.textContent = `You're saving ${fmt(disc)} with Buy 1 get 2nd 50% off.`
+    } else {
+      nudge.hidden = true
+    }
   }
 
-  const terms = document.getElementById("pageTerms") as HTMLInputElement
-  const checkout = document.getElementById("pageCheckout") as HTMLAnchorElement
-  const sync = () => {
-    checkout.style.pointerEvents = terms.checked ? "" : "none"
-    checkout.style.opacity = terms.checked ? "1" : "0.45"
-  }
-  terms?.addEventListener("change", sync)
-  checkout?.addEventListener("click", (e) => { if (!terms.checked) e.preventDefault() })
-  sync()
+  document.getElementById("itemsList")?.addEventListener("click", async (e) => {
+    const t = e.target as HTMLElement
+    const rem = t.closest<HTMLElement>("[data-remove]")
+    const qty = t.closest<HTMLElement>("[data-qty]")
+    if (rem) await window.toonhub.removeItem(rem.getAttribute("data-remove") || "")
+    if (qty) await window.toonhub.changeQty(qty.getAttribute("data-id") || "", Number(qty.getAttribute("data-qty")))
+    if (rem || qty) loadCart()
+  })
+
   const wait = () => {
     if (window.toonhub) loadCart()
     else setTimeout(wait, 20)

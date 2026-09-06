@@ -27,11 +27,16 @@ import { SITE } from "../lib/site"
       <span>Estimated total</span><span id="cartTotal">$0.00</span>
     </div>
     <p style="font-size:0.72rem;color:#666;margin-bottom:8px;">Taxes included. Discounts and shipping calculated at checkout.</p>
-    <label class="terms-row">
-      <input id="cartTerms" type="checkbox" style="margin-top:3px;" />
-      <span>I accept the <a href="/policies/terms-of-service">terms of service</a> and <a href="/policies/privacy-policy">privacy policy</a>.</span>
-    </label>
-    <a id="cartCheckout" href="/checkout" class="btn btn-primary btn-block">Check out</a>
+    <p id="cartBogoNudge" hidden class="offer-note" style="margin:8px 0;"></p>
+    <a id="cartCheckout" href="/checkout" class="btn btn-primary btn-block">Checkout — free shipping</a>
+    <p style="font-size:0.72rem;color:#888;text-align:center;margin-top:10px;line-height:1.45;">
+      By checking out you agree to the <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
+    </p>
+    <div class="cart-trust">
+      <span>🚚 Free shipping</span>
+      <span>↩️ 30-day returns</span>
+      <span>🔒 Secure</span>
+    </div>
     <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:0.82rem;">
       <a href="/cart" style="text-decoration:underline;">View cart</a>
       <button type="button" data-close-cart style="background:none;border:none;color:#fff;text-decoration:underline;">Continue shopping</button>

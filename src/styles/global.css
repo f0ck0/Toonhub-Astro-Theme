@@ -1257,4 +1257,53 @@ button, a, summary { touch-action: manipulation; }
   a.icon-btn[aria-label="Wishlist"] { display: none; }
 }
 
+.cart-trust {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  color: #bbb;
+}
+.cart-trust span {
+  background: #111;
+  border: 1px solid var(--color-border);
+  border-radius: 0.3rem;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.pdp-sticky {
+  display: none;
+}
+@media (max-width: 749px) {
+  .pdp-sticky {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    background: #000;
+    border-top: 1px solid var(--color-border);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pdp-sticky .btn { flex: 0 0 auto; min-width: 44%; }
+  .pdp-sticky-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    max-width: 52vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pdp-sticky-price { font-size: 0.88rem; font-weight: 700; margin-top: 2px; }
+  main:has(.pdp-sticky) { padding-bottom: 76px; }
+}
+
 .hidden { display: none !important; }

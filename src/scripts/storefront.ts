@@ -191,6 +191,19 @@ function renderCart() {
     discRow.classList.toggle("hidden", disc <= 0)
     discEl.textContent = `−${formatMoney(disc, code)}`
   }
+  const units = items.reduce((s, i) => s + i.quantity, 0)
+  const nudge = document.getElementById("cartBogoNudge")
+  if (nudge) {
+    if (units === 1) {
+      nudge.hidden = false
+      nudge.textContent = "Add one more figure — the 2nd is 50% off."
+    } else if (units > 1 && disc > 0) {
+      nudge.hidden = false
+      nudge.textContent = `You're saving ${formatMoney(disc, code)} with Buy 1 get 2nd 50% off.`
+    } else {
+      nudge.hidden = true
+    }
+  }
 }
 
 function escapeHtml(s: string) {
@@ -253,7 +266,7 @@ function addLocal(payload: AddPayload) {
   items = local
 }
 
-async function addToCart(payload: AddPayload) {
+async function addToCart(payload: AddPayload, opts?: { goCheckout?: boolean }) {
   const qty = payload.quantity || 1
   try {
     const cartId = await ensureCartId()
@@ -265,6 +278,10 @@ async function addToCart(payload: AddPayload) {
       })
       if (res.ok) {
         await refresh()
+        if (opts?.goCheckout) {
+          window.location.href = "/checkout"
+          return
+        }
         openCart(true)
         return
       }
@@ -274,6 +291,10 @@ async function addToCart(payload: AddPayload) {
   }
   addLocal(payload)
   renderCart()
+  if (opts?.goCheckout) {
+    window.location.href = "/checkout"
+    return
+  }
   openCart(true)
 }
 
@@ -484,18 +505,7 @@ function bind() {
     if (qty) changeQty(qty.getAttribute("data-id") || "", Number(qty.getAttribute("data-qty")))
   })
 
-  const terms = document.getElementById("cartTerms") as HTMLInputElement | null
-  const checkout = document.getElementById("cartCheckout") as HTMLAnchorElement | null
-  const syncTerms = () => {
-    if (checkout) checkout.classList.toggle("is-disabled", !terms?.checked)
-    if (checkout) checkout.style.pointerEvents = terms?.checked ? "" : "none"
-    if (checkout) checkout.style.opacity = terms?.checked ? "1" : "0.45"
-  }
-  terms?.addEventListener("change", syncTerms)
-  syncTerms()
-  checkout?.addEventListener("click", (e) => {
-    if (!terms?.checked) e.preventDefault()
-  })
+  /* Checkout is one tap — terms are linked under the button, not a gate. */
 
   const searchInput = document.getElementById("searchInput") as HTMLInputElement | null
   searchInput?.addEventListener("input", () => {
@@ -711,6 +721,8 @@ declare global {
       formatMoney: typeof formatMoney
       getCurrency: typeof getCurrency
       getItems: () => CartItem[]
+      changeQty: typeof changeQty
+      removeItem: typeof removeItem
     }
   }
 }
@@ -726,6 +738,8 @@ window.toonhub = {
   formatMoney,
   getCurrency,
   getItems: () => items,
+  changeQty,
+  removeItem,
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind)
