@@ -370,16 +370,20 @@ input, select, textarea {
 }
 
 @media (min-width: 1100px) {
-  .co-wrap { display: block; }
+  .co-wrap {
+    display: block;
+    max-width: 1040px;
+    margin: 0 auto;
+  }
   .co-main {
-    padding: 36px 5% 80px;
+    padding: 36px 28px 80px;
     max-width: none;
     margin: 0;
   }
   #coForm {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr);
-    column-gap: 8%;
+    grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.78fr);
+    column-gap: 40px;
     align-items: start;
   }
   .co-left { grid-column: 1; }
@@ -387,7 +391,7 @@ input, select, textarea {
     grid-column: 2;
     grid-row: 1 / span 8;
     margin: 0;
-    padding: 0 0 80px 8%;
+    padding: 0 0 80px 32px;
     border-top: 0;
     border-left: 1px solid var(--co-border);
     background: transparent;

@@ -14,7 +14,7 @@ export const prerender = false
   <meta name="theme-color" content="#000000" />
   <title>Checkout — {SITE.name}</title>
   <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
-  <link rel="stylesheet" href="/checkout.css?v=mobile6" />
+  <link rel="stylesheet" href="/checkout.css?v=desktop7" />
   <style>
     html,body{background:#000!important;color:#fff;color-scheme:dark}
     .co-wrap{display:flex!important;flex-direction:column!important;width:100%;max-width:100%;overflow-x:clip}
@@ -26,11 +26,11 @@ export const prerender = false
     .co-summary-head{padding-left:0;padding-right:0}
     .co-fold-toggle{display:none!important}
     @media (min-width: 1100px) {
-      .co-wrap{display:block!important}
-      .co-main{max-width:none;margin:0;padding:36px 5% 80px}
-      #coForm{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.9fr);column-gap:8%;align-items:start}
+      .co-wrap{display:block!important;max-width:1040px!important;margin:0 auto!important}
+      .co-main{max-width:none;margin:0;padding:36px 28px 80px}
+      #coForm{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(280px,.78fr);column-gap:40px;align-items:start}
       .co-left{grid-column:1}
-      .co-aside{grid-column:2;grid-row:1 / span 8;order:0;margin:0;padding:0 0 80px;border-top:0;border-left:1px solid #2a2a2a;padding-left:8%}
+      .co-aside{grid-column:2;grid-row:1 / span 8;order:0;margin:0;padding:0 0 80px 32px;border-top:0;border-left:1px solid #2a2a2a}
       .co-aside-body{padding:0!important}
       #payBtn,.co-foot,.co-lock{grid-column:1}
       .co-row.two{grid-template-columns:1fr 1fr!important}
