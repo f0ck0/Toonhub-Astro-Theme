@@ -121,9 +121,9 @@ function productCard(p: any) {
       ${cta}
     </div>
     <a href="/products/${esc(p.handle)}" class="pc-info">
-      <div class="pc-title">${esc(p.title)}</div>
+      <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title)}</div>
       <div class="stars" data-review-product="${esc(p.id)}"></div>
-      <div class="pc-price-row"><span class="pc-price">${esc(price)}</span></div>
+      <div class="pc-price-row"><span class="pc-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${esc(price)}</span></div>
     </a>
   </article>`
 }

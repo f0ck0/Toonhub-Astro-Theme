@@ -56,11 +56,11 @@ const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
     </button>
   </div>
   <a href={href} class="pc-info">
-    <div class="pc-title">{product.title}</div>
+    <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">{product.title}</div>
     <Stars rating={rating} count={count} productId={product?.id || ""} />
     <div class="pc-price-row">
-      <span class="pc-price product-card-price"><span class="pc-from">From</span>{saleFmt}</span>
-      <span class="pc-compare" data-price-strike>{originalFmt}</span>
+      <span class="pc-price product-card-price" style="font-family:'Quattrocento Sans','Helvetica Neue',Arial,sans-serif;font-weight:400;font-style:italic;"><span class="pc-from">From</span>{saleFmt}</span>
+      <span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">{originalFmt}</span>
     </div>
   </a>
 </article>
