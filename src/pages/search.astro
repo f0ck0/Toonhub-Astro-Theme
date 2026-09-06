@@ -3,55 +3,172 @@ import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
-import { searchProducts } from "../lib/medusa"
+import { searchProducts, getNavCategories } from "../lib/medusa"
+import { shopCategories } from "../lib/site"
 
 const url = new URL(Astro.request.url)
 const q = url.searchParams.get("q") || ""
 let products: any[] = []
 let totalCount = 0
+let series: any[] = []
 
 if (q) {
-    try {
-        const result = await searchProducts(q, 48)
-        products = result.products
-        totalCount = result.count
-    } catch (e) { console.error(e) }
+  try {
+    const result = await searchProducts(q, 48)
+    products = result.products
+    totalCount = result.count
+  } catch (e) { console.error(e) }
 }
+try {
+  series = shopCategories(await getNavCategories())
+} catch {}
 ---
-<Base>
-    <Header />
-    <main class="page-width" style="padding:48px 0;">
-        <h1 style="font-size:2rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:24px;">Search</h1>
-        <div style="margin-bottom:32px;">
-            <form method="get" style="display:flex;gap:12px;">
-                <input type="text" name="q" value={q} placeholder="Search anime figures..." style="flex:1;padding:12px 20px;border:1px solid var(--color-border);border-radius:0.3rem;font-size:0.9rem;background:#000;color:#fff;outline:none;font-family:inherit;" />
-                <button type="submit" class="btn btn-primary">Search</button>
-            </form>
-        </div>
+<Base title={q ? `Search: ${q} — TOONHUB` : "Search — TOONHUB"}>
+  <Header />
+  <main id="MainContent" class="page-width" style="padding:48px 0;" data-search-page data-search-q={q}>
+    <h1 style="font-size:2rem;margin-bottom:24px;">Search</h1>
+    <form class="search-page-form" method="get">
+      <input class="field" type="search" name="q" value={q} placeholder="Search anime figures..." />
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
 
-        {q && (
-            <p style="font-size:0.85rem;color:#888;margin-bottom:24px;">{totalCount} results for "{q}"</p>
-        )}
+    <div class="search-filters" id="searchFilters" hidden={!q}>
+      <label>Series
+        <select id="filterSeries">
+          <option value="">All series</option>
+          {series.map((c: any) => <option value={c.handle}>{c.name}</option>)}
+        </select>
+      </label>
+      <label>Price
+        <select id="filterPrice">
+          <option value="">Any price</option>
+          <option value="0-5000">Under $50</option>
+          <option value="5000-10000">$50 – $100</option>
+          <option value="10000-25000">$100 – $250</option>
+          <option value="25000-99999999">$250+</option>
+        </select>
+      </label>
+      <label>Sort
+        <select id="filterSort">
+          <option value="featured">Featured</option>
+          <option value="az">A–Z</option>
+          <option value="za">Z–A</option>
+          <option value="price-asc">Price, low to high</option>
+          <option value="price-desc">Price, high to low</option>
+        </select>
+      </label>
+    </div>
 
-        {products.length > 0 ? (
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" class="search-grid">
-                {products.map((product) => <ProductCard product={product} />)}
-            </div>
-        ) : q ? (
-            <div style="text-align:center;padding:80px 0;">
-                <div style="font-size:48px;">🔍</div>
-                <h3 style="font-size:1.25rem;font-weight:700;color:#fff;margin-top:16px;">No results found</h3>
-            </div>
-        ) : (
-            <div style="text-align:center;padding:80px 0;">
-                <div style="font-size:48px;">🔍</div>
-                <h3 style="font-size:1.25rem;font-weight:700;color:#fff;margin-top:16px;">Search for anime figures</h3>
-            </div>
-        )}
-    </main>
-    <Footer />
+    {q && <p id="searchCount" style="font-size:0.85rem;color:#888;margin-bottom:24px;">{totalCount} results for “{q}”</p>}
+    <div class="product-grid" id="searchGrid" data-hydrate-search>
+      {products.map((product) => <ProductCard product={product} />)}
+    </div>
+    {q && products.length === 0 && (
+      <div id="searchEmpty" style="text-align:center;padding:80px 0;">
+        <h3 style="font-size:1.25rem;">No results found</h3>
+        <a href="/collections" class="btn btn-outline" style="margin-top:20px;">Continue shopping</a>
+      </div>
+    )}
+    {!q && (
+      <div style="text-align:center;padding:80px 0;color:#888;">
+        <h3 style="font-size:1.25rem;color:#fff;">Search for anime figures</h3>
+      </div>
+    )}
+  </main>
+  <Footer />
 </Base>
+<script>
+  import { medusaGet } from "../scripts/medusa-client"
 
-<style>
-    @media (max-width: 990px) { .search-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-</style>
+  const root = document.querySelector("[data-search-page]")
+  const q = root?.getAttribute("data-search-q") || ""
+  const grid = document.getElementById("searchGrid")
+  const countEl = document.getElementById("searchCount")
+  const filters = document.getElementById("searchFilters")
+  const seriesSel = document.getElementById("filterSeries") as HTMLSelectElement | null
+  const priceSel = document.getElementById("filterPrice") as HTMLSelectElement | null
+  const sortSel = document.getElementById("filterSort") as HTMLSelectElement | null
+
+  function applyFilters() {
+    if (!grid) return
+    const series = seriesSel?.value || ""
+    const price = priceSel?.value || ""
+    const sort = sortSel?.value || "featured"
+    const cards = [...grid.querySelectorAll<HTMLElement>(".product-card")]
+    const [min, max] = price ? price.split("-").map(Number) : [0, Infinity]
+    const vis = cards.filter((c) => {
+      const cats = c.getAttribute("data-cats") || ""
+      if (series && !cats.split(/\s+/).includes(series)) return false
+      const p = Number(c.getAttribute("data-price-usd") || 0)
+      if (price && (p < min || p > max)) return false
+      return true
+    })
+    vis.sort((a, b) => {
+      const ta = a.getAttribute("data-title") || ""
+      const tb = b.getAttribute("data-title") || ""
+      const pa = Number(a.getAttribute("data-price-usd") || 0)
+      const pb = Number(b.getAttribute("data-price-usd") || 0)
+      if (sort === "az") return ta.localeCompare(tb)
+      if (sort === "za") return tb.localeCompare(ta)
+      if (sort === "price-asc") return pa - pb
+      if (sort === "price-desc") return pb - pa
+      return 0
+    })
+    cards.forEach((c) => { c.hidden = true })
+    vis.forEach((c) => { c.hidden = false; grid.appendChild(c) })
+    if (countEl) countEl.textContent = `${vis.length} result${vis.length === 1 ? "" : "s"}${q ? ` for “${q}”` : ""}`
+    const empty = document.getElementById("searchEmpty")
+    if (empty) empty.style.display = vis.length ? "none" : ""
+  }
+
+  seriesSel?.addEventListener("change", applyFilters)
+  priceSel?.addEventListener("change", applyFilters)
+  sortSel?.addEventListener("change", applyFilters)
+
+  async function hydrate() {
+    if (!q || !grid) return
+    if (grid.querySelector(".product-card")) {
+      filters && (filters.hidden = false)
+      applyFilters()
+      return
+    }
+    try {
+      const data = await medusaGet(`/store/products?q=${encodeURIComponent(q)}&limit=48&fields=*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,*categories,+handle,+title`)
+      const products = data.products || []
+      if (!products.length) return
+      grid.innerHTML = products.map((p: any) => {
+        const img = p.thumbnail || p.images?.[0]?.url || ""
+        const hover = (p.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img) || ""
+        const raw = p.variants?.[0]?.calculated_price?.calculated_amount ?? p.variants?.[0]?.prices?.[0]?.amount
+        const n = Number(typeof raw === "object" ? raw?.amount : raw) || 0
+        const usd = n > 0 && n < 1000 ? Math.round(n * 100) : Math.round(n)
+        const cats = (p.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
+        const esc = (s: string) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
+        const price = usd ? `From $${(usd / 100).toFixed(2)}` : ""
+        return `<article class="product-card card" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
+          <div class="pc-media">
+            <a href="/products/${esc(p.handle)}" aria-label="${esc(p.title)}" style="position:absolute;inset:0;z-index:1;">
+              ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : ""}
+              ${hover ? `<img class="pc-hover" src="${esc(hover)}" alt="" loading="lazy" decoding="async" />` : ""}
+            </a>
+            <button class="wish-btn" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${usd}" aria-label="Add to wishlist">♡</button>
+            <span class="sale-badge">Sale</span>
+            <a class="choose-options" href="/products/${esc(p.handle)}">View</a>
+          </div>
+          <a href="/products/${esc(p.handle)}" class="pc-info">
+            <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title)}</div>
+            <div class="pc-price-row"><span class="pc-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${price}</span></div>
+          </a>
+        </article>`
+      }).join("")
+      filters && (filters.hidden = false)
+      document.getElementById("searchEmpty")?.remove()
+      applyFilters()
+      document.dispatchEvent(new Event("toonhub:catalog"))
+    } catch (e) {
+      console.warn("[search]", e)
+    }
+  }
+
+  hydrate()
+</script>

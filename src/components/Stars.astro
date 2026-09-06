@@ -1,0 +1,16 @@
+---
+const { rating, count, size = "0.85rem", productId = "" } = Astro.props
+const n = Number(count) || 0
+const r = Number(rating) || 0
+const show = n > 0 && r > 0
+const full = Math.round(Math.max(0, Math.min(5, r)))
+const glyphs = "★".repeat(full) + "☆".repeat(5 - full)
+---
+<div class="stars" data-review-product={productId || undefined}>
+  {show && (
+    <>
+      <span class="star-glyphs" style={`font-size:${size};`}>{glyphs}</span>
+      <span class="star-meta">{r.toFixed(1)} / 5.0 ({n})</span>
+    </>
+  )}
+</div>

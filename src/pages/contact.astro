@@ -1,0 +1,47 @@
+---
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import { SITE } from "../lib/site"
+---
+<Base title="Contact Us — TOONHUB">
+  <Header />
+  <main id="MainContent" class="page-width policy-page">
+    <h1>Contact Us</h1>
+    <p class="rte">For any enquiries please contact us through {SITE.email}, or the form below.</p>
+    <h2 style="margin:28px 0 14px;font-size:1.1rem;">Contact form</h2>
+    <form id="contactForm" style="display:flex;flex-direction:column;gap:14px;max-width:560px;">
+      <input class="field" name="name" placeholder="Name" required />
+      <input class="field" type="email" name="email" placeholder="Email *" required />
+      <input class="field" name="phone" placeholder="Phone number" />
+      <textarea class="field" name="comment" placeholder="Comment" style="min-height:140px;resize:vertical;" required></textarea>
+      <button class="btn btn-primary" type="submit">Send</button>
+      <p id="contactMsg" class="hidden" style="color:#8bc34a;font-size:0.9rem;">Thanks — we'll get back to you shortly.</p>
+    </form>
+  </main>
+  <Footer />
+</Base>
+<script>
+  document.getElementById("contactForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault()
+    const form = e.target as HTMLFormElement
+    const data = Object.fromEntries(new FormData(form).entries())
+    const msg = document.getElementById("contactMsg")
+    try {
+      const res = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+      const out = await res.json()
+      if (msg) {
+        msg.classList.remove("hidden")
+        msg.style.color = res.ok ? "#8bc34a" : "#e53935"
+        msg.textContent = res.ok ? "Thanks — we'll get back to you shortly." : (out.error || "Could not send. Try again.")
+      }
+      if (res.ok) form.reset()
+    } catch {
+      if (msg) {
+        msg.classList.remove("hidden")
+        msg.style.color = "#e53935"
+        msg.textContent = "Network error. Please try again."
+      }
+    }
+  })
+</script>

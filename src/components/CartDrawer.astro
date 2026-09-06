@@ -1,0 +1,35 @@
+---
+import { SITE } from "../lib/site"
+---
+<div id="cartOverlay" class="overlay"></div>
+<aside id="cartDrawer" class="drawer drawer-right" aria-hidden="true" inert>
+  <div class="drawer-head">
+    <h2 id="cartDrawerTitle">Your cart</h2>
+    <button class="close-x" type="button" data-close-cart aria-label="Close">×</button>
+  </div>
+  <div class="drawer-body">
+    <div id="cartAddedNote" class="offer-note hidden">{SITE.offer}</div>
+    <div id="cartDrawerEmpty" class="hidden" style="text-align:center;padding:48px 8px;color:#888;">
+      <p style="font-size:1.1rem;color:#fff;text-transform:uppercase;font-family:var(--font-heading);">Your cart is empty</p>
+      <button class="btn btn-primary" type="button" data-close-cart style="margin-top:20px;">Continue shopping</button>
+    </div>
+    <div id="cartDrawerList"></div>
+  </div>
+  <div id="cartDrawerFoot" class="drawer-foot hidden">
+    <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;padding:0 0 10px;">
+      <span>Total</span><span id="cartTotal">$0.00</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#999;padding:0 0 8px;">
+      <span>Subtotal</span><span id="cartSubtotal">$0.00</span>
+    </div>
+    <div id="cartDiscountRow" class="hidden" style="display:flex;justify-content:space-between;font-size:0.85rem;color:#8bc34a;padding:0 0 8px;">
+      <span>Buy 1 get 2nd 50% off</span><span id="cartDiscount">−$0.00</span>
+    </div>
+    <p id="cartBogoNudge" hidden class="offer-note" style="margin:8px 0;"></p>
+    <a id="cartCheckout" href="/checkout" class="btn btn-primary btn-block">Checkout now — free shipping</a>
+    <button type="button" data-close-cart class="btn btn-outline btn-block" style="margin-top:8px;">Keep shopping</button>
+    <p style="font-size:0.72rem;color:#888;text-align:center;margin-top:10px;line-height:1.45;">
+      Free worldwide shipping · 30-day returns · <a href="/cart" style="text-decoration:underline;">View cart</a>
+    </p>
+  </div>
+</aside>

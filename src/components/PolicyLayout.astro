@@ -1,0 +1,17 @@
+---
+import Base from "../layouts/Base.astro"
+import Header from "./Header.astro"
+import Footer from "./Footer.astro"
+const { title, description } = Astro.props
+---
+<Base title={`${title} — TOONHUB`} description={description}>
+  <Header />
+  <main id="MainContent" class="page-width policy-page">
+    <nav class="breadcrumb" style="margin-bottom:16px;"><a href="/">Home</a><span>/</span><span style="color:#fff;">{title}</span></nav>
+    <h1>{title}</h1>
+    <div class="rte">
+      <slot />
+    </div>
+  </main>
+  <Footer />
+</Base>

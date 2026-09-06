@@ -1,0 +1,45 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import CollectionCard from "../../components/CollectionCard.astro"
+import { getAllCategories, productImageUrl } from "../../lib/medusa"
+import { medusaConfig } from "../../lib/medusa-config"
+import { COLLECTION_IMAGES, shopCategories } from "../../lib/site"
+
+let categories: any[] = []
+try { categories = await getAllCategories() } catch {}
+
+const ipCats = shopCategories(categories)
+
+function catTileImage(cat: any): string {
+  const p = cat.products?.find((p: any) => p.thumbnail)
+  return p?.thumbnail ? productImageUrl(p.thumbnail) : ""
+}
+---
+<Base title="Shop All — TOONHUB" description="Browse every anime figure collection at Toonhub.">
+  <Header />
+  <main id="MainContent" class="page-width shopby-section" style="padding-top:40px;padding-bottom:24px;">
+    <nav class="breadcrumb" style="margin-bottom:16px;"><a href="/">Home</a><span>/</span><span style="color:#fff;">Shop All</span></nav>
+    <h1 class="section-heading">Shop All</h1>
+    <p style="margin:8px 0 28px;color:#888;font-size:0.9rem;">Browse by series — each tile is a Medusa category, not a product.</p>
+    <div class="shopby-grid" data-hydrate-cats>
+      {ipCats.map((cat: any) => (
+        <CollectionCard
+          name={cat.name}
+          handle={cat.handle}
+          description={`Shop our exclusive ${cat.name} figures, featuring high-quality sculpts of iconic characters.`}
+          img={COLLECTION_IMAGES[cat.handle] || catTileImage(cat)}
+          count={cat.products?.length || 0}
+        />
+      ))}
+    </div>
+    {ipCats.length === 0 && (
+      <p style="color:#888;padding:48px 0;">
+        No Medusa categories yet. Backend: {medusaConfig().baseUrl}
+        {!medusaConfig().publishableKey && " — add MEDUSA_PUBLISHABLE_KEY (Admin → Settings → Publishable API Keys)."}
+      </p>
+    )}
+  </main>
+  <Footer />
+</Base>

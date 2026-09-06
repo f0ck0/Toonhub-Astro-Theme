@@ -4,23 +4,21 @@ import Header from "../../components/Header.astro"
 import Footer from "../../components/Footer.astro"
 import { getCollection, render } from "astro:content"
 
-export const prerender = true
-
-export async function getStaticPaths() {
-  const posts = await getCollection("posts")
-  return posts.filter((p) => !p.data.draft).map((post) => ({ params: { slug: post.id }, props: { post } }))
+const slug = Astro.params.slug || ""
+const posts = await getCollection("posts")
+const post = posts.find((p) => p.id === slug && !p.data.draft)
+if (!post) {
+  return new Response(null, { status: 404, statusText: "Not found" })
 }
-
-const { post } = Astro.props
 const { Content } = await render(post)
 ---
-<Base>
+<Base title={`${post.data.title} — TOONHUB`} description={post.data.description}>
     <Header />
-    <main class="page-width" style="padding:48px 0 8px;max-width:820px;min-height:50vh;">
+    <main id="MainContent" class="page-width" style="padding:48px 0 8px;max-width:820px;min-height:50vh;">
         <a href="/blog" style="font-size:0.8rem;color:#888;text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;">← Back to Blog</a>
         <h1 style="margin-top:16px;font-size:1.9rem;font-weight:700;color:#fff;line-height:1.25;">{post.data.title}</h1>
         <div style="margin-top:12px;font-size:0.8rem;color:#888;">{post.data.pubDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
-        <article style="margin-top:28px;font-size:0.95rem;color:#ddd;line-height:1.8;">
+        <article class="rte" style="margin-top:28px;color:#ddd;">
             <Content />
         </article>
     </main>

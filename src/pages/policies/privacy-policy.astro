@@ -1,0 +1,24 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+---
+<PolicyLayout title="Privacy policy" description="How TOONHUB collects and uses your information.">
+  <p>TOONHUB (“we”) respects your privacy. This policy describes how we collect, use and share information when you visit {SITE.domain} or place an order.</p>
+  <h2>What we collect</h2>
+  <ul>
+    <li>Contact details (name, email, shipping address, phone)</li>
+    <li>Order history and cart contents</li>
+    <li>Device and usage data (browser, pages viewed)</li>
+    <li>Currency preference stored in a cookie</li>
+  </ul>
+  <h2>How we use it</h2>
+  <p>To process orders, provide customer support, send shipping updates, improve the store, and — if you opt in — email you about launches and offers. We do not sell your personal information.</p>
+  <h2>Cookies</h2>
+  <p>We use essential cookies for cart and currency. Analytics cookies, if enabled, help us understand traffic. You can control cookies in your browser.</p>
+  <h2>Sharing</h2>
+  <p>We share data with payment processors, shipping carriers and hosting providers only as needed to fulfill your order. We may disclose information if required by law.</p>
+  <h2>Your rights</h2>
+  <p>You may request access, correction or deletion of your personal data by emailing {SITE.email}. EU/UK visitors also have rights under GDPR; California residents may have additional rights under the CCPA.</p>
+  <h2>Contact</h2>
+  <p>{SITE.email}</p>
+</PolicyLayout>

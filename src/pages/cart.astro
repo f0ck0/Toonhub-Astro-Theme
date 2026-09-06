@@ -2,112 +2,131 @@
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+import TrustIcons from "../components/TrustIcons.astro"
+import { SITE } from "../lib/site"
 ---
-<Base>
-    <Header />
-    <main class="page-width" style="padding:48px 0;">
-        <h1 style="font-size:2rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:24px;">Your Bag</h1>
-        <div id="cartContainer">
-            <!-- Empty cart state -->
-            <div style="text-align:center;padding:80px 0;display:flex;flex-direction:column;align-items:center;" id="emptyCart">
-                <div style="width:96px;height:96px;border:1.5px solid var(--color-border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#888;">
-                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                </div>
-                <h2 style="font-size:1.4rem;font-weight:700;color:#fff;margin-top:24px;text-transform:uppercase;">Your Bag Is Empty</h2>
-                <p style="font-size:0.9rem;color:#888;margin-top:8px;max-width:400px;">Once you add something to your bag, it will appear here. Ready to get started?</p>
-                <a href="/" class="btn btn-primary" style="margin-top:24px;">Start Shopping</a>
-            </div>
-            <!-- Cart items (JS-rendered) -->
-            <div id="cartItems" style="display:none;">
-                <div style="display:grid;grid-template-columns:1fr 340px;gap:48px;align-items:start;" class="cart-layout">
-                    <div id="itemsList" style="display:flex;flex-direction:column;"></div>
-                    <div class="cart-summary">
-                        <h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.06em;">Summary</h3>
-                        <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#999;padding:8px 0;">
-                            <span>Subtotal</span><span id="subtotal">$0.00</span>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#999;padding:8px 0;">
-                            <span>Shipping</span><span>Calculated at checkout</span>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;color:#fff;padding:12px 0;border-top:1px solid var(--color-border);margin-top:8px;">
-                            <span>Total</span><span id="total">$0.00</span>
-                        </div>
-                        <a href="/checkout" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px;">Checkout</a>
-                        <div style="font-size:0.72rem;color:#666;text-align:center;margin-top:12px;">Taxes and shipping calculated at checkout</div>
-                    </div>
-                </div>
-            </div>
+<Base title="Your Shopping Cart — TOONHUB">
+  <Header />
+  <main id="MainContent" class="page-width" style="padding:48px 0;">
+    <h1 style="font-size:2rem;font-weight:700;margin-bottom:8px;">Your cart</h1>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:24px;"><a href="/collections" style="text-decoration:underline;">Continue shopping</a></p>
+    <div class="offer-note">{SITE.offer}</div>
+
+    <div id="emptyCart" style="text-align:center;padding:64px 0;">
+      <h2 style="font-size:1.4rem;">Your cart is empty</h2>
+      <a href="/collections" class="btn btn-primary" style="margin-top:20px;">Continue shopping</a>
+      <p style="margin-top:28px;font-size:0.9rem;color:#888;">Have an account? <a href="/account" style="text-decoration:underline;color:#fff;">Log in</a> to check out faster.</p>
+    </div>
+
+    <div id="cartItems" class="hidden">
+      <div class="cart-layout">
+        <div id="itemsList"></div>
+        <div class="cart-summary">
+          <h3 style="font-size:0.9rem;letter-spacing:0.06em;margin-bottom:16px;">Summary</h3>
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#999;padding:8px 0;">
+            <span>Subtotal</span><span id="subtotal">$0.00</span>
+          </div>
+          <div id="discRow" class="hidden" style="display:flex;justify-content:space-between;font-size:0.85rem;color:#8bc34a;padding:8px 0;">
+            <span>Buy 1 get 2nd 50% off</span><span id="discount">−$0.00</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#999;padding:8px 0;">
+            <span>Shipping</span><span>Free worldwide</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;padding:12px 0;border-top:1px solid var(--color-border);margin-top:8px;">
+            <span>Estimated total</span><span id="total">$0.00</span>
+          </div>
+          <p style="font-size:0.72rem;color:#666;">Taxes included. Discounts and shipping calculated at checkout.</p>
+          <p id="pageBogoNudge" class="offer-note" hidden style="margin-top:12px;"></p>
+          <a id="pageCheckout" href="/checkout" class="btn btn-primary btn-block cart-checkout-btn">Checkout — free shipping</a>
+          <p style="font-size:0.72rem;color:#888;text-align:center;margin-top:10px;line-height:1.45;">
+            By checking out you agree to the <a href="/policies/terms-of-service" style="text-decoration:underline;">Terms</a> and <a href="/policies/privacy-policy" style="text-decoration:underline;">Privacy Policy</a>.
+          </p>
+          <TrustIcons />
         </div>
-    </main>
-    <Footer />
+      </div>
+    </div>
+  </main>
+  <Footer />
 </Base>
-
 <script>
-    // ---- Currency helpers (client-side, static rates mirror server) ----
-    const RATES = { usd: 1, eur: 0.92, gbp: 0.79, aud: 1.52, cad: 1.37, jpy: 156, cny: 7.25 }
-    function getCurrency() {
-        try {
-            const m = document.cookie.match(/(?:^|; )toonhub_currency=([^;]+)/)
-            return m ? m[1] : 'usd'
-        } catch (e) { return 'usd' }
-    }
-    function fmtMinor(minor, code) {
-        const rate = RATES[code] ?? 1
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: code.toUpperCase() })
-            .format((minor * rate) / 100)
-    }
+  function bogo(items: any[]) {
+    const units: number[] = []
+    for (const it of items) for (let i = 0; i < it.quantity; i++) units.push(it.unit_price)
+    units.sort((a, b) => b - a)
+    let d = 0
+    for (let i = 0; i + 1 < units.length; i += 2) d += Math.round(Math.min(units[i], units[i + 1]) * 0.5)
+    return d
+  }
 
-    async function loadCart() {
-        const cartId = localStorage.getItem('cartId')
-        if (!cartId) { showEmpty(); return }
-        try {
-            const res = await fetch(`/api/cart?cartId=${cartId}`)
-            const data = await res.json()
-            const items = data.items || []
-            if (!items.length) { showEmpty(); return }
-            document.getElementById('emptyCart').style.display = 'none'
-            document.getElementById('cartItems').style.display = 'block'
-            const list = document.getElementById('itemsList')
-            const code = getCurrency()
-            let subtotal = 0
-            list.innerHTML = items.map(item => {
-                const line = item.unit_price * item.quantity
-                subtotal += line
-                return `
-                    <div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--color-border);">
-                        <div style="width:110px;height:132px;background:#111;flex-shrink:0;overflow:hidden;border-radius:0.3rem;">
-                            <img src="${item.thumbnail || ''}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />
-                        </div>
-                        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:4px 0;">
-                            <div>
-                                <div style="font-size:0.95rem;font-weight:700;color:#fff;text-transform:uppercase;">${item.title}</div>
-                                <div style="font-size:0.82rem;color:#888;margin-top:4px;">Qty: ${item.quantity}</div>
-                                <div style="font-size:0.9rem;font-weight:700;color:#fff;margin-top:4px;">${fmtMinor(line, code)}</div>
-                            </div>
-                            <button onclick="removeItem('${item.id}','${cartId}')" style="align-self:flex-start;font-size:0.82rem;color:#888;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;">Remove</button>
-                        </div>
-                    </div>
-                `
-            }).join('')
-            document.getElementById('subtotal').innerText = fmtMinor(subtotal, code)
-            document.getElementById('total').innerText = fmtMinor(subtotal, code)
-        } catch(e) { console.error(e); showEmpty() }
+  async function loadCart() {
+    await window.toonhub.refresh()
+    const items = window.toonhub.getItems()
+    const empty = document.getElementById("emptyCart")!
+    const box = document.getElementById("cartItems")!
+    if (!items.length) {
+      empty.style.display = "block"
+      box.classList.add("hidden")
+      return
     }
-    function showEmpty() {
-        document.getElementById('emptyCart').style.display = 'flex'
-        document.getElementById('cartItems').style.display = 'none'
+    empty.style.display = "none"
+    box.classList.remove("hidden")
+    const fmt = window.toonhub.formatMoney
+    const list = document.getElementById("itemsList")!
+    list.innerHTML = items.map((item) => `
+      <div class="cart-line" data-id="${item.id}" style="align-items:flex-start;">
+        <a href="${item.handle ? `/products/${item.handle}` : "#"}" style="flex-shrink:0;">
+          ${item.thumbnail
+            ? `<img src="${item.thumbnail}" alt="" style="width:110px;height:110px;object-fit:cover;border-radius:0.3rem;background:#111;" />`
+            : `<div class="ph" style="width:110px;height:110px;"></div>`}
+        </a>
+        <div style="flex:1;min-width:0;">
+          <a href="${item.handle ? `/products/${item.handle}` : "#"}" style="font-size:0.95rem;font-weight:700;text-transform:uppercase;">${item.title}</a>
+          ${item.variant_title ? `<div style="font-size:0.8rem;color:#888;margin-top:4px;">${item.variant_title}</div>` : ""}
+          <div style="font-size:0.9rem;font-weight:700;margin-top:8px;">${fmt(item.unit_price * item.quantity)}</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;">
+            <div class="qty-row">
+              <button type="button" data-qty="-1" data-id="${item.id}" aria-label="Decrease">−</button>
+              <span>${item.quantity}</span>
+              <button type="button" data-qty="1" data-id="${item.id}" aria-label="Increase">+</button>
+            </div>
+            <button type="button" data-remove="${item.id}" style="background:none;border:none;color:#888;font-size:0.78rem;text-decoration:underline;padding:0;">Remove</button>
+          </div>
+        </div>
+      </div>
+    `).join("")
+    const sum = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    const disc = bogo(items)
+    document.getElementById("subtotal")!.textContent = fmt(sum)
+    document.getElementById("total")!.textContent = fmt(Math.max(0, sum - disc))
+    const row = document.getElementById("discRow")!
+    const dEl = document.getElementById("discount")!
+    row.classList.toggle("hidden", disc <= 0)
+    dEl.textContent = "−" + fmt(disc)
+    const units = items.reduce((s, i) => s + i.quantity, 0)
+    const nudge = document.getElementById("pageBogoNudge")!
+    if (units === 1) {
+      nudge.hidden = false
+      nudge.textContent = "Add one more figure — the 2nd is 50% off."
+    } else if (disc > 0) {
+      nudge.hidden = false
+      nudge.textContent = `You're saving ${fmt(disc)} with Buy 1 get 2nd 50% off.`
+    } else {
+      nudge.hidden = true
     }
-    loadCart()
+  }
 
-    window.removeItem = async (itemId, cartId) => {
-        try {
-            await fetch('/api/cart/remove', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cartId, itemId}) })
-            loadCart()
-        } catch(e) { console.error(e) }
-    }
+  document.getElementById("itemsList")?.addEventListener("click", async (e) => {
+    const t = e.target as HTMLElement
+    const rem = t.closest<HTMLElement>("[data-remove]")
+    const qty = t.closest<HTMLElement>("[data-qty]")
+    if (rem) await window.toonhub.removeItem(rem.getAttribute("data-remove") || "")
+    if (qty) await window.toonhub.changeQty(qty.getAttribute("data-id") || "", Number(qty.getAttribute("data-qty")))
+    if (rem || qty) loadCart()
+  })
+
+  const wait = () => {
+    if (window.toonhub) loadCart()
+    else setTimeout(wait, 20)
+  }
+  wait()
 </script>
-
-<style>
-    .cart-summary { border: 1px solid var(--color-border); padding: 24px; border-radius: 0.4rem; background: #0a0a0a; }
-    @media (max-width: 960px) { .cart-layout { grid-template-columns: 1fr !important; } }
-</style>

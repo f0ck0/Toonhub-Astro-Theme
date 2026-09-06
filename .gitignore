@@ -17,6 +17,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# local data (newsletter signups when Medusa has no route)
+data/
+
 # macOS-specific files
 .DS_Store
 

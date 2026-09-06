@@ -226,6 +226,35 @@ export function readCurrencyCookie(): string | null {
   return m ? m[1] : null
 }
 
+/** SSR-safe currency from Astro.cookies (falls back to usd). */
+export function currencyFromCookies(cookies?: { get: (name: string) => { value: string } | undefined } | null): string {
+  const v = cookies?.get(CURRENCY_COOKIE)?.value
+  return (v || "usd").toLowerCase()
+}
+
+export const CURRENCY_OPTIONS = [
+  { code: "usd", label: "USD $ — US Dollar", flag: "🇺🇸" },
+  { code: "eur", label: "EUR € — Euro", flag: "🇪🇺" },
+  { code: "gbp", label: "GBP £ — British Pound", flag: "🇬🇧" },
+  { code: "aud", label: "AUD AU$ — Australian Dollar", flag: "🇦🇺" },
+  { code: "cad", label: "CAD CA$ — Canadian Dollar", flag: "🇨🇦" },
+  { code: "jpy", label: "JPY ¥ — Japanese Yen", flag: "🇯🇵" },
+  { code: "cny", label: "CNY CN¥ — Chinese Yuan", flag: "🇨🇳" },
+] as const
+
+export function currencyLabel(code: string): string {
+  const map: Record<string, string> = {
+    usd: "USD $",
+    eur: "EUR €",
+    gbp: "GBP £",
+    aud: "AUD AU$",
+    cad: "CAD CA$",
+    jpy: "JPY ¥",
+    cny: "CNY CN¥",
+  }
+  return map[code?.toLowerCase()] || code.toUpperCase()
+}
+
 /** Sale simulation: reference store uses 50% off. Returns { original, sale } in the target currency. */
 export function salePrice(usdMinor: number, currency: string, rates: Record<string, number> = STATIC_RATES) {
   const sale = convertAmount(usdMinor, currency, rates)

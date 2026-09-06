@@ -1,22 +1,114 @@
 ---
 import "../styles/global.css"
-import { getCurrencyAndLocale } from "../lib/currency"
----
+import CartDrawer from "../components/CartDrawer.astro"
+import SearchOverlay from "../components/SearchOverlay.astro"
+import QuickView from "../components/QuickView.astro"
+import { SITE } from "../lib/site"
+import { medusaConfig } from "../lib/medusa-config"
 
+const {
+  title = `${SITE.name}: Shop Premium Anime Figures`,
+  description = SITE.description,
+  image = "/images/collection/onepiece.webp",
+  lcpImage = "",
+} = Astro.props
+const medusa = medusaConfig()
+const canonical = new URL(Astro.url.pathname, "https://toonhubshop.com").href
+const ogImage = image.startsWith("http") ? image : `https://toonhubshop.com${image}`
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE.name,
+  url: "https://toonhubshop.com",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://toonhubshop.com/search?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
+}
+---
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#000;color-scheme:dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Toonhub — World's Leading Anime Figures Collection</title>
-    <meta name="description" content="Premium anime figures, statues and collectibles. Free shipping on orders over $68." />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
-    <!-- Self-hosted fonts (Asul headings + Quattrocento Sans body) — 避免 Google Fonts 渲染阻塞 -->
-    <link rel="stylesheet" href="/fonts/fonts.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#000000" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://medusa.toonhubshop.com" crossorigin />
+  <link rel="preload" href="/fonts/asul-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/qs-400.woff2" as="font" type="font/woff2" crossorigin />
+  {lcpImage ? <link rel="preload" as="image" href={lcpImage} fetchpriority="high" /> : null}
+  <style is:inline>
+    @font-face{font-family:'Asul';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/asul-400.woff2') format('woff2')}
+    @font-face{font-family:'Asul';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/asul-700.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/qs-400.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/qs-700.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:italic;font-weight:400;font-display:swap;src:url('/fonts/qs-italic-400.woff2') format('woff2')}
+  </style>
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)}></script>
 </head>
-<body class="bg-[--color-background] text-[--color-foreground]">
-    <main id="main">
-        <slot />
-    </main>
+<body>
+  <a class="skip-link" href="#MainContent">Skip to content</a>
+  <slot />
+  <CartDrawer />
+  <SearchOverlay />
+  <QuickView />
+  <script is:inline define:vars={{ baseUrl: medusa.baseUrl, publishableKey: medusa.publishableKey }}>
+    window.toonhubMedusa = { baseUrl: baseUrl, publishableKey: publishableKey }
+  </script>
+  <script is:inline>
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest && e.target.closest("[data-action='buynow']")
+      if (!t) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation()
+      var src = t
+      if (t.id === "qvBuy") src = document.getElementById("qvAdd") || t
+      else if (!t.getAttribute("data-title")) src = document.getElementById("addToCartBtn") || document.getElementById("buyNowBtn") || t
+      var variantId = src.getAttribute("data-variant-id") || ""
+      var title = src.getAttribute("data-title") || "Figure"
+      var qty = parseInt(src.getAttribute("data-qty") || "1", 10) || 1
+      var item = {
+        id: (variantId || "item") + "-" + Date.now(),
+        title: title,
+        thumbnail: src.getAttribute("data-thumbnail") || "",
+        variant_id: variantId,
+        quantity: qty,
+        unit_price: Number(src.getAttribute("data-price") || 0),
+        handle: src.getAttribute("data-handle") || "",
+        variant_title: src.getAttribute("data-vtitle") || "",
+      }
+      try {
+        var local = JSON.parse(localStorage.getItem("toonhub_local_cart") || "[]")
+        if (!Array.isArray(local)) local = []
+        var existing = local.find(function (i) { return i.variant_id && i.variant_id === variantId })
+        if (existing) existing.quantity += qty
+        else local.push(item)
+        localStorage.setItem("toonhub_local_cart", JSON.stringify(local))
+      } catch (err) {}
+      t.textContent = "Going to checkout…"
+      if (t.disabled !== undefined) t.disabled = true
+      window.location.href = "/checkout"
+    }, true)
+  </script>
+  <script>
+    import "../scripts/storefront"
+    import "../scripts/catalog"
+    import "../scripts/reviews"
+  </script>
 </body>
 </html>

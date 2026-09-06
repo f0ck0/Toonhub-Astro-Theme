@@ -1,0 +1,112 @@
+---
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import { getProducts, getAllCategories, getCategoryByHandle } from "../../lib/medusa"
+
+const { id } = Astro.params
+const sort = Astro.url.searchParams.get("sort") || "featured"
+let category: any = null
+let initialProducts: any[] = []
+let totalCount = 0
+let childCategories: any[] = []
+let siblingCats: any[] = []
+let parentCat: any = null
+const PAGE_SIZE = 24
+if (id === "all") return Astro.redirect("/collections")
+const special = id === "new-arrivals"
+
+try {
+  const allCats = await getAllCategories()
+  if (!special) {
+    category = allCats.find((c: any) => c.handle === id) || await getCategoryByHandle(id || "")
+  }
+  if (category || special) {
+    if (category) {
+      childCategories = allCats.filter((c: any) => c.parent_category_id === category.id)
+      if (category.parent_category_id) {
+        parentCat = allCats.find((c: any) => c.id === category.parent_category_id)
+        siblingCats = allCats.filter((c: any) => c.parent_category_id === category.parent_category_id && c.id !== category.id)
+      }
+    }
+    const result = await getProducts(PAGE_SIZE, 0, category?.id)
+    initialProducts = result.products
+    totalCount = result.count
+  }
+} catch (e) { console.error(e) }
+
+function sortProducts(list: any[]) {
+  const copy = [...list]
+  if (sort === "az") copy.sort((a, b) => String(a.title).localeCompare(String(b.title)))
+  else if (sort === "za") copy.sort((a, b) => String(b.title).localeCompare(String(a.title)))
+  else if (sort === "price-asc") copy.sort((a, b) => (a.variants?.[0]?.prices?.[0]?.amount || 0) - (b.variants?.[0]?.prices?.[0]?.amount || 0))
+  else if (sort === "price-desc") copy.sort((a, b) => (b.variants?.[0]?.prices?.[0]?.amount || 0) - (a.variants?.[0]?.prices?.[0]?.amount || 0))
+  return copy
+}
+initialProducts = sortProducts(initialProducts)
+
+const title = special ? "New Designs" : (category?.name || "")
+const heading = special ? title : title ? `Collection: ${title}` : "Collection"
+const rawDesc = String(category?.description || "").trim()
+const descText = rawDesc.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim()
+const showDesc = Boolean(descText)
+---
+<Base title={`${title || "Collection"} — TOONHUB`}>
+  <Header />
+  <main id="MainContent" data-collection-handle={id}>
+      <section class="page-width" style="padding:24px 0 8px;">
+        <nav class="breadcrumb">
+          <a href="/">Home</a>
+          {parentCat && <><span>/</span><a href={`/collections/${parentCat.handle}`}>{parentCat.name}</a></>}
+          <span>/</span>
+          <span style="color:#fff;">{title}</span>
+        </nav>
+        <h1 class="section-heading" style="margin-top:12px;font-size:2rem;" data-collection-title>{heading}</h1>
+        {showDesc && (
+          <div class="rte" style="margin-top:12px;max-width:820px;" set:html={rawDesc} />
+        )}
+        {special && !showDesc && (
+          <p style="margin-top:8px;font-size:0.9rem;color:#888;max-width:820px;">The newest figures added to Toonhub.</p>
+        )}
+      </section>
+
+      {childCategories.length > 0 && (
+        <section class="page-width" style="padding:12px 0;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href={`/collections/${category.handle}`} class="filter-pill active">All</a>
+            {childCategories.map((cat: any) => (
+              <a href={`/collections/${cat.handle}`} class="filter-pill">{cat.name}</a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section class="page-width" style="padding:24px 0 48px;">
+        <div class="toolbar">
+          <p style="font-size:0.85rem;color:#888;" data-product-count>{totalCount} products</p>
+          <label style="font-size:0.8rem;color:#888;">Sort by
+            <select id="collectionSort" name="sort" style="margin-left:8px;">
+              <option value="featured" selected={sort === "featured"}>Featured</option>
+              <option value="az" selected={sort === "az"}>Alphabetically, A–Z</option>
+              <option value="za" selected={sort === "za"}>Alphabetically, Z–A</option>
+              <option value="price-asc" selected={sort === "price-asc"}>Price, low to high</option>
+              <option value="price-desc" selected={sort === "price-desc"}>Price, high to low</option>
+            </select>
+          </label>
+        </div>
+        <div class="product-grid" id="productGrid" data-hydrate-products>
+          {initialProducts.map((product: any) => <ProductCard product={product} />)}
+        </div>
+        <div id="loadMoreWrap" class="load-more">
+          <div id="loadMoreSentinel" aria-hidden="true"></div>
+          <button id="loadMoreBtn" class="btn btn-outline" type="button">Load more</button>
+          <div id="loadMoreStatus" class="load-more-status" hidden>
+            <div class="spinner"></div>
+            <span>Loading next page…</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  <Footer />
+</Base>

@@ -3,296 +3,187 @@ import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
-import { getProducts, getAllCategories, productImageUrl } from "../lib/medusa"
+import CollectionCard from "../components/CollectionCard.astro"
+import ReviewMedals from "../components/ReviewMedals.astro"
+import { getProducts, getProductsByIds, getAllCategories, productImageUrl } from "../lib/medusa"
+import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
+import { cardImage } from "../lib/img"
+
+function shuffle<T>(list: T[]): T[] {
+  const a = [...list]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function stubId(p: any) {
+  return typeof p === "string" ? p : p?.id || ""
+}
 
 let products: any[] = []
 let totalCount = 0
 let categories: any[] = []
 
 try {
-    categories = await getAllCategories()
+  categories = await getAllCategories()
 } catch (e) {}
 
 try {
-    // 从所有子类目中随机取样, 混合不同 IP 的产品 (避免默认列表全是同一类目)
-    const leafCats = categories.filter((c: any) => c.parent_category_id && (c.products?.length || 0) > 0)
-    const mixed: any[] = []
-    for (const c of leafCats) {
-        const pool = c.products || []
-        // 每个类目随机取若干产品, 保证类目多样性
-        const take = Math.min(2, pool.length)
-        for (let i = 0; i < take; i++) {
-            const idx = Math.floor(Math.random() * pool.length)
-            const p = pool.splice(idx, 1)[0]
-            if (p) mixed.push(p)
-        }
-    }
-    // 若混合不足 24 个, 用全量最新产品补齐
-    if (mixed.length < 24) {
-        const { products: extra, count } = await getProducts(48, 0)
-        totalCount = count
-        for (const p of extra) {
-            if (!mixed.some((m: any) => m.id === p.id)) mixed.push(p)
-        }
-    }
-    products = [...mixed].sort(() => Math.random() - 0.5).slice(0, 24)
-} catch (e) { console.error("Failed to fetch products:", e) }
+  try {
+    const extra = await getProducts(1, 0)
+    totalCount = extra.count
+  } catch {}
 
-const parentCats = categories.filter((c: any) => !c.parent_category_id)
-const childMap: Record<string, any[]> = {}
-for (const c of categories) {
-    if (c.parent_category_id) {
-        if (!childMap[c.parent_category_id]) childMap[c.parent_category_id] = []
-        childMap[c.parent_category_id].push(c)
+  const shop = shuffle(shopCategories(categories))
+  const ids: string[] = []
+  const seenIds = new Set<string>()
+  for (let pass = 0; pass < 2; pass++) {
+    for (const c of shop) {
+      if (ids.length >= 24) break
+      const pool = shuffle(c.products || [])
+        .map(stubId)
+        .filter((id: string) => id && !seenIds.has(id))
+      if (!pool.length) continue
+      seenIds.add(pool[0])
+      ids.push(pool[0])
     }
+  }
+
+  let full: any[] = []
+  if (ids.length) full = (await getProductsByIds(ids)).products || []
+  const byId = new Map(full.map((p: any) => [p.id, p]))
+  let mixed = ids
+    .map((id) => byId.get(id))
+    .filter((p: any) => p && (p.title || p.handle))
+
+  if (mixed.length < 12) {
+    const batches = await Promise.all(
+      shop.slice(0, 12).map((c: any) =>
+        getProducts(6, 0, c.id)
+          .then((r) => r.products || [])
+          .catch(() => []),
+      ),
+    )
+    const have = new Set(mixed.map((p: any) => p.id))
+    const fromCats: any[] = []
+    for (const list of batches) {
+      let took = 0
+      for (const p of shuffle(list)) {
+        if (!p?.id || have.has(p.id) || !(p.title || p.handle)) continue
+        have.add(p.id)
+        fromCats.push(p)
+        took++
+        if (took >= 2) break
+      }
+    }
+    mixed = [...mixed, ...fromCats]
+  }
+
+  products = shuffle(mixed).slice(0, 24)
+  if (!products.length) {
+    const extra = await getProducts(48, 0)
+    if (!totalCount) totalCount = extra.count
+    products = shuffle(extra.products || []).filter((p: any) => p && (p.title || p.handle)).slice(0, 24)
+  }
+} catch (e) {
+  console.error("Failed to fetch products:", e)
 }
 
-// tsukiyashop-style "Shop by List": Figures 下的全部 IP 子分类，按产品数排序
-const figuresParent = categories.find((c: any) => c.handle === "figures-100028") || parentCats[0]
-const ipCats: any[] = (figuresParent ? childMap[figuresParent.id] || [] : [])
-    .sort((a: any, b: any) => (b.products?.length || 0) - (a.products?.length || 0))
-
-// 参考站下载的分类图映射 (handle -> 本地图片, 已转 WebP)
-const COLLECTION_IMAGES: Record<string, string> = {
-    "one-piece-100029": "/images/collection/onepiece.webp",
-    "dragon-ball-100030": "/images/collection/dragonball.webp",
-    "naruto-100031": "/images/collection/solo-leveling.webp",
-    "demon-slayer-100032": "/images/collection/demon-slayer.webp",
-    "pok-mon-100033": "/images/collection/pokemon.webp",
-    "digimon-100034": "/images/collection/gundam.webp",
-    "bleach-100035": "/images/collection/bleach.webp",
-    "my-hero-academia-100036": "/images/collection/my-hero-acadamia.webp",
-    "jujutsu-kaisen-100037": "/images/collection/jujutsu-kaisen.webp",
-    "black-clover-100038": "/images/collection/black-clover.webp",
-    "tokyo-revengers-100039": "/images/collection/sailor-moon.webp",
-    // One Punch Man 无参考站图, 走下方 catTileImage 商品图兜底
-    "attack-on-titan-100041": "/images/collection/attack-on-titan.webp",
-    "chainsaw-man-100042": "/images/collection/chainsaw-man.webp",
-    "tokyo-ghoul-100043": "/images/collection/tokyo-ghoul.webp",
-}
+const ipCats = shopCategories(categories)
 
 function catTileImage(cat: any): string {
-    const p = cat.products?.find((p: any) => p.thumbnail)
-    return p?.thumbnail ? productImageUrl(p.thumbnail) : ""
+  const p = cat.products?.find((p: any) => p.thumbnail)
+  return p?.thumbnail ? productImageUrl(p.thumbnail) : ""
 }
 
 const shopByList = ipCats.map((cat: any) => ({
-    name: cat.name,
-    handle: cat.handle,
-    description: `Shop our exclusive ${cat.name} figures collection — premium quality, high-resolution prints, worldwide shipping.`,
-    count: cat.products?.length || 0,
-    img: COLLECTION_IMAGES[cat.handle] || catTileImage(cat),
+  name: cat.name,
+  handle: cat.handle,
+  description: `Shop our exclusive ${cat.name} figures — premium quality, worldwide shipping.`,
+  count: cat.products?.length || 0,
+  img: COLLECTION_IMAGES[cat.handle] || catTileImage(cat),
 }))
 
-const FEATURED_TITLE = "You May Also Like"
-const featuredSubtitle = "A handpicked mix from every collection — updated for you."
-const PAGES = Math.ceil(totalCount / 24) || 1
+const featuredCols = shopByList.slice(0, 18)
+const moreCols = shopByList.slice(18)
+const lcpImage = cardImage(featuredCols[0]?.img).src
 ---
-<Base>
-    <Header />
-
-    <!-- ============ Shop by List (参考站: 桌面6列多行网格 / 手机单行横向滚动) ============ -->
-    <section class="shopby-section" style="padding:48px 0 8px;">
-        <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
-        <div class="shopby-grid" id="shopbyGrid">
-            {shopByList.map((sec, idx) => (
-                <a href={`/categories/${sec.handle}`} class="card shopby-tile" style="display:block;text-decoration:none;">
-                    <div class="shopby-media" style="position:relative;aspect-ratio:1;overflow:hidden;background:#111;">
-                        {sec.img ? (
-                            <img src={sec.img} alt={sec.name} loading={idx === 0 ? "eager" : "lazy"} fetchpriority={idx === 0 ? "high" : undefined} style="width:100%;height:100%;object-fit:cover;transition:transform 400ms ease;" class="shopby-img" />
-                        ) : (
-                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;color:#555;font-family:var(--font-heading);font-size:1.1rem;text-transform:uppercase;">{sec.name}</div>
-                        )}
-                    </div>
-                    <div class="shopby-info" style="padding:12px 0 0;">
-                        <div class="shopby-heading">
-                            <h3 style="font-size:1rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{sec.name}</h3>
-                            <svg class="icon-arrow" width="14" height="10" viewBox="0 0 14 10" fill="none" style="flex-shrink:0;color:#888;transition:transform 200ms ease;"><path fill="currentColor" fill-rule="evenodd" d="M8.537.808a.5.5 0 0 1 .817-.162l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 1 1-.708-.708L11.793 5.5H1a.5.5 0 0 1 0-1h10.793L8.646 1.354a.5.5 0 0 1-.109-.546" clip-rule="evenodd"/></svg>
-                        </div>
-                        <p style="margin-top:6px;font-size:0.8rem;color:#999;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{sec.description}</p>
-                        <p style="margin-top:8px;font-size:0.75rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;">{sec.count} products</p>
-                    </div>
-                </a>
-            ))}
-        </div>
+<Base lcpImage={lcpImage}>
+  <Header />
+  <main id="MainContent">
+    <section class="page-width shopby-section" style="padding-top:48px;padding-bottom:8px;">
+      <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
+      <div class="shopby-grid" data-hydrate-cats>
+        {featuredCols.map((sec, i) => (
+          <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} eager={i < 6} high={i === 0} />
+        ))}
+      </div>
     </section>
 
-    <!-- ============ New Arrivals: 一行横排, 鼠标拖拽滚动(可半张预览) ============ -->
-    <section class="page-width" style="padding:64px 0 8px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
-            <div>
-                <h2 class="section-heading" style="margin:0;">{FEATURED_TITLE}</h2>
-                <p style="margin-top:6px;font-size:0.85rem;color:#888;">{featuredSubtitle}</p>
-            </div>
-            <div style="display:flex;gap:8px;">
-                <button class="slider-btn" id="prevBtn" aria-label="Previous">←</button>
-                <button class="slider-btn" id="nextBtn" aria-label="Next">→</button>
-            </div>
-        </div>
-
-        <!-- 拖拽滚动容器: overflow-x 自由滚动, 支持鼠标拖拽 + 触摸滑动 -->
-        <div id="productSlider" class="product-drag-slider" style="overflow-x:auto;overflow-y:hidden;cursor:grab;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:8px;">
-            <div style="display:flex;gap:16px;min-width:max-content;">
-                {products.length > 0 ? (
-                    products.map((product: any) => (
-                        <div style="flex:0 0 auto;width:calc((100vw - 12rem) / 6);max-width:250px;min-width:190px;">
-                            <ProductCard product={product} />
-                        </div>
-                    ))
-                ) : (
-                    <div style="text-align:center;padding:60px 0;width:100%;">
-                        <div style="font-size:48px;">📦</div>
-                        <h3 style="font-size:20px;font-weight:700;margin-top:16px;color:#fff;">No products yet</h3>
-                    </div>
-                )}
-            </div>
-        </div>
-
-        <!-- 滚动指示(半张预览提示) -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:12px;">
-            <span style="font-size:0.85rem;color:#888;">Drag or use arrows to browse · {totalCount} products</span>
-            <a href="/search" style="font-size:0.9rem;font-weight:700;color:#fff;text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #fff;padding-bottom:2px;">View all →</a>
-        </div>
+    <section class="sale-band">
+      <h2>Seasonal Clearance Sale🔥</h2>
+      <p>Buy 1 get Second Half Price on top of Free Shipping. Prices are also 50% off right now!</p>
+      <p style="margin-top:18px;font-size:0.8rem;letter-spacing:0.12em;color:#888;">OFFER ENDS IN</p>
+      <div class="countdown" id="countdown">
+        <div class="unit"><b id="cdD">00</b><span>Days</span></div>
+        <div class="unit"><b id="cdH">00</b><span>Hours</span></div>
+        <div class="unit"><b id="cdM">00</b><span>Minutes</span></div>
+        <div class="unit"><b id="cdS">00</b><span>Seconds</span></div>
+      </div>
     </section>
 
-    <!-- ============ Featured Anime Figure (single spotlight, tsukiyashop-style) ============ -->
-    <section class="page-width" style="padding:72px 0 0;">
-        <h2 class="section-heading">Featured Anime Figure</h2>
-        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:40px;margin-top:28px;align-items:center;" class="featured-grid">
-            <div style="position:relative;aspect-ratio:1;overflow:hidden;border-radius:var(--radius-card);background:#111;">
-                {products[0] ? (
-                    <img src={productImageUrl(products[0].thumbnail || products[0]?.images?.[0]?.url)} alt={products[0].title} style="width:100%;height:100%;object-fit:cover;" />
-                ) : (
-                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;">📦</div>
-                )}
-                <span class="sale-badge">Sale</span>
-            </div>
-            <div>
-                <p style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.1em;">Featured</p>
-                <h3 style="font-size:1.6rem;font-weight:700;color:#fff;margin-top:10px;line-height:1.2;text-transform:uppercase;">{products[0]?.title || "Coming Soon"}</h3>
-                <p style="margin-top:14px;font-size:0.9rem;color:#999;line-height:1.7;">Premium anime figures, statues and collectibles. Hand-picked from the world's most popular series — One Piece, Dragon Ball, Naruto, Demon Slayer, Jujutsu Kaisen and more.</p>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:16px;">
-                    <span style="color:var(--color-star);font-size:0.95rem;letter-spacing:2px;">★★★★★</span>
-                    <span style="font-size:0.8rem;color:#888;">5.0 / 5.0</span>
-                </div>
-                {products[0] && (
-                    <a href={`/products/${products[0].handle}`} class="btn btn-primary" style="margin-top:24px;">Shop Now</a>
-                )}
-            </div>
+    <div class="marquee">
+      <div class="marquee-track">
+        {Array.from({ length: 8 }).map(() => <span>{SITE.marquee}</span>)}
+      </div>
+    </div>
+
+    <ReviewMedals />
+
+    <section class="page-width" style="padding:48px 0 8px;" data-slider>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <h2 class="section-heading" style="margin:0;">New Arrived Anime Figures</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="slider-btn" data-prev type="button" aria-label="Previous">←</button>
+          <button class="slider-btn" data-next type="button" aria-label="Next">→</button>
         </div>
+      </div>
+      <div class="product-drag-slider">
+        <div class="slider-track" data-hydrate-products="home">
+          {products.length > 0 ? (
+            products.map((product: any) => <ProductCard product={product} />)
+          ) : (
+            <div style="text-align:center;padding:60px 0;width:100%;color:#888;">Loading products…</div>
+          )}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:12px;">
+        <span style="font-size:0.85rem;color:#888;">Drag or use arrows to browse · {totalCount || products.length} products</span>
+        <a href="/collections/new-arrivals" style="font-size:0.9rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #fff;padding-bottom:2px;">View all →</a>
+      </div>
     </section>
 
-    <!-- ============ Value props band ============ -->
-    <section class="page-width" style="padding:72px 0 0;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--color-border);border:1px solid var(--color-border);" class="props-grid">
-            {[
-                { icon: "🚚", title: "Worldwide Shipping", sub: "Trackable delivery to 40+ countries" },
-                { icon: "🔒", title: "Secure Payment", sub: "SSL encrypted checkout" },
-                { icon: "⭐", title: "Premium Quality", sub: "High-resolution prints, top-grade materials" },
-                { icon: "🎁", title: "Free Gift", sub: "With every order" },
-            ].map((p) => (
-                <div style="background:#000;padding:28px 24px;text-align:center;">
-                    <div style="font-size:28px;">{p.icon}</div>
-                    <h4 style="font-size:0.85rem;font-weight:700;color:#fff;margin-top:12px;text-transform:uppercase;letter-spacing:0.06em;">{p.title}</h4>
-                    <p style="margin-top:6px;font-size:0.78rem;color:#888;">{p.sub}</p>
-                </div>
-            ))}
+    {moreCols.length > 0 && (
+      <section class="page-width shopby-section" style="padding-top:64px;padding-bottom:8px;">
+        <h2 class="section-heading" style="margin:0 0 24px;">400+ More Figures in Collections Below</h2>
+        <div class="shopby-grid">
+          {moreCols.map((sec) => (
+            <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} />
+          ))}
         </div>
-    </section>
+        <div style="text-align:center;margin-top:28px;">
+          <a href="/collections" class="btn btn-outline">View all</a>
+        </div>
+      </section>
+    )}
 
-    <Footer />
+    <section class="page-width seo-block">
+      <h2 class="section-heading">Anime Figures at Toonhub</h2>
+      <p>Discover 40+ anime-inspired figure collections at Toonhub, with hundreds of unique designs featuring vibrant, detailed sculpting and dynamic themes loved by anime fans. From action-packed heroes to mystical worlds and intense fantasy battles.</p>
+      <p>Our high-quality figures are perfect for collectors and otakus, offering premium materials and display-ready finishes. Every piece showcases bold colors, detailed illustration, and eye-catching aesthetics that bring your favorite anime vibes to life.</p>
+    </section>
+  </main>
+  <Footer />
 </Base>
-
-<script>
-    // ---- New Arrivals: 鼠标拖拽横向滚动(可半张预览) + 箭头步进 ----
-    const slider = document.getElementById('productSlider')
-    const prevBtn = document.getElementById('prevBtn')
-    const nextBtn = document.getElementById('nextBtn')
-
-    if (slider) {
-        // 隐藏滚动条(保留滚动能力)
-        slider.style.scrollbarWidth = 'none'
-        slider.style.msOverflowStyle = 'none'
-
-        // 鼠标拖拽
-        let isDown = false, startX = 0, startScroll = 0, dragged = false
-        slider.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return
-            isDown = true
-            dragged = false
-            startX = e.pageX
-            startScroll = slider.scrollLeft
-            slider.style.cursor = 'grabbing'
-        })
-        slider.addEventListener('mousemove', (e) => {
-            if (!isDown) return
-            const dx = e.pageX - startX
-            if (Math.abs(dx) > 5) dragged = true
-            slider.scrollLeft = startScroll - dx
-        })
-        window.addEventListener('mouseup', () => {
-            if (!isDown) return
-            isDown = false
-            slider.style.cursor = 'grab'
-        })
-        // 拖拽后抑制卡片点击
-        slider.addEventListener('click', (e) => {
-            if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false }
-        }, true)
-        slider.addEventListener('dragstart', (e) => e.preventDefault())
-
-        // 箭头: 每次移动约一张卡片宽度, 平滑滚动
-        const step = () => {
-            const card = slider.querySelector(':scope > div > div')
-            return (card ? card.getBoundingClientRect().width : 240) + 16
-        }
-        if (prevBtn) prevBtn.onclick = () => slider.scrollBy({ left: -step(), behavior: 'smooth' })
-        if (nextBtn) nextBtn.onclick = () => slider.scrollBy({ left: step(), behavior: 'smooth' })
-    }
-</script>
-
-<style>
-    .section-heading {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #fff;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-    /* Shop by List 区块: 独立较窄容器(1200px), 不占满 1600px 页面宽度 */
-    .shopby-section {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-    }
-    /* 桌面端: 6 列多行网格 (参考站 grid--6-col-desktop, 间距 20px) */
-    .shopby-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 20px;
-    }
-    @media (max-width: 1200px) {
-        .shopby-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 990px) {
-        /* Shop by List: 单行横向滚动 (参考站 slider--tablet) */
-        .shopby-grid {
-            display: flex !important;
-            gap: 12px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scroll-snap-type: x mandatory;
-            padding-bottom: 8px;
-        }
-        .shopby-grid .shopby-tile {
-            flex: 0 0 42vw;
-            max-width: 220px;
-            scroll-snap-align: start;
-        }
-        .featured-grid { grid-template-columns: 1fr !important; }
-        .props-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    }
-    .shopby-tile:hover .shopby-img { transform: scale(1.05); }
-    .shopby-tile:hover .icon-arrow { transform: translateX(4px); }
-</style>

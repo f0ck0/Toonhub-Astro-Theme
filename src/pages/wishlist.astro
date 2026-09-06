@@ -1,0 +1,56 @@
+---
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+---
+<Base title="Wishlist — TOONHUB">
+  <Header />
+  <main id="MainContent" class="page-width" style="padding:48px 0;">
+    <h1 class="section-heading" style="margin-bottom:12px;">Wishlist</h1>
+    <p style="color:#888;font-size:0.9rem;margin-bottom:28px;">Saved figures on this device. Sign in later to keep them across browsers.</p>
+    <div class="product-grid" id="wishGrid"></div>
+    <div id="wishEmpty" style="text-align:center;padding:80px 0;">
+      <h3 style="font-size:1.25rem;">Your wishlist is empty</h3>
+      <a href="/collections" class="btn btn-outline" style="margin-top:20px;">Continue shopping</a>
+    </div>
+  </main>
+  <Footer />
+</Base>
+<script>
+  const grid = document.getElementById("wishGrid")!
+  const empty = document.getElementById("wishEmpty")!
+  function esc(s: string) {
+    return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
+  }
+  function render() {
+    let items: any[] = []
+    try { items = JSON.parse(localStorage.getItem("toonhub_wishlist") || "[]") } catch { items = [] }
+    if (!items.length) {
+      grid.innerHTML = ""
+      empty.style.display = ""
+      return
+    }
+    empty.style.display = "none"
+    grid.innerHTML = items.map((p) => {
+      const img = p.thumbnail || ""
+      const price = p.unit_price ? `From $${(Number(p.unit_price) / 100).toFixed(2)}` : ""
+      return `<article class="product-card card">
+        <div class="pc-media">
+          <a href="/products/${esc(p.handle)}" style="position:absolute;inset:0;z-index:1;">
+            ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : ""}
+          </a>
+          <button class="wish-btn is-on" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${p.unit_price || 0}" aria-label="Remove from wishlist">♥</button>
+          <a class="choose-options" href="/products/${esc(p.handle)}">View</a>
+        </div>
+        <a href="/products/${esc(p.handle)}" class="pc-info">
+          <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title)}</div>
+          <div class="pc-price-row"><span class="pc-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${price}</span></div>
+        </a>
+      </article>`
+    }).join("")
+  }
+  render()
+  document.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest("[data-wish]")) setTimeout(render, 0)
+  })
+</script>
