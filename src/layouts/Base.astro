@@ -10,6 +10,7 @@ const {
   title = `${SITE.name}: Shop Premium Anime Figures`,
   description = SITE.description,
   image = "/images/collection/onepiece.webp",
+  lcpImage = "",
 } = Astro.props
 const medusa = medusaConfig()
 const canonical = new URL(Astro.url.pathname, "https://toonhubshop.com").href
@@ -37,7 +38,17 @@ const jsonLd = {
   <meta name="description" content={description} />
   <link rel="canonical" href={canonical} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
+  <link rel="preconnect" href="https://medusa.toonhubshop.com" crossorigin />
+  <link rel="preload" href="/fonts/asul-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/qs-400.woff2" as="font" type="font/woff2" crossorigin />
+  {lcpImage ? <link rel="preload" as="image" href={lcpImage} fetchpriority="high" /> : null}
+  <style is:inline>
+    @font-face{font-family:'Asul';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/asul-400.woff2') format('woff2')}
+    @font-face{font-family:'Asul';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/asul-700.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/qs-400.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/qs-700.woff2') format('woff2')}
+    @font-face{font-family:'Quattrocento Sans';font-style:italic;font-weight:400;font-display:swap;src:url('/fonts/qs-italic-400.woff2') format('woff2')}
+  </style>
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />

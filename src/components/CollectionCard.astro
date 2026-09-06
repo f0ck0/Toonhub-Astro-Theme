@@ -1,11 +1,22 @@
 ---
-const { name, handle, description, img, count, href } = Astro.props
+import { cardImage } from "../lib/img"
+
+const { name, handle, description, img, href, eager = false, high = false } = Astro.props
 const url = href || `/collections/${handle}`
+const pic = cardImage(img)
 ---
 <a href={url} class="shopby-tile card">
   <div class="shopby-media">
-    {img ? (
-      <img src={img} alt={name} loading="lazy" decoding="async" width="800" height="800" />
+    {pic.src ? (
+      <img
+        src={pic.src}
+        alt={name}
+        loading={eager ? "eager" : "lazy"}
+        fetchpriority={high ? "high" : undefined}
+        decoding="async"
+        width="400"
+        height="400"
+      />
     ) : (
       <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">{name}</div>
     )}

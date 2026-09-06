@@ -7,6 +7,7 @@ import CollectionCard from "../components/CollectionCard.astro"
 import ReviewMedals from "../components/ReviewMedals.astro"
 import { getProducts, getProductsByIds, getAllCategories, productImageUrl } from "../lib/medusa"
 import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
+import { cardImage } from "../lib/img"
 
 function shuffle<T>(list: T[]): T[] {
   const a = [...list]
@@ -107,15 +108,16 @@ const shopByList = ipCats.map((cat: any) => ({
 
 const featuredCols = shopByList.slice(0, 18)
 const moreCols = shopByList.slice(18)
+const lcpImage = cardImage(featuredCols[0]?.img).src
 ---
-<Base>
+<Base lcpImage={lcpImage}>
   <Header />
   <main id="MainContent">
     <section class="page-width shopby-section" style="padding-top:48px;padding-bottom:8px;">
       <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
       <div class="shopby-grid" data-hydrate-cats>
-        {featuredCols.map((sec) => (
-          <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} />
+        {featuredCols.map((sec, i) => (
+          <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} eager={i < 6} high={i === 0} />
         ))}
       </div>
     </section>

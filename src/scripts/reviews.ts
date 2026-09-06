@@ -191,6 +191,12 @@ async function hydrate() {
 
 ;(window as any).toonhubLoadReviews = hydrate
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate)
-else hydrate()
+function startReviews() {
+  const run = () => hydrate()
+  const ric = (window as any).requestIdleCallback
+  if (typeof ric === "function") ric(run, { timeout: 2500 })
+  else setTimeout(run, 400)
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startReviews)
+else startReviews()
 document.addEventListener("toonhub:catalog", hydrate)

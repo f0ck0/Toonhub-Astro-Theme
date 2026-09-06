@@ -70,6 +70,13 @@ function imgOf(p: any) {
   return p?.thumbnail || p?.images?.[0]?.url || ""
 }
 
+function cardSrc(src: string) {
+  if (!src) return src
+  if (!src.startsWith("/images/")) return src
+  if (/^\/images\/collection\/[^/]+\.webp$/.test(src)) return src.replace("/images/collection/", "/images/collection/w400/")
+  return `/img/w400${src}`
+}
+
 function hoverOf(p: any, img: string) {
   return (p?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img) || ""
 }
@@ -80,8 +87,9 @@ function esc(s: string) {
 
 function catTile(cat: any, img = "") {
   const src = img || cat.products?.find((p: any) => p.thumbnail)?.thumbnail || ""
+  const thumb = src ? cardSrc(src) : ""
   return `<a href="/collections/${esc(cat.handle)}" class="shopby-tile card">
-    <div class="shopby-media">${src ? `<img src="${esc(src)}" alt="${esc(cat.name)}" loading="lazy" decoding="async" width="800" height="800" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
+    <div class="shopby-media">${thumb ? `<img src="${esc(thumb)}" alt="${esc(cat.name)}" loading="lazy" decoding="async" width="400" height="400" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
     <div class="shopby-heading"><h3>${esc(cat.name)}</h3></div>
     <p style="color:#999;">Shop our exclusive ${esc(cat.name)} figures.</p>
   </a>`
@@ -89,7 +97,9 @@ function catTile(cat: any, img = "") {
 
 function productCard(p: any) {
   const img = imgOf(p)
+  const thumb = cardSrc(img)
   const hover = hoverOf(p, img)
+  const hoverThumb = hover ? cardSrc(hover) : ""
   const usd = productUsdMinor(p)
   const sale = usd ? Math.round(usd / 2) : 0
   const price = sale ? `<span class="pc-from">From</span>${esc(money(sale))}` : ""
@@ -115,8 +125,8 @@ function productCard(p: any) {
   return `<article class="product-card card" data-qv="${qv}" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
     <div class="pc-media">
       <a href="/products/${esc(p.handle)}" aria-label="${esc(p.title)}" style="position:absolute;inset:0;z-index:1;">
-        ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
-        ${hover ? `<img class="pc-hover" src="${esc(hover)}" alt="" loading="lazy" decoding="async" width="600" height="600" />` : ""}
+        ${thumb ? `<img src="${esc(thumb)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="400" height="400" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
+        ${hoverThumb ? `<img class="pc-hover" src="${esc(hoverThumb)}" alt="" loading="lazy" decoding="async" width="400" height="400" />` : ""}
       </a>
       <button class="wish-btn" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${usd}" aria-label="Add to wishlist">♡</button>
       <span class="sale-badge">Sale</span>
@@ -384,6 +394,15 @@ async function load() {
     setupCollectionSort()
   }
 
+  const homeEl = document.querySelector('[data-hydrate-products="home"]')
+  const ssrReady = Boolean(
+    homeEl &&
+    !homeNeedsHydrate(homeEl) &&
+    document.querySelector(".az-dropdown a, #azMobile a") &&
+    document.querySelector("[data-hydrate-cats] .shopby-tile"),
+  )
+  if (!handle && ssrReady) return
+
   status("Loading products from Medusa…")
   try {
     const catsData = await medusaGet("/store/product-categories?limit=200&fields=id,name,handle,parent_category_id,description")
@@ -415,7 +434,6 @@ async function load() {
     const prodData = await medusaGet(`/store/products?${qs}`)
     let products = prodData.products || []
 
-    const homeEl = document.querySelector('[data-hydrate-products="home"]')
     if (homeEl && homeNeedsHydrate(homeEl)) {
       const mixed = await mixHomeFromCategories(categories, regionId)
       if (mixed.length) products = mixed

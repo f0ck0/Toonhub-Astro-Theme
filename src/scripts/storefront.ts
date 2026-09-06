@@ -73,7 +73,14 @@ function subtotal() {
 }
 
 function setOpen(id: string, open: boolean) {
-  document.getElementById(id)?.classList.toggle("open", open)
+  const el = document.getElementById(id)
+  if (!el) return
+  el.classList.toggle("open", open)
+  if (el.hasAttribute("aria-hidden") || el.hasAttribute("inert")) {
+    el.setAttribute("aria-hidden", open ? "false" : "true")
+    if (open) el.removeAttribute("inert")
+    else el.setAttribute("inert", "")
+  }
 }
 
 function lockBody() {
