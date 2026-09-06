@@ -162,19 +162,84 @@ function cardMissingTitleOrPrice(el: Element) {
   return !title || !price
 }
 
+function shuffle<T>(list: T[]): T[] {
+  const a = [...list]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function mixAcrossCategories(products: any[], take = 24) {
+  const byCat: Record<string, any[]> = {}
+  for (const p of products) {
+    const keys = (p.categories || []).map((c: any) => c.id || c.handle).filter(Boolean)
+    if (!keys.length) keys.push("_")
+    for (const k of keys) (byCat[k] ||= []).push(p)
+  }
+  const cats = shuffle(Object.keys(byCat))
+  const out: any[] = []
+  const seen = new Set<string>()
+  for (let pass = 0; pass < 3; pass++) {
+    for (const k of cats) {
+      const p = shuffle(byCat[k] || []).find((x) => x?.id && !seen.has(x.id))
+      if (!p) continue
+      seen.add(p.id)
+      out.push(p)
+      if (out.length >= take) return shuffle(out)
+    }
+  }
+  return shuffle(out).slice(0, take)
+}
+
+async function mixHomeFromCategories(categories: any[], regionId: string) {
+  const shop = shuffle(shopCategories(categories)).slice(0, 12)
+  if (!shop.length) return [] as any[]
+  const fields = "+id,+title,+handle,+thumbnail,*variants,*variants.calculated_price,*variants.prices,*images,*categories"
+  const batches = await Promise.all(shop.map(async (c) => {
+    try {
+      const qs = new URLSearchParams({ limit: "4", fields })
+      if (regionId) qs.set("region_id", regionId)
+      qs.append("category_id[]", c.id)
+      const data = await medusaGet(`/store/products?${qs}`)
+      return data.products || []
+    } catch {
+      return []
+    }
+  }))
+  const out: any[] = []
+  const seen = new Set<string>()
+  for (let pass = 0; pass < 2; pass++) {
+    for (const list of batches) {
+      const p = shuffle(list).find((x: any) => x?.id && !seen.has(x.id) && (x.title || x.handle))
+      if (!p) continue
+      seen.add(p.id)
+      out.push(p)
+      if (out.length >= 24) return shuffle(out)
+    }
+  }
+  return shuffle(out)
+}
+
+function homeNeedsHydrate(el: Element) {
+  const cards = [...el.querySelectorAll(".product-card")]
+  if (!cards.length) return true
+  return cards.filter(cardMissingTitleOrPrice).length >= Math.ceil(cards.length / 2)
+}
+
 function fillProductGrids(products: any[]) {
   document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
-    const cards = [...el.querySelectorAll(".product-card")]
     const home = el.getAttribute("data-hydrate-products") === "home"
-    const incomplete = home && cards.length > 0 && cards.filter(cardMissingTitleOrPrice).length >= Math.ceil(cards.length / 2)
-    if (cards.length && !incomplete) return
+    const cards = [...el.querySelectorAll(".product-card")]
+    if (cards.length && !(home && homeNeedsHydrate(el))) return
     if (!products.length) {
       if (!cards.length) {
         el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products returned from Medusa</h3><p style="color:#888;margin-top:8px;">Check the publishable key is linked to a sales channel that has products.</p></div>`
       }
       return
     }
-    const list = home ? products.slice(0, 24) : products
+    const list = home ? mixAcrossCategories(products, 24) : products
     el.innerHTML = list.map(productCard).join("")
   })
 }
@@ -348,7 +413,15 @@ async function load() {
     }
 
     const prodData = await medusaGet(`/store/products?${qs}`)
-    const products = prodData.products || []
+    let products = prodData.products || []
+
+    const homeEl = document.querySelector('[data-hydrate-products="home"]')
+    if (homeEl && homeNeedsHydrate(homeEl)) {
+      const mixed = await mixHomeFromCategories(categories, regionId)
+      if (mixed.length) products = mixed
+      else products = mixAcrossCategories(products, 24)
+    }
+
     fillCatGrids(categories, products)
     fillProductGrids(products)
     const total = Number(prodData.count ?? products.length) || products.length

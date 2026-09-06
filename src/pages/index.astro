@@ -5,8 +5,21 @@ import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
 import CollectionCard from "../components/CollectionCard.astro"
 import ReviewMedals from "../components/ReviewMedals.astro"
-import { getProducts, getAllCategories, productImageUrl } from "../lib/medusa"
+import { getProducts, getProductsByIds, getAllCategories, productImageUrl } from "../lib/medusa"
 import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
+
+function shuffle<T>(list: T[]): T[] {
+  const a = [...list]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function stubId(p: any) {
+  return typeof p === "string" ? p : p?.id || ""
+}
 
 let products: any[] = []
 let totalCount = 0
@@ -17,12 +30,62 @@ try {
 } catch (e) {}
 
 try {
-  // Same /store/products payload as collection pages (title + variants/prices).
-  // Nested category.products are often id/thumbnail stubs, so names and prices
-  // never render — and those empty cards then block client hydration.
-  const extra = await getProducts(48, 0)
-  totalCount = extra.count
-  products = (extra.products || []).filter((p: any) => p && (p.title || p.handle)).slice(0, 24)
+  try {
+    const extra = await getProducts(1, 0)
+    totalCount = extra.count
+  } catch {}
+
+  const shop = shuffle(shopCategories(categories))
+  const ids: string[] = []
+  const seenIds = new Set<string>()
+  for (let pass = 0; pass < 2; pass++) {
+    for (const c of shop) {
+      if (ids.length >= 24) break
+      const pool = shuffle(c.products || [])
+        .map(stubId)
+        .filter((id: string) => id && !seenIds.has(id))
+      if (!pool.length) continue
+      seenIds.add(pool[0])
+      ids.push(pool[0])
+    }
+  }
+
+  let full: any[] = []
+  if (ids.length) full = (await getProductsByIds(ids)).products || []
+  const byId = new Map(full.map((p: any) => [p.id, p]))
+  let mixed = ids
+    .map((id) => byId.get(id))
+    .filter((p: any) => p && (p.title || p.handle))
+
+  if (mixed.length < 12) {
+    const batches = await Promise.all(
+      shop.slice(0, 12).map((c: any) =>
+        getProducts(6, 0, c.id)
+          .then((r) => r.products || [])
+          .catch(() => []),
+      ),
+    )
+    const have = new Set(mixed.map((p: any) => p.id))
+    const fromCats: any[] = []
+    for (const list of batches) {
+      let took = 0
+      for (const p of shuffle(list)) {
+        if (!p?.id || have.has(p.id) || !(p.title || p.handle)) continue
+        have.add(p.id)
+        fromCats.push(p)
+        took++
+        if (took >= 2) break
+      }
+    }
+    mixed = [...mixed, ...fromCats]
+  }
+
+  products = shuffle(mixed).slice(0, 24)
+  if (!products.length) {
+    const extra = await getProducts(48, 0)
+    if (!totalCount) totalCount = extra.count
+    products = shuffle(extra.products || []).filter((p: any) => p && (p.title || p.handle)).slice(0, 24)
+  }
 } catch (e) {
   console.error("Failed to fetch products:", e)
 }

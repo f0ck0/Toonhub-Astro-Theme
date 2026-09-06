@@ -83,6 +83,25 @@ async function expandCategoryIds(categoryId: string): Promise<string[]> {
   }
 }
 
+export async function getProductsByIds(ids: string[]) {
+  const unique = [...new Set(ids.map((id) => String(id || "")).filter(Boolean))]
+  if (!unique.length) return { products: [] as any[], count: 0 }
+  try {
+    const medusa = getStoreSdk()
+    const out: any[] = []
+    for (let i = 0; i < unique.length; i += 50) {
+      const chunk = unique.slice(i, i + 50)
+      const params: any = await productQuery({ limit: chunk.length, id: chunk })
+      const { products } = await medusa.store.product.list(params)
+      out.push(...(products || []))
+    }
+    return { products: out, count: out.length }
+  } catch (e) {
+    console.error("getProductsByIds", e)
+    return { products: [] as any[], count: 0 }
+  }
+}
+
 export async function getProducts(limit = 24, offset = 0, categoryId?: string) {
   const key = `products:${limit}:${offset}:${categoryId || "all"}`
   try {
