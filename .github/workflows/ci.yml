@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    name: Check, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Type safety across .astro + .ts (strictest gate the repo has).
+      - run: npm run check
+
+      # Unit tests for the pure lib layer (i18n, currency, regions, seo,
+      # sitemap, tracking, redirect guard) — no Medusa backend required.
+      - run: npm run test
+
+      # The storefront pages render at request time (output: "server"), so the
+      # build does not need MEDUSA_URL / publishable keys to compile.
+      - run: npm run build
