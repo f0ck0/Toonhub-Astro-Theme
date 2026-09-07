@@ -213,7 +213,19 @@ describe("extractReviewList — envelope variants", () => {
  */
 const { collectReviewCards } = await import("../src/lib/reviews");
 
-type Product = { id: string; title?: string; handle?: string };
+/*
+ * The real `Product` requires `title`/`handle`; these fixtures only care about
+ * the id, so build them through a factory that fills the rest in rather than
+ * a looser local shape (which would not be assignable to `CollectReviewCardsDeps`).
+ */
+import type { Product } from "../src/types";
+
+const product = (id: string, extra: Partial<Product> = {}): Product => ({
+  id,
+  title: `T-${id}`,
+  handle: `h-${id}`,
+  ...extra,
+});
 
 const review = (
   id: string,
@@ -233,7 +245,7 @@ const review = (
 });
 
 describe("collectReviewCards — global feed path", () => {
-  const arrivals: Product[] = [{ id: "a1" }];
+  const arrivals: Product[] = [product("a1")];
   const base = {
     fetchGlobal: async () => ({
       reviews: [review("g1", 5, ["img"], "p1")],
@@ -282,10 +294,9 @@ describe("collectReviewCards — global feed path", () => {
 });
 
 describe("collectReviewCards — per-product fan-out fallback", () => {
-  const arrivals: Product[] = Array.from({ length: 4 }, (_, i) => ({
-    id: `prod-${i}`,
-    handle: `h-${i}`,
-  }));
+  const arrivals: Product[] = Array.from({ length: 4 }, (_, i) =>
+    product(`prod-${i}`, { handle: `h-${i}` }),
+  );
 
   it("fires when the global feed is empty and backfills productId", async () => {
     const called: string[] = [];
