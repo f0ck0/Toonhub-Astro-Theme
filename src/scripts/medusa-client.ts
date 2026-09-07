@@ -1,68 +1,128 @@
-const FALLBACK = {
-  baseUrl: "https://medusa.toonhubshop.com",
-  publishableKey: "pk_7b55f85cfbc0b36baa03e4f3914732c2f5f9d8fc5ae3bb50a98e01d6fcc73c4b",
-}
+/**
+ * Browser-side Medusa transport.
+ *
+ * Used only as a *resilience* layer: the storefront is server-rendered, and
+ * this client is what fills the grid when SSR came back empty (backend down,
+ * publishable key missing, CORS blocked) or when the shopper paginates.
+ *
+ * Requests are tried in order — direct, public CORS relays, then our own
+ * `/api/medusa-proxy` — and the first usable JSON wins. Every hop is bounded by
+ * an `AbortSignal.timeout` so a dead backend can never hang the page.
+ */
 
-export function cfg() {
-  const w = (window as any).toonhubMedusa
-  const baseUrl = String(w?.baseUrl || FALLBACK.baseUrl).replace(/\/$/, "").replace(/^http:\/\/96\.47\.238\.191:9000$/, FALLBACK.baseUrl)
-  const publishableKey = String(w?.publishableKey || FALLBACK.publishableKey)
+import { config } from "./lib/config"
+
+export function cfg(): { baseUrl: string; publishableKey: string } {
+  const { baseUrl, publishableKey } = config()
   return { baseUrl, publishableKey }
 }
 
-export async function medusaGet(path: string): Promise<any> {
-  const { baseUrl, publishableKey } = cfg()
-  const raw = `${baseUrl}${path}`
-  const headers: Record<string, string> = {
-    accept: "application/json",
-    "x-publishable-api-key": publishableKey,
-  }
-  const urls = [
-    raw,
-    "https://corsproxy.org/?" + encodeURIComponent(raw),
-    "https://corsproxy.io/?" + encodeURIComponent(raw),
+const REQUEST_TIMEOUT = 8000
+
+function endpoints(path: string): string[] {
+  const { baseUrl } = cfg()
+  const direct = `${baseUrl}${path}`
+  return [
+    direct,
+    `https://corsproxy.org/?${encodeURIComponent(direct)}`,
+    `https://corsproxy.io/?${encodeURIComponent(direct)}`,
     `/api/medusa-proxy?path=${encodeURIComponent(path)}`,
   ]
-  let last = "Medusa request failed"
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { headers, mode: "cors", credentials: "omit", signal: AbortSignal.timeout(8000) })
-      const text = await res.text()
-      let data: any = {}
-      try { data = text ? JSON.parse(text) : {} } catch { last = "non-JSON"; continue }
-      if (data?.type === "not_allowed" || /publishable/i.test(String(data?.message || ""))) {
-        last = data.message
-        continue
-      }
-      if (data?.error && /unreachable|fetch failed|invalid path/i.test(String(data.error))) {
-        last = data.error
-        continue
-      }
-      if (res.ok) return data
-      last = data.message || data.error || `HTTP ${res.status}`
-    } catch (e: any) {
-      last = e.message || last
-    }
-  }
-  throw new Error(last)
 }
 
-export async function medusaSend(path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: any }> {
-  const { baseUrl, publishableKey } = cfg()
-  const headers: Record<string, string> = {
-    accept: "application/json",
-    "content-type": "application/json",
-    "x-publishable-api-key": publishableKey,
-    ...(init.headers as any),
+function headers(): Record<string, string> {
+  const { publishableKey } = cfg()
+  const base: Record<string, string> = { accept: "application/json" }
+  if (publishableKey) base["x-publishable-api-key"] = publishableKey
+  return base
+}
+
+/** True when the payload says "reachable, but not allowed" — worth retrying. */
+function isSoftFailure(data: unknown): boolean {
+  const record = (data || {}) as { type?: string; message?: string; error?: string }
+  if (record.type === "not_allowed") return true
+  if (/publishable/i.test(String(record.message || ""))) return true
+  if (/unreachable|fetch failed|invalid path/i.test(String(record.error || ""))) return true
+  return false
+}
+
+export async function medusaGet<T = Record<string, unknown>>(path: string): Promise<T> {
+  let lastError = "Medusa request failed"
+
+  for (const url of endpoints(path)) {
+    try {
+      const res = await fetch(url, {
+        headers: headers(),
+        mode: "cors",
+        credentials: "omit",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+      })
+      const text = await res.text()
+      let data: unknown = {}
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        lastError = "non-JSON response"
+        continue
+      }
+      if (isSoftFailure(data)) {
+        const record = data as { message?: string; error?: string }
+        lastError = String(record.message || record.error || "not allowed")
+        continue
+      }
+      if (res.ok) return data as T
+      const record = data as { message?: string; error?: string }
+      lastError = String(record.message || record.error || `HTTP ${res.status}`)
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : lastError
+    }
   }
-  const raw = `${baseUrl}${path}`
+
+  throw new Error(lastError)
+}
+
+export interface MedusaSendResult<T = unknown> {
+  ok: boolean
+  status: number
+  data: T
+}
+
+export async function medusaSend<T = Record<string, unknown>>(
+  path: string,
+  init: RequestInit = {},
+): Promise<MedusaSendResult<T>> {
+  const { baseUrl } = cfg()
   try {
-    const res = await fetch(raw, { ...init, headers, mode: "cors", credentials: "omit", signal: init.signal || AbortSignal.timeout(8000) })
+    const res = await fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        ...headers(),
+        "content-type": "application/json",
+        ...(init.headers as Record<string, string> | undefined),
+      },
+      mode: "cors",
+      credentials: "omit",
+      signal: init.signal || AbortSignal.timeout(REQUEST_TIMEOUT),
+    })
     const text = await res.text()
-    let data: any = {}
-    try { data = text ? JSON.parse(text) : {} } catch { data = { raw: text } }
+    let data: T
+    try {
+      data = (text ? JSON.parse(text) : {}) as T
+    } catch {
+      data = { raw: text } as T
+    }
     return { ok: res.ok, status: res.status, data }
-  } catch (e: any) {
-    return { ok: false, status: 0, data: { error: e.message } }
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      data: { error: error instanceof Error ? error.message : "network error" } as T,
+    }
   }
 }
+
+/** Fields the storefront needs — kept identical to the server-side query. */
+export const PRODUCT_FIELDS =
+  "+id,+title,+handle,+thumbnail,*variants,*variants.calculated_price,*variants.prices,*images,*categories"
+
+export const CATEGORY_FIELDS = "id,name,handle,parent_category_id,description"

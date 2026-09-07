@@ -1,455 +1,631 @@
-import { medusaGet } from "./medusa-client"
+/**
+ * Catalogue resilience + infinite scroll.
+ *
+ * Two jobs, both optional at runtime:
+ *
+ * 1. **Hydration fallback.** The grid is server-rendered. If SSR came back
+ *    empty (Medusa unreachable from the server, publishable key missing,
+ *    category mismatch) this module retries from the browser — through the
+ *    public CORS relays and finally `/api/medusa-proxy` — and paints real cards
+ *    over the skeleton the server already rendered.
+ * 2. **Infinite scroll** on collection pages, with a visible "Load more" button
+ *    as the no-JS-observer fallback and an `aria-live` status line.
+ *
+ * Cards injected here mirror `ProductCard.astro` markup exactly, so quick view,
+ * wishlist sync and review hydration all keep working.
+ */
 
-function shopCategories(categories: any[]) {
-  const parentCats = categories.filter((c) => !c.parent_category_id)
-  const childMap: Record<string, any[]> = {}
-  for (const c of categories) {
-    if (c.parent_category_id) {
-      if (!childMap[c.parent_category_id]) childMap[c.parent_category_id] = []
-      childMap[c.parent_category_id].push(c)
-    }
+import { $, $$, escapeHtml, escapePath, ready, whenIdle } from "./lib/dom"
+import { CATEGORY_FIELDS, medusaGet, PRODUCT_FIELDS } from "./medusa-client"
+import { formatMoney, toMinorUnits } from "./lib/money"
+import type { Product, ProductCategory, QuickViewData } from "../types"
+
+const PAGE_SIZE = 24
+
+/* -------------------------------------------------------------------------- */
+/* Catalogue helpers (mirrors src/lib/site.ts for the browser)                */
+/* -------------------------------------------------------------------------- */
+
+function shopCategories(categories: ProductCategory[]): ProductCategory[] {
+  const list = Array.isArray(categories) ? categories : []
+  const parents = list.filter((c) => !c.parent_category_id)
+  const childMap: Record<string, ProductCategory[]> = {}
+  for (const category of list) {
+    const parent = category.parent_category_id
+    if (parent) (childMap[parent] ||= []).push(category)
   }
-  const figures = categories.find((c) => /^figures?$/i.test(String(c.handle || "")) || /^figures?$/i.test(String(c.name || "")))
-  let list: any[] = []
-  if (figures && childMap[figures.id]?.length) list = childMap[figures.id]
+  const figures = list.find(
+    (c) => /^figures?(-\d+)?$/i.test(String(c.handle || "")) || /^figures?$/i.test(String(c.name || "")),
+  )
+  let picked: ProductCategory[] = []
+  if (figures && childMap[figures.id]?.length) picked = childMap[figures.id]
   else {
-    const leaves = categories.filter((c) => c.parent_category_id)
-    list = leaves.length ? leaves : parentCats.length ? parentCats : categories
+    const leaves = list.filter((c) => c.parent_category_id)
+    picked = leaves.length ? leaves : parents.length ? parents : list
   }
-  return list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { sensitivity: "base" }))
+  return picked.sort((a, b) =>
+    String(a.name).localeCompare(String(b.name), undefined, { sensitivity: "base" }),
+  )
 }
 
-function groupAz(cats: any[]) {
-  const groups: { letter: string; items: any[] }[] = []
-  for (const cat of shopCategories(cats)) {
-    const letter = String(cat.name || "#").charAt(0).toUpperCase()
-    const key = /[A-Z]/.test(letter) ? letter : "#"
-    const last = groups[groups.length - 1]
-    if (last && last.letter === key) last.items.push(cat)
-    else groups.push({ letter: key, items: [cat] })
-  }
-  return groups
+function imageOf(product: Partial<Product> | undefined): string {
+  if (!product) return ""
+  const thumb = String(product.thumbnail || "").trim()
+  if (thumb) return thumb
+  const first = (product.images || [])
+    .map((entry) => (typeof entry === "string" ? entry : entry?.url || ""))
+    .find((url) => Boolean(url))
+  return first || ""
 }
 
-function status(msg: string) {
-  document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
-    if (!el.querySelector(".product-card")) {
-      const p = el.querySelector("div")
-      if (p) p.textContent = msg
-    }
-  })
-  console.warn("[toonhub catalog]", msg)
+function hoverImageOf(product: Partial<Product> | undefined): string {
+  const primary = imageOf(product)
+  return (
+    (product?.images || [])
+      .map((entry) => (typeof entry === "string" ? entry : entry?.url || ""))
+      .find((url) => url && url !== primary) || ""
+  )
 }
 
-function money(amount: number | null | undefined) {
-  if (amount == null) return ""
-  const n = Number(amount)
-  const minor = n > 0 && n < 1000 ? Math.round(n * 100) : Math.round(n)
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(minor / 100)
-  } catch {
-    return `$${(minor / 100).toFixed(2)}`
-  }
+/** Local `public/` artwork goes through the resizer; remote URLs pass through. */
+function cardSrc(src: string, width = 400): string {
+  if (!src) return ""
+  if (!src.startsWith("/")) return src
+  return `/img/w${width}${src.startsWith("/") ? src : `/${src}`}`
 }
 
-function productUsdMinor(p: any) {
-  const v = p?.variants?.[0]
-  const raw = v?.calculated_price?.calculated_amount ?? v?.prices?.[0]?.amount
-  if (raw == null) return 0
-  const n = Number(typeof raw === "object" ? raw.amount : raw)
-  if (!Number.isFinite(n)) return 0
-  return n > 0 && n < 1000 ? Math.round(n * 100) : Math.round(n)
+function priceOf(product: Partial<Product>): number {
+  const variant = product?.variants?.[0]
+  const raw =
+    variant?.calculated_price?.calculated_amount ?? variant?.calculated_price?.original_amount ?? variant?.prices?.[0]?.amount
+  return toMinorUnits(raw)
 }
 
-function productPrice(p: any) {
-  const n = productUsdMinor(p)
-  return n ? "From " + money(n) : ""
+function variantsOf(product: Partial<Product>): { id: string; title: string }[] {
+  return (product?.variants || [])
+    .map((variant) => ({
+      id: String(variant?.id || ""),
+      title:
+        String(variant?.title || "") ||
+        (variant?.options || []).map((option) => option?.value).filter(Boolean).join(" / ") ||
+        "Default",
+    }))
+    .filter((variant) => variant.id)
 }
 
-function imgOf(p: any) {
-  return p?.thumbnail || p?.images?.[0]?.url || ""
-}
+/* -------------------------------------------------------------------------- */
+/* Card / tile templates                                                      */
+/* -------------------------------------------------------------------------- */
 
-function cardSrc(src: string) {
-  if (!src) return src
-  if (!src.startsWith("/images/")) return src
-  if (/^\/images\/collection\/[^/]+\.webp$/.test(src)) return src.replace("/images/collection/", "/images/collection/w400/")
-  return `/img/w400${src}`
-}
-
-function hoverOf(p: any, img: string) {
-  return (p?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img) || ""
-}
-
-function esc(s: string) {
-  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
-}
-
-function catTile(cat: any, img = "") {
-  const src = img || cat.products?.find((p: any) => p.thumbnail)?.thumbnail || ""
-  const thumb = src ? cardSrc(src) : ""
-  return `<a href="/collections/${esc(cat.handle)}" class="shopby-tile card">
-    <div class="shopby-media">${thumb ? `<img src="${esc(thumb)}" alt="${esc(cat.name)}" loading="lazy" decoding="async" width="400" height="400" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-family:var(--font-heading);text-transform:uppercase;padding:12px;text-align:center;">${esc(cat.name)}</div>`}</div>
-    <div class="shopby-heading"><h3>${esc(cat.name)}</h3></div>
-    <p style="color:#999;">Shop our exclusive ${esc(cat.name)} figures.</p>
-  </a>`
-}
-
-function productCard(p: any) {
-  const img = imgOf(p)
-  const thumb = cardSrc(img)
-  const hover = hoverOf(p, img)
-  const hoverThumb = hover ? cardSrc(hover) : ""
-  const usd = productUsdMinor(p)
-  const sale = usd ? Math.round(usd / 2) : 0
-  const price = sale ? `<span class="pc-from">From</span>${esc(money(sale))}` : ""
-  const compare = usd ? esc(money(usd)) : ""
-  const cats = (p.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
-  const variants = (p.variants || []).map((v: any) => ({
-    id: v.id,
-    title: v.title || (v.options || []).map((o: any) => o.value).join(" / ") || "Default",
-  })).filter((v: any) => v.id)
-  const qv = encodeURIComponent(JSON.stringify({
+function quickViewPayload(product: Partial<Product>): string {
+  const variants = variantsOf(product)
+  const data: QuickViewData = {
     variantId: variants[0]?.id || "",
-    title: p.title,
-    thumbnail: img,
-    handle: p.handle,
-    unit_price: usd,
+    title: String(product?.title || ""),
+    thumbnail: imageOf(product),
+    handle: String(product?.handle || ""),
+    unit_price: priceOf(product),
     variant_title: variants[0]?.title,
     variants,
-  }))
+  }
+  return encodeURIComponent(JSON.stringify(data))
+}
+
+export function productCardTemplate(product: Partial<Product>): string {
+  const title = String(product?.title || product?.handle || "")
+  const handle = String(product?.handle || "")
+  const image = imageOf(product)
+  const hover = hoverImageOf(product)
+  const usd = priceOf(product)
+  const sale = usd ? Math.round(usd / 2) : 0
+  const variants = variantsOf(product)
+  const categories = (product?.categories || [])
+    .map((category) => category?.handle || category?.id)
+    .filter(Boolean)
+    .join(" ")
+  const href = `/products/${escapePath(handle)}`
   const hasOptions = variants.length > 1
+
+  const media = image
+    ? `<img class="media__img" src="${escapeHtml(cardSrc(image))}" alt="${escapeHtml(title)}" width="400" height="400" loading="lazy" decoding="async" />${
+        hover
+          ? `<img class="media__img pc-hover" src="${escapeHtml(cardSrc(hover))}" alt="" width="400" height="400" loading="lazy" decoding="async" />`
+          : ""
+      }`
+    : `<span class="pc-media__placeholder" role="img" aria-label="No image available"></span>`
+
   const cta = variants.length
-    ? `<button class="choose-options" type="button" data-action="quickview">${hasOptions ? "Choose options" : "Add to cart"}</button>`
-    : `<a class="choose-options" href="/products/${esc(p.handle)}">View</a>`
-  return `<article class="product-card card" data-qv="${qv}" data-price-usd="${usd}" data-title="${esc(p.title)}" data-cats="${esc(cats)}" data-id="${esc(p.id)}">
+    ? `<button class="choose-options" type="button" data-action="quickview">${
+        hasOptions ? "Choose options" : "Add to cart"
+      }</button>`
+    : `<a class="choose-options" href="${href}">View</a>`
+
+  const price = sale
+    ? `<span class="pc-price product-card-price"><span class="pc-from">From</span>${escapeHtml(formatMoney(sale))}</span>`
+    : ""
+  const compare = usd
+    ? `<span class="pc-compare" data-price-strike>${escapeHtml(formatMoney(usd))}</span>`
+    : ""
+
+  return `<article class="product-card card" data-qv="${quickViewPayload(product)}" data-price-usd="${usd}" data-title="${escapeHtml(title)}" data-cats="${escapeHtml(categories)}" data-id="${escapeHtml(String(product?.id || ""))}">
     <div class="pc-media">
-      <a href="/products/${esc(p.handle)}" aria-label="${esc(p.title)}" style="position:absolute;inset:0;z-index:1;">
-        ${thumb ? `<img src="${esc(thumb)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="400" height="400" />` : `<div style="width:100%;height:100%;background:#111;"></div>`}
-        ${hoverThumb ? `<img class="pc-hover" src="${esc(hoverThumb)}" alt="" loading="lazy" decoding="async" width="400" height="400" />` : ""}
-      </a>
-      <button class="wish-btn" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${usd}" aria-label="Add to wishlist">♡</button>
-      <span class="sale-badge">Sale</span>
+      <a class="pc-media__link" href="${href}" aria-label="${escapeHtml(title)}">${media}</a>
+      <button class="wish-btn" type="button" data-wish
+        data-wish-id="${escapeHtml(String(product?.id || ""))}"
+        data-wish-handle="${escapeHtml(handle)}"
+        data-wish-title="${escapeHtml(title)}"
+        data-wish-img="${escapeHtml(image)}"
+        data-wish-price="${usd}"
+        aria-pressed="false" aria-label="Add to wishlist"><span data-wish-glyph aria-hidden="true">♡</span></button>
+      ${usd ? `<span class="sale-badge">Sale</span>` : ""}
       ${cta}
     </div>
-    <a href="/products/${esc(p.handle)}" class="pc-info">
-      <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title || p.handle || "")}</div>
-      <div class="stars" data-review-product="${esc(p.id)}"></div>
-      ${price ? `<div class="pc-price-row"><span class="pc-price product-card-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${price}</span>${compare ? `<span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">${compare}</span>` : ""}</div>` : ""}
+    <a href="${href}" class="pc-info">
+      <h3 class="pc-title">${escapeHtml(title)}</h3>
+      <div class="stars" data-review-product="${escapeHtml(String(product?.id || ""))}"></div>
+      ${price ? `<p class="pc-price-row">${price}${compare}</p>` : ""}
     </a>
   </article>`
 }
 
-function fillAz(categories: any[]) {
-  const groups = groupAz(categories)
-  const html = groups.map((g) => `<div class="az-group"><div class="az-letter">${g.letter}</div>${g.items.map((c) => `<a href="/collections/${esc(c.handle)}">${esc(c.name)}</a>`).join("")}</div>`).join("")
-  const desk = document.querySelector(".az-dropdown")
-  if (desk && !desk.querySelector("a")) desk.innerHTML = html
-  const mobile = document.getElementById("azMobile")
-  if (mobile && !mobile.querySelector("a")) {
-    mobile.innerHTML = groups.map((g) => `<div class="az-letter" style="padding:8px 8px 2px;">${g.letter}</div>${g.items.map((c) => `<a href="/collections/${esc(c.handle)}" style="padding:8px 8px;font-size:0.85rem;color:#bbb;text-transform:uppercase;letter-spacing:0.04em;">${esc(c.name)}</a>`).join("")}`).join("")
-  }
+function tileTemplate(category: ProductCategory, image: string): string {
+  const href = `/collections/${escapePath(category.handle)}`
+  const name = escapeHtml(String(category.name || ""))
+  const thumb = image ? cardSrc(image, 400) : ""
+  return `<a href="${href}" class="shopby-tile card">
+    <span class="shopby-media">
+      ${
+        thumb
+          ? `<img class="media__img" src="${escapeHtml(thumb)}" alt="${name}" width="400" height="400" loading="lazy" decoding="async" />`
+          : `<span class="shopby-media__placeholder">${name}</span>`
+      }
+    </span>
+    <span class="shopby-heading"><span class="shopby-heading__title truncate">${name}</span></span>
+  </a>`
 }
 
-function fillCatGrids(categories: any[], products: any[]) {
-  const shop = shopCategories(categories)
-  const byCat: Record<string, any[]> = {}
-  for (const p of products) {
-    for (const c of p.categories || []) {
-      (byCat[c.id] ||= []).push(p)
-      (byCat[c.handle] ||= []).push(p)
-    }
-  }
-  const html = shop.map((c) => catTile(c, imgOf(byCat[c.id]?.[0] || byCat[c.handle]?.[0] || {}))).join("")
-  document.querySelectorAll("[data-hydrate-cats]").forEach((el) => {
-    if (!el.querySelector(".shopby-tile") && html) el.innerHTML = html
-  })
+function emptyGridTemplate(message: string, hint: string): string {
+  return `<div class="empty-state empty-state--inline">
+    <svg class="empty-state__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m0 0 2.6-3.5A2 2 0 0 1 7.2 3.6h9.6a2 2 0 0 1 1.6.9L21 8M3 8h18M9.5 12.5h5"/></svg>
+    <p class="empty-state__title">${escapeHtml(message)}</p>
+    <p class="empty-state__body">${escapeHtml(hint)}</p>
+    <div class="empty-state__actions"><a class="btn btn-outline" href="/collections">Browse all collections</a></div>
+  </div>`
 }
 
-function cardMissingTitleOrPrice(el: Element) {
-  const title = (el.querySelector(".pc-title")?.textContent || "").trim()
-  const price = Number(el.getAttribute("data-price-usd") || 0)
+/* -------------------------------------------------------------------------- */
+/* Grid state                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function cardIsIncomplete(card: Element): boolean {
+  const title = ($(".pc-title", card)?.textContent || "").trim()
+  const price = Number(card.getAttribute("data-price-usd") || 0)
   return !title || !price
 }
 
-function shuffle<T>(list: T[]): T[] {
-  const a = [...list]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
+function gridNeedsHydration(grid: Element): boolean {
+  const cards = $$(".product-card", grid)
+  if (!cards.length) return true
+  return cards.filter(cardIsIncomplete).length >= Math.ceil(cards.length / 2)
 }
 
-function mixAcrossCategories(products: any[], take = 24) {
-  const byCat: Record<string, any[]> = {}
-  for (const p of products) {
-    const keys = (p.categories || []).map((c: any) => c.id || c.handle).filter(Boolean)
-    if (!keys.length) keys.push("_")
-    for (const k of keys) (byCat[k] ||= []).push(p)
+function setGridStatus(message: string): void {
+  for (const grid of $$<HTMLElement>("[data-hydrate-products]")) {
+    if (grid.querySelector(".product-card")) continue
+    const placeholder = $<HTMLElement>("[data-grid-status]", grid)
+    if (placeholder) placeholder.textContent = message
   }
-  const cats = shuffle(Object.keys(byCat))
-  const out: any[] = []
+}
+
+function fillGrids(products: Product[], home: boolean): void {
+  for (const grid of $$<HTMLElement>("[data-hydrate-products]")) {
+    const isHome = grid.getAttribute("data-hydrate-products") === "home"
+    const hasCards = grid.querySelectorAll(".product-card").length > 0
+    if (hasCards && !(isHome && home && gridNeedsHydration(grid))) continue
+
+    const status = $<HTMLElement>("[data-grid-status]", grid)
+    if (status) status.remove()
+
+    if (!products.length) {
+      if (!hasCards) {
+        grid.innerHTML = emptyGridTemplate(
+          "No figures here yet",
+          "The catalogue is empty right now. Check the publishable key is linked to a sales channel that has products.",
+        )
+      }
+      continue
+    }
+
+    const list = isHome && home ? mixAcrossCategories(products, PAGE_SIZE) : products
+    grid.innerHTML = list.map(productCardTemplate).join("")
+  }
+}
+
+function fillTiles(categories: ProductCategory[], products: Product[]): void {
+  const shop = shopCategories(categories)
+  const byCategory: Record<string, Product[]> = {}
+  for (const product of products) {
+    for (const category of product.categories || []) {
+      if (category.id) (byCategory[category.id] ||= []).push(product)
+      if (category.handle) (byCategory[category.handle] ||= []).push(product)
+    }
+  }
+  const html = shop
+    .map((category) =>
+      tileTemplate(category, imageOf(byCategory[category.id]?.[0] || byCategory[category.handle]?.[0])),
+    )
+    .join("")
+
+  for (const grid of $$<HTMLElement>("[data-hydrate-cats]")) {
+    if (grid.querySelector(".shopby-tile")) continue
+    const status = $<HTMLElement>("[data-grid-status]", grid)
+    if (status) status.remove()
+    // No categories → replace the SSR skeletons with an explanation instead of
+    // leaving a shimmering grid that will never resolve.
+    grid.innerHTML =
+      html ||
+      emptyGridTemplate(
+        "No collections yet",
+        "Medusa returned no product categories. Create them in Admin → Products → Categories, or link the publishable key to a sales channel that has them.",
+      )
+  }
+}
+
+function fillAz(categories: ProductCategory[]): void {
+  const shop = shopCategories(categories)
+  const groups: { letter: string; items: ProductCategory[] }[] = []
+  for (const category of shop) {
+    const letter = String(category.name || "#").charAt(0).toUpperCase()
+    const key = /[A-Z]/.test(letter) ? letter : "#"
+    const last = groups[groups.length - 1]
+    if (last && last.letter === key) last.items.push(category)
+    else groups.push({ letter: key, items: [category] })
+  }
+  const html = groups
+    .map(
+      (group) => `<div class="az-group"><p class="az-letter">${escapeHtml(group.letter)}</p>${group.items
+        .map((category) => `<a class="az-link truncate" href="/collections/${escapePath(category.handle)}">${escapeHtml(String(category.name))}</a>`)
+        .join("")}</div>`,
+    )
+    .join("")
+
+  const desktop = $<HTMLElement>("[data-az-dropdown]")
+  if (desktop && !desktop.querySelector("a") && html) desktop.innerHTML = html
+  const mobile = $<HTMLElement>("[data-az-mobile]")
+  if (mobile && !mobile.querySelector("a") && html) mobile.innerHTML = html
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ordering                                                                   */
+/* -------------------------------------------------------------------------- */
+
+function shuffle<T>(list: T[]): T[] {
+  const copy = [...list]
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+/** Spread the homepage mix across categories instead of showing one series. */
+function mixAcrossCategories(products: Product[], take = PAGE_SIZE): Product[] {
+  const byCategory: Record<string, Product[]> = {}
+  for (const product of products) {
+    const keys = (product.categories || []).map((category) => category.id || category.handle).filter(Boolean)
+    for (const key of keys.length ? keys : ["_"]) (byCategory[key] ||= []).push(product)
+  }
+  const keys = shuffle(Object.keys(byCategory))
   const seen = new Set<string>()
-  for (let pass = 0; pass < 3; pass++) {
-    for (const k of cats) {
-      const p = shuffle(byCat[k] || []).find((x) => x?.id && !seen.has(x.id))
-      if (!p) continue
-      seen.add(p.id)
-      out.push(p)
+  const out: Product[] = []
+  for (let pass = 0; pass < 3; pass += 1) {
+    for (const key of keys) {
+      const product = shuffle(byCategory[key] || []).find((entry) => entry?.id && !seen.has(entry.id))
+      if (!product) continue
+      seen.add(product.id)
+      out.push(product)
       if (out.length >= take) return shuffle(out)
     }
   }
   return shuffle(out).slice(0, take)
 }
 
-async function mixHomeFromCategories(categories: any[], regionId: string) {
-  const shop = shuffle(shopCategories(categories)).slice(0, 12)
-  if (!shop.length) return [] as any[]
-  const fields = "+id,+title,+handle,+thumbnail,*variants,*variants.calculated_price,*variants.prices,*images,*categories"
-  const batches = await Promise.all(shop.map(async (c) => {
-    try {
-      const qs = new URLSearchParams({ limit: "4", fields })
-      if (regionId) qs.set("region_id", regionId)
-      qs.append("category_id[]", c.id)
-      const data = await medusaGet(`/store/products?${qs}`)
-      return data.products || []
-    } catch {
-      return []
+function sortCards(cards: HTMLElement[], mode: string): HTMLElement[] {
+  const copy = [...cards]
+  const title = (card: HTMLElement) => card.getAttribute("data-title") || ""
+  const price = (card: HTMLElement) => Number(card.getAttribute("data-price-usd") || 0)
+  copy.sort((a, b) => {
+    if (mode === "az") return title(a).localeCompare(title(b))
+    if (mode === "za") return title(b).localeCompare(title(a))
+    if (mode === "price-asc") return price(a) - price(b)
+    if (mode === "price-desc") return price(b) - price(a)
+    return 0
+  })
+  return copy
+}
+
+function bindSort(): void {
+  const select = $<HTMLSelectElement>("[data-collection-sort]")
+  const grid = $<HTMLElement>("[data-product-grid]")
+  if (!select || !grid) return
+
+  select.addEventListener("change", () => {
+    const cards = $$<HTMLElement>(".product-card", grid)
+    sortCards(cards, select.value).forEach((card) => grid.appendChild(card))
+    announceCount(`${cards.length} products, sorted`)
+  })
+}
+
+function announceCount(message: string): void {
+  const live = $<HTMLElement>("[data-product-count]")
+  if (live) live.textContent = message
+}
+
+/* -------------------------------------------------------------------------- */
+/* Infinite scroll                                                            */
+/* -------------------------------------------------------------------------- */
+
+interface InfiniteState {
+  loading: boolean
+  done: boolean
+  categoryIds: string[] | null
+  regionId: string
+}
+
+function bindInfiniteScroll(handle: string): void {
+  const wrap = $<HTMLElement>("[data-load-more]")
+  const button = $<HTMLButtonElement>("[data-load-more-btn]")
+  const status = $<HTMLElement>("[data-load-more-status]")
+  const grid = $<HTMLElement>("[data-product-grid]")
+  const sentinel = $<HTMLElement>("[data-load-more-sentinel]") || wrap
+  if (!wrap || !button || !grid || wrap.dataset.bound) return
+  wrap.dataset.bound = "1"
+
+  const state: InfiniteState = { loading: false, done: false, categoryIds: null, regionId: "" }
+
+  const finish = () => {
+    state.done = true
+    wrap.hidden = true
+  }
+
+  const busy = (on: boolean, error = "") => {
+    wrap.hidden = false
+    state.loading = on
+    if (status) {
+      status.hidden = !on && !error
+      status.innerHTML = on
+        ? `<span class="spinner" aria-hidden="true"></span><span>Loading next page…</span>`
+        : error
+          ? `<span role="alert">${escapeHtml(error)}</span>`
+          : ""
     }
-  }))
-  const out: any[] = []
+    button.hidden = on || state.done
+    button.disabled = on
+    button.textContent = error ? "Retry" : "Load more"
+  }
+
+  async function resolveFilters(): Promise<void> {
+    if (state.categoryIds) return
+    state.categoryIds = []
+    try {
+      const regions = await medusaGet<{ regions?: { id: string }[] }>("/store/regions?limit=5")
+      state.regionId = regions.regions?.[0]?.id || ""
+    } catch {
+      /* region is optional */
+    }
+    if (!handle || handle === "new-arrivals") return
+    try {
+      const data = await medusaGet<{ product_categories?: ProductCategory[] }>(
+        `/store/product-categories?limit=200&fields=${encodeURIComponent(CATEGORY_FIELDS)}`,
+      )
+      const categories = data.product_categories || []
+      const category = categories.find((entry) => entry.handle === handle)
+      if (category) {
+        state.categoryIds = [
+          category.id,
+          ...categories.filter((entry) => entry.parent_category_id === category.id).map((entry) => entry.id),
+        ]
+      }
+    } catch {
+      /* unfiltered page */
+    }
+  }
+
+  const nearViewport = () => {
+    if (!sentinel) return false
+    return sentinel.getBoundingClientRect().top < window.innerHeight + 900
+  }
+
+  async function next(): Promise<void> {
+    if (state.loading || state.done) return
+    busy(true)
+    try {
+      await resolveFilters()
+      const offset = grid.querySelectorAll(".product-card").length
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
+        fields: PRODUCT_FIELDS,
+      })
+      if (state.regionId) params.set("region_id", state.regionId)
+      for (const id of state.categoryIds || []) params.append("category_id[]", id)
+
+      const data = await medusaGet<{ products?: Product[]; count?: number }>(`/store/products?${params}`)
+      const list = data.products || []
+      const have = new Set(
+        $$<HTMLElement>("[data-id]", grid).map((card) => card.getAttribute("data-id") || ""),
+      )
+      const fresh = list.filter((product) => product?.id && !have.has(product.id))
+
+      if (fresh.length) {
+        grid.insertAdjacentHTML("beforeend", fresh.map(productCardTemplate).join(""))
+        document.dispatchEvent(new CustomEvent("toonhub:catalog"))
+      }
+
+      const now = grid.querySelectorAll(".product-card").length
+      const total = Number(data.count)
+      announceCount(Number.isFinite(total) && total > 0 ? `${total} products` : `${now} products`)
+
+      // Medusa's `count` is unreliable (often equals the page size) — stop when
+      // a page comes back short or repeats, not when `count` says so.
+      if (list.length < PAGE_SIZE) return finish()
+      if (!fresh.length) {
+        if (now > offset) {
+          busy(false)
+          if (nearViewport()) queueMicrotask(() => void next())
+          return
+        }
+        return finish()
+      }
+      busy(false)
+      if (nearViewport()) queueMicrotask(() => void next())
+    } catch (error) {
+      busy(false, `Could not load the next page. ${error instanceof Error ? error.message : ""}`)
+    }
+  }
+
+  wrap.hidden = false
+  button.hidden = false
+  button.addEventListener("click", () => void next())
+
+  if (sentinel && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void next()
+      },
+      { rootMargin: "800px 0px", threshold: 0 },
+    )
+    observer.observe(sentinel)
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Boot                                                                       */
+/* -------------------------------------------------------------------------- */
+
+async function load(): Promise<void> {
+  const handle =
+    $<HTMLElement>("[data-collection-handle]")?.getAttribute("data-collection-handle") || ""
+  if (handle) {
+    bindInfiniteScroll(handle)
+    bindSort()
+  }
+
+  const homeGrid = $<HTMLElement>('[data-hydrate-products="home"]')
+  const serverRendered =
+    homeGrid &&
+    !gridNeedsHydration(homeGrid) &&
+    Boolean($("[data-az-dropdown] a, [data-az-mobile] a")) &&
+    Boolean($("[data-hydrate-cats] .shopby-tile"))
+
+  if (!handle && serverRendered) return
+  if (!handle && !homeGrid && !$("[data-hydrate-cats]") && !$("[data-hydrate-products]")) return
+
+  setGridStatus("Loading figures…")
+
+  try {
+    const categoriesData = await medusaGet<{ product_categories?: ProductCategory[] }>(
+      `/store/product-categories?limit=200&fields=${encodeURIComponent(CATEGORY_FIELDS)}`,
+    )
+    const categories = categoriesData.product_categories || []
+    fillAz(categories)
+
+    const onCollection = Boolean(handle)
+    let regionId = ""
+    try {
+      const regions = await medusaGet<{ regions?: { id: string }[] }>("/store/regions?limit=5")
+      regionId = regions.regions?.[0]?.id || ""
+    } catch {
+      /* optional */
+    }
+
+    const params = new URLSearchParams({
+      limit: onCollection ? String(PAGE_SIZE) : "48",
+      fields: PRODUCT_FIELDS,
+    })
+    if (regionId) params.set("region_id", regionId)
+
+    if (handle && handle !== "new-arrivals") {
+      const category = categories.find((entry) => entry.handle === handle)
+      const ids = category
+        ? [category.id, ...categories.filter((entry) => entry.parent_category_id === category.id).map((entry) => entry.id)]
+        : []
+      for (const id of ids) params.append("category_id[]", id)
+      const titleEl = $<HTMLElement>("[data-collection-title]")
+      if (titleEl && category?.name) titleEl.textContent = `Collection: ${category.name}`
+    }
+
+    const productsData = await medusaGet<{ products?: Product[]; count?: number }>(
+      `/store/products?${params}`,
+    )
+    let products = productsData.products || []
+
+    if (homeGrid && gridNeedsHydration(homeGrid)) {
+      const mixed = await mixHomeFromCategories(categories, regionId)
+      products = mixed.length ? mixed : mixAcrossCategories(products, PAGE_SIZE)
+    }
+
+    fillTiles(categories, products)
+    fillGrids(products, Boolean(homeGrid))
+
+    const total = Number(productsData.count ?? products.length) || products.length
+    if ($("[data-product-count]")) announceCount(`${total} products`)
+    document.dispatchEvent(new CustomEvent("toonhub:catalog"))
+  } catch (error) {
+    setGridStatus(
+      `Could not load the catalogue: ${error instanceof Error ? error.message : "unknown error"}`,
+    )
+    const unreachable = emptyGridTemplate(
+      "The catalogue is unreachable",
+      "We could not reach the store backend. If you are the site owner, check MEDUSA_URL and MEDUSA_PUBLISHABLE_KEY, or set STORE_CORS to include this origin.",
+    )
+    for (const grid of $$<HTMLElement>("[data-hydrate-products]")) {
+      if (grid.querySelector(".product-card")) continue
+      const status = $<HTMLElement>("[data-grid-status]", grid)
+      if (status) status.remove()
+      grid.innerHTML = unreachable
+    }
+    // Tile grids shimmer forever otherwise — give them the same explanation.
+    for (const grid of $$<HTMLElement>("[data-hydrate-cats]")) {
+      if (grid.querySelector(".shopby-tile")) continue
+      const status = $<HTMLElement>("[data-grid-status]", grid)
+      if (status) status.remove()
+      grid.innerHTML = unreachable
+    }
+  }
+}
+
+async function mixHomeFromCategories(categories: ProductCategory[], regionId: string): Promise<Product[]> {
+  const shop = shuffle(shopCategories(categories)).slice(0, 12)
+  if (!shop.length) return []
+  const batches = await Promise.all(
+    shop.map(async (category) => {
+      try {
+        const params = new URLSearchParams({ limit: "4", fields: PRODUCT_FIELDS })
+        if (regionId) params.set("region_id", regionId)
+        params.append("category_id[]", category.id)
+        const data = await medusaGet<{ products?: Product[] }>(`/store/products?${params}`)
+        return data.products || []
+      } catch {
+        return [] as Product[]
+      }
+    }),
+  )
   const seen = new Set<string>()
-  for (let pass = 0; pass < 2; pass++) {
+  const out: Product[] = []
+  for (let pass = 0; pass < 2; pass += 1) {
     for (const list of batches) {
-      const p = shuffle(list).find((x: any) => x?.id && !seen.has(x.id) && (x.title || x.handle))
-      if (!p) continue
-      seen.add(p.id)
-      out.push(p)
-      if (out.length >= 24) return shuffle(out)
+      const product = shuffle(list).find((entry) => entry?.id && !seen.has(entry.id) && (entry.title || entry.handle))
+      if (!product) continue
+      seen.add(product.id)
+      out.push(product)
+      if (out.length >= PAGE_SIZE) return shuffle(out)
     }
   }
   return shuffle(out)
 }
 
-function homeNeedsHydrate(el: Element) {
-  const cards = [...el.querySelectorAll(".product-card")]
-  if (!cards.length) return true
-  return cards.filter(cardMissingTitleOrPrice).length >= Math.ceil(cards.length / 2)
-}
-
-function fillProductGrids(products: any[]) {
-  document.querySelectorAll("[data-hydrate-products]").forEach((el) => {
-    const home = el.getAttribute("data-hydrate-products") === "home"
-    const cards = [...el.querySelectorAll(".product-card")]
-    if (cards.length && !(home && homeNeedsHydrate(el))) return
-    if (!products.length) {
-      if (!cards.length) {
-        el.innerHTML = `<div style="text-align:center;padding:60px 0;width:100%;"><h3 style="font-size:20px;font-weight:700;color:#fff;">No products returned from Medusa</h3><p style="color:#888;margin-top:8px;">Check the publishable key is linked to a sales channel that has products.</p></div>`
-      }
-      return
-    }
-    const list = home ? mixAcrossCategories(products, 24) : products
-    el.innerHTML = list.map(productCard).join("")
-  })
-}
-
-function setupCollectionSort() {
-  const sel = document.getElementById("collectionSort") as HTMLSelectElement | null
-  const grid = document.getElementById("productGrid")
-  if (!sel || !grid) return
-  sel.onchange = () => {
-    const cards = [...grid.querySelectorAll<HTMLElement>(".product-card")]
-    const mode = sel.value
-    cards.sort((a, b) => {
-      const ta = a.getAttribute("data-title") || ""
-      const tb = b.getAttribute("data-title") || ""
-      const pa = Number(a.getAttribute("data-price-usd") || 0)
-      const pb = Number(b.getAttribute("data-price-usd") || 0)
-      if (mode === "az") return ta.localeCompare(tb)
-      if (mode === "za") return tb.localeCompare(ta)
-      if (mode === "price-asc") return pa - pb
-      if (mode === "price-desc") return pb - pa
-      return 0
-    })
-    cards.forEach((c) => grid.appendChild(c))
-  }
-}
-
-function setupInfiniteProducts(handle: string) {
-  const wrap = document.getElementById("loadMoreWrap") as HTMLElement | null
-  const btn = document.getElementById("loadMoreBtn") as HTMLButtonElement | null
-  const statusEl = document.getElementById("loadMoreStatus")
-  const grid = document.getElementById("productGrid")
-  const sentinel = document.getElementById("loadMoreSentinel") || wrap
-  if (!wrap || !btn || !grid || wrap.dataset.bound) return
-  wrap.dataset.bound = "1"
-
-  const PAGE = 24
-  let loading = false
-  let done = false
-  let catIds: string[] | null = null
-  let regionId = ""
-
-  function finish() {
-    done = true
-    wrap.hidden = true
-  }
-
-  function busy(on: boolean, err = "") {
-    wrap.hidden = false
-    loading = on
-    if (statusEl) {
-      statusEl.hidden = !on && !err
-      if (on) statusEl.innerHTML = `<div class="spinner"></div><span>Loading next page…</span>`
-      else if (err) statusEl.innerHTML = `<span>${err}</span>`
-    }
-    btn.hidden = on || done
-    btn.disabled = on
-    btn.textContent = err ? "Retry" : "Load more"
-  }
-
-  async function resolveFilters() {
-    if (catIds) return
-    catIds = []
-    try {
-      const regions = await medusaGet("/store/regions?limit=5")
-      regionId = regions.regions?.[0]?.id || ""
-    } catch { /* optional */ }
-    if (!handle || handle === "new-arrivals") return
-    try {
-      const catsData = await medusaGet("/store/product-categories?limit=200&fields=id,name,handle,parent_category_id")
-      const categories = catsData.product_categories || catsData.categories || []
-      const cat = categories.find((c: any) => c.handle === handle)
-      if (cat) catIds = [cat.id, ...categories.filter((c: any) => c.parent_category_id === cat.id).map((c: any) => c.id)]
-    } catch { /* unfiltered page */ }
-  }
-
-  function stillInView() {
-    const el = sentinel as HTMLElement
-    return el.getBoundingClientRect().top < window.innerHeight + 900
-  }
-
-  async function next() {
-    if (loading || done) return
-    busy(true)
-    try {
-      await resolveFilters()
-      const offset = grid.querySelectorAll(".product-card").length
-      const qs = new URLSearchParams({
-        limit: String(PAGE),
-        offset: String(offset),
-        fields: "*variants,*variants.calculated_price,*variants.prices,*images,+thumbnail,*categories,+handle,+title,+id",
-      })
-      if (regionId) qs.set("region_id", regionId)
-      for (const id of catIds || []) qs.append("category_id[]", id)
-      const data = await medusaGet(`/store/products?${qs}`)
-      const list: any[] = data.products || []
-      const have = new Set([...grid.querySelectorAll("[data-id]")].map((el) => el.getAttribute("data-id") || ""))
-      const fresh = list.filter((p) => p?.id && !have.has(p.id))
-      if (fresh.length) {
-        grid.insertAdjacentHTML("beforeend", fresh.map(productCard).join(""))
-        document.dispatchEvent(new Event("toonhub:catalog"))
-      }
-      const now = grid.querySelectorAll(".product-card").length
-      const total = Number(data.count)
-      const countEl = document.querySelector("[data-product-count]")
-      if (countEl && Number.isFinite(total) && total > 0) countEl.textContent = `${total} products`
-      else if (countEl) countEl.textContent = `${now} products`
-
-      // Do not trust Medusa `count` to stop — it is often equal to the page size.
-      if (list.length < PAGE) {
-        finish()
-        return
-      }
-      if (fresh.length === 0) {
-        if (now > offset) {
-          busy(false)
-          if (stillInView()) queueMicrotask(() => next())
-          return
-        }
-        finish()
-        return
-      }
-      busy(false)
-      if (stillInView()) queueMicrotask(() => next())
-    } catch (e: any) {
-      busy(false, `Could not load the next page. ${e.message || ""}`)
-    }
-  }
-
-  wrap.hidden = false
-  btn.hidden = false
-  btn.onclick = () => next()
-  const io = new IntersectionObserver((entries) => {
-    if (entries[0]?.isIntersecting) next()
-  }, { root: null, rootMargin: "800px 0px", threshold: 0 })
-  io.observe(sentinel!)
-}
-
-async function load() {
-  const handle = document.querySelector("[data-collection-handle]")?.getAttribute("data-collection-handle") || ""
-  if (handle) {
-    setupInfiniteProducts(handle)
-    setupCollectionSort()
-  }
-
-  const homeEl = document.querySelector('[data-hydrate-products="home"]')
-  const ssrReady = Boolean(
-    homeEl &&
-    !homeNeedsHydrate(homeEl) &&
-    document.querySelector(".az-dropdown a, #azMobile a") &&
-    document.querySelector("[data-hydrate-cats] .shopby-tile"),
-  )
-  if (!handle && ssrReady) return
-
-  status("Loading products from Medusa…")
-  try {
-    const catsData = await medusaGet("/store/product-categories?limit=200&fields=id,name,handle,parent_category_id,description")
-    const categories = catsData.product_categories || catsData.categories || []
-    fillAz(categories)
-
-    const special = handle === "new-arrivals"
-    const onCollection = Boolean(handle)
-    let regionId = ""
-    try {
-      const regions = await medusaGet("/store/regions?limit=5")
-      regionId = regions.regions?.[0]?.id || ""
-    } catch { /* optional */ }
-
-    const qs = new URLSearchParams({
-      limit: onCollection ? "24" : "48",
-      fields: "+id,+title,+handle,+thumbnail,*variants,*variants.calculated_price,*variants.prices,*images,*categories",
-    })
-    if (regionId) qs.set("region_id", regionId)
-
-    if (handle && !special) {
-      const cat = categories.find((c: any) => c.handle === handle)
-      const ids = cat ? [cat.id, ...categories.filter((c: any) => c.parent_category_id === cat.id).map((c: any) => c.id)] : []
-      if (ids.length) ids.forEach((id) => qs.append("category_id[]", id))
-      const titleEl = document.querySelector("[data-collection-title]")
-      if (titleEl && cat?.name) titleEl.textContent = `Collection: ${cat.name}`
-    }
-
-    const prodData = await medusaGet(`/store/products?${qs}`)
-    let products = prodData.products || []
-
-    if (homeEl && homeNeedsHydrate(homeEl)) {
-      const mixed = await mixHomeFromCategories(categories, regionId)
-      if (mixed.length) products = mixed
-      else products = mixAcrossCategories(products, 24)
-    }
-
-    fillCatGrids(categories, products)
-    fillProductGrids(products)
-    const total = Number(prodData.count ?? products.length) || products.length
-    const countEl = document.querySelector("[data-product-count]")
-    if (countEl) countEl.textContent = `${total} products`
-    document.dispatchEvent(new Event("toonhub:catalog"))
-  } catch (e: any) {
-    status(`Could not load Medusa products: ${e.message || e}. If this is CORS, set STORE_CORS=* (or this preview origin) on the Medusa server.`)
-  }
-}
-
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load)
-else load()
+ready(() => {
+  // Hydration is a rescue path — never let it compete with LCP.
+  whenIdle(() => void load(), 2500)
+})
