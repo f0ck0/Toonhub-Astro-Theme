@@ -1,16 +1,19 @@
 ---
 import PolicyLayout from "../components/PolicyLayout.astro"
 import { SITE } from "../lib/site"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
 ---
-<PolicyLayout title="Affiliate Program" description="Earn commission sharing TOONHUB anime figures.">
-  <p>Love Toonhub? Share the collection and earn commission on every referred order.</p>
-  <h2>How it works</h2>
+<PolicyLayout title={t("affiliate.title")} description={t("affiliate.metaDesc")}>
+  <p>{t("affiliate.intro")}</p>
+  <h2>{t("affiliate.howH")}</h2>
   <ul>
-    <li>Apply with your social or site details</li>
-    <li>Get a unique tracking link</li>
-    <li>Earn a percentage of net sales from customers you send our way</li>
-    <li>Payouts monthly once you hit the minimum threshold</li>
+    <li>{t("affiliate.how1")}</li>
+    <li>{t("affiliate.how2")}</li>
+    <li>{t("affiliate.how3")}</li>
+    <li>{t("affiliate.how4")}</li>
   </ul>
-  <h2>Apply</h2>
-  <p>Email {SITE.email} with the subject “Affiliate application” and include your platform, audience size, and content niche. We'll reply within a few business days.</p>
+  <h2>{t("affiliate.applyH")}</h2>
+  <p>{t("affiliate.applyP", { email: SITE.email })}</p>
 </PolicyLayout>

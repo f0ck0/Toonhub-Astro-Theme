@@ -1,25 +1,31 @@
+import type { MedusaOrder, MedusaShippingMethodLike } from "../types"
+
 export type TrackItem = {
   tracking_number: string
   url: string
   carrier: string
 }
 
-/** The tracking-bearing fields Medusa puts on a fulfillment (or a legacy shipping method). */
-interface FulfillmentLike {
-  provider_id?: string
-  name?: string
-  tracking_links?: unknown[]
-  labels?: unknown[]
+/** Loose object a tracking entry can be, across Medusa versions. */
+interface TrackingLike {
+  tracking_number?: string | number
   tracking_numbers?: unknown[]
-  tracking_number?: string
+  number?: string | number
+  id?: string | number
+  url?: string
+  tracking_url?: string
+  href?: string
+  carrier?: string
+  provider?: string
+  company?: string
 }
 
-function carrierOf(num: string, hint = "") {
+function carrierOf(num: string, hint = ""): string {
   const n = num.replace(/\s/g, "").toUpperCase()
   const h = hint.toLowerCase()
   if (h.includes("ups") || n.startsWith("1Z")) return "UPS"
-  if (h.includes("fedex") || /^(\d{12,22})$/.test(n) && n.length === 12) return h.includes("fedex") ? "FedEx" : ""
-  if (h.includes("dhl") || n.startsWith("JD") || /^(\d{10,11})$/.test(n) && h.includes("dhl")) return "DHL"
+  if (h.includes("fedex") || (/^(\d{12,22})$/.test(n) && n.length === 12)) return h.includes("fedex") ? "FedEx" : ""
+  if (h.includes("dhl") || n.startsWith("JD") || (/^(\d{10,11})$/.test(n) && h.includes("dhl"))) return "DHL"
   if (h.includes("usps")) return "USPS"
   if (h.includes("yun") || n.startsWith("YT")) return "YunExpress"
   if (h.includes("4px") || n.startsWith("4PX")) return "4PX"
@@ -29,30 +35,36 @@ function carrierOf(num: string, hint = "") {
   return hint || "Carrier"
 }
 
-export function trackLookupUrl(num: string, existing = "") {
+export function trackLookupUrl(num: string, existing = ""): string {
   if (existing && /^https?:\/\//i.test(existing)) return existing
   return `https://t.17track.net/en#nums=${encodeURIComponent(num)}`
 }
 
-export function extractTracking(order: any): TrackItem[] {
+export function extractTracking(order: MedusaOrder | null | undefined): TrackItem[] {
   const out: TrackItem[] = []
   const seen = new Set<string>()
-  const push = (raw: any, carrierHint = "") => {
+
+  const push = (raw: unknown, carrierHint = ""): void => {
     if (!raw) return
-    if (typeof raw === "string") {
-      const num = raw.trim()
+    if (typeof raw === "string" || typeof raw === "number") {
+      const num = String(raw).trim()
       if (!num || seen.has(num)) return
       seen.add(num)
       out.push({ tracking_number: num, url: trackLookupUrl(num), carrier: carrierOf(num, carrierHint) })
       return
     }
-    const num = String(raw.tracking_number || raw.number || raw.tracking_numbers?.[0] || raw.id || "").trim()
-    const href = String(raw.url || raw.tracking_url || raw.href || "")
+    if (typeof raw !== "object") return
+    const entry = raw as TrackingLike
+    const firstListed = Array.isArray(entry.tracking_numbers)
+      ? (entry.tracking_numbers[0] as string | number | undefined)
+      : undefined
+    const num = String(entry.tracking_number ?? entry.number ?? firstListed ?? entry.id ?? "").trim()
+    const href = String(entry.url || entry.tracking_url || entry.href || "")
     if (!num && !href) return
     const key = num || href
     if (seen.has(key)) return
     seen.add(key)
-    const carrier = carrierOf(num, raw.carrier || raw.provider || raw.company || carrierHint)
+    const carrier = carrierOf(num, entry.carrier || entry.provider || entry.company || carrierHint)
     out.push({
       tracking_number: num,
       url: trackLookupUrl(num, href),
@@ -61,10 +73,10 @@ export function extractTracking(order: any): TrackItem[] {
   }
 
   // Medusa exposes tracking data on fulfillments *and* on legacy shipping
-  // methods, with different key names per version — hence the loose shape.
-  const fulfillmentSources: FulfillmentLike[] = [
-    ...(Array.isArray(order?.fulfillments) ? (order.fulfillments as FulfillmentLike[]) : []),
-    ...(Array.isArray(order?.shipping_methods) ? (order.shipping_methods as FulfillmentLike[]) : []),
+  // methods, with different key names per version.
+  const fulfillmentSources: MedusaShippingMethodLike[] = [
+    ...(Array.isArray(order?.fulfillments) ? order.fulfillments : []),
+    ...(Array.isArray(order?.shipping_methods) ? order.shipping_methods : []),
   ]
   for (const f of fulfillmentSources) {
     const hint = f?.provider_id || f?.name || ""
@@ -78,6 +90,6 @@ export function extractTracking(order: any): TrackItem[] {
   return out
 }
 
-export function orderTrackStatus(order: any) {
-  return order?.fulfillment_status || order?.status || order?.payment_status || "placed"
+export function orderTrackStatus(order: MedusaOrder | null | undefined): string {
+  return String(order?.fulfillment_status || order?.status || order?.payment_status || "placed")
 }

@@ -44,7 +44,7 @@ try {
   series = []
 }
 
-const crumbs = [{ name: "Home", href: "/" }, { name: term ? `Search: ${term}` : "Search" }]
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: term ? `${t("search.title")}: ${term}` : t("search.title") }]
 const noResults = Boolean(term) && products.length === 0
 ---
 

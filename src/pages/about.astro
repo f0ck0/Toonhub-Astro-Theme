@@ -1,17 +1,20 @@
 ---
 import PolicyLayout from "../components/PolicyLayout.astro"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
 ---
-<PolicyLayout title="About Us" description="The story of TOONHUB — premium anime figures for collectors worldwide.">
-  <h2>Our Story</h2>
-  <p>Founded by a group of anime enthusiasts, TOONHUB was born from a shared love for the art, stories, and culture of anime. We saw a need for a dedicated space where fans could find the best anime figures and connect with others who share their passion.</p>
-  <p>Since our inception, we've been committed to delivering an exceptional experience to our customers and fostering a vibrant, inclusive community of collectors.</p>
-  <h2>What we sell</h2>
-  <p>Premium anime figures, statues and collectibles — from One Piece, Dragon Ball, Demon Slayer, Jujutsu Kaisen and dozens more universes. Every piece is selected for sculpt quality, paint finish and display presence.</p>
-  <h2>Our promise</h2>
+<PolicyLayout title={t("about.title")} description={t("about.metaDesc")}>
+  <h2>{t("about.storyH")}</h2>
+  <p>{t("about.storyP1")}</p>
+  <p>{t("about.storyP2")}</p>
+  <h2>{t("about.sellH")}</h2>
+  <p>{t("about.sellP")}</p>
+  <h2>{t("about.promiseH")}</h2>
   <ul>
-    <li>Worldwide free shipping on every order</li>
-    <li>Buy 1 get the 2nd half price</li>
-    <li>30-day guarantee on unused items</li>
-    <li>Secure, encrypted checkout</li>
+    <li>{t("about.promise1")}</li>
+    <li>{t("about.promise2")}</li>
+    <li>{t("about.promise3")}</li>
+    <li>{t("about.promise4")}</li>
   </ul>
 </PolicyLayout>

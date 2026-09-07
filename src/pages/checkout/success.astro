@@ -1,37 +1,49 @@
 ---
+/**
+ * Order confirmation. Same rules as /checkout: shared <Base /> shell
+ * (negotiated lang, noindex, canonical) with localized copy from the
+ * dictionary — no standalone hand-rolled <html> document.
+ */
 import "../../styles/checkout.css"
+import Base from "../../layouts/Base.astro"
 import { SITE } from "../../lib/site"
+import { NOINDEX } from "../../lib/seo"
+import { pageLocale, useTranslations } from "../../lib/i18n"
 import TrustIcons from "../../components/TrustIcons.astro"
+
 export const prerender = false
+
+const locale = pageLocale(Astro)
+const t = useTranslations(locale)
+
 const order = Astro.url.searchParams.get("order") || ""
 const email = Astro.url.searchParams.get("email") || ""
 ---
-<!DOCTYPE html>
-<html lang="en" style="background:#000;color-scheme:dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
-  <title>Thank you — {SITE.name}</title>
-  <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
-  <style>html,body{background:#000!important;color:#fff;color-scheme:dark}</style>
-</head>
-<body class="co-body" style="background:#000;color:#fff">
+<Base
+  title={t("success.heading")}
+  description={t("success.metaDesc")}
+  robots={NOINDEX}
+  bodyClass="co-body"
+  skipLink={false}
+  overlays={{ cart: false, search: false }}
+>
+  <Fragment slot="head">
+    <style is:inline>html,body{background:#000!important;color:#fff}</style>
+  </Fragment>
   <main class="co-main co-success" style="margin:0 auto;padding:48px 1.35rem 64px;text-align:center;max-width:560px;">
     <a href="/" class="co-logo">{SITE.name}</a>
-    <h1 class="co-h" style="margin-top:36px;font-size:1.6rem;">Thank you for your order</h1>
+    <h1 class="co-h" style="margin-top:36px;font-size:1.6rem;">{t("success.heading")}</h1>
     <p style="color:#bbb;margin-top:12px;line-height:1.55;">
-      {order ? `Order ${order} is confirmed.` : "Your order is confirmed."}
-      {email ? ` A receipt will be sent to ${email}.` : ""}
+      {order ? t("success.orderConfirmed", { order }) : t("success.confirmed")}
+      {email ? t("success.receipt", { email }) : ""}
     </p>
     <div class="co-offer" style="text-align:left;margin-top:22px;">
-      <strong>What happens next</strong><br />
-      We pack in 2–3 business days · Free worldwide shipping with tracking · 30-day returns
+      <strong>{t("success.nextH")}</strong><br />
+      {t("success.nextBody")}
     </div>
     <TrustIcons gift />
-    <a href="/collections" class="co-btn pay" style="max-width:320px;margin:28px auto 0;">Continue shopping</a>
-    <p class="co-lock"><a href="/track-order">Track this order</a> · <a href="/">Back to home</a></p>
+    <a href="/collections" class="co-btn pay" style="max-width:320px;margin:28px auto 0;">{t("cart.continueShopping")}</a>
+    <p class="co-lock"><a href="/track-order">{t("success.trackThis")}</a> · <a href="/">{t("notFound.goHome")}</a></p>
   </main>
   <script>
     try {
@@ -39,5 +51,4 @@ const email = Astro.url.searchParams.get("email") || ""
       localStorage.removeItem("toonhub_local_cart")
     } catch {}
   </script>
-</body>
-</html>
+</Base>

@@ -32,12 +32,12 @@ try {
 }
 
 const series = shopCategories(categories)
-const crumbs = [{ name: "Home", href: "/" }, { name: "Shop All" }]
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("nav.shopAll") }]
 const medusa = medusaConfig()
 ---
 
 <Base
-  title="Shop All"
+  title={t("nav.shopAll")}
   description={`Browse every anime figure collection at ${medusaConfig().isLocal ? "the Toonhub demo catalogue" : "Toonhub"} — ${series.length || "40"}+ series, worldwide shipping.`}
   jsonLd={[breadcrumbJsonLd(crumbs, Astro.site), collectionPageJsonLd(null, Astro.site)]}
   overlays={{ quickView: false }}

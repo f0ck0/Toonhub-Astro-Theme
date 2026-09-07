@@ -12,6 +12,8 @@ import Header from "./Header.astro"
 import Footer from "./Footer.astro"
 import Breadcrumb from "./Breadcrumb.astro"
 import { breadcrumbJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+import { SITE } from "../lib/site"
 import type { SeoMeta } from "../types"
 
 export interface Props extends SeoMeta {
@@ -42,15 +44,18 @@ const updatedDate = updated
   : null
 const hasUpdated = Boolean(updatedDate && !Number.isNaN(updatedDate.valueOf()))
 
+const locale = pageLocale(Astro, seo.lang)
+const t = useTranslations(locale)
+
 const crumbs = [
-  { name: "Home", href: "/" },
+  { name: t("nav.home"), href: "/" },
   { name: title },
 ]
 ---
 
 <Base
   title={title}
-  lang={seo.lang ?? "en"}
+  lang={seo.lang}
   description={seo.description}
   image={seo.image}
   robots={seo.robots}
@@ -61,7 +66,7 @@ const crumbs = [
       "@type": "WebPage",
       name: title,
       description: seo.description,
-      url: new URL(Astro.url.pathname, Astro.site ?? "https://toonhubshop.com").href,
+      url: new URL(Astro.url.pathname, Astro.site ?? SITE.url).href,
       ...(hasUpdated ? { dateModified: updatedDate!.toISOString() } : {}),
       isPartOf: { "@type": "WebSite", name: "TOONHUB" },
     },
@@ -77,9 +82,9 @@ const crumbs = [
         <h1>{title}</h1>
         {hasUpdated && (
           <p class="policy-article__updated">
-            Last updated
+            {t("policy.lastUpdated")}
             <time datetime={updatedDate!.toISOString()}>
-              {updatedDate!.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              {updatedDate!.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })}
             </time>
           </p>
         )}

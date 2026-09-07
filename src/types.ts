@@ -214,6 +214,184 @@ export interface PricePair {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Medusa API payloads (server side)                                          */
+/*                                                                            */
+/* Medusa v2 store-API responses, kept loose on purpose: optional fields and  */
+/* `unknown` for values that vary between plugin versions. These interfaces   */
+/* exist so API routes never need `any` — enumerate what the theme reads.     */
+/* -------------------------------------------------------------------------- */
+
+export interface MedusaRegion {
+  id?: string
+  currency_code?: string
+  countries?: { iso_2?: string }[]
+}
+
+export interface MedusaAddress {
+  id?: string
+  first_name?: string
+  last_name?: string
+  address_1?: string
+  address_2?: string
+  city?: string
+  province?: string
+  postal_code?: string
+  country_code?: string
+  phone?: string
+}
+
+export interface MedusaCartItem {
+  id?: string
+  title?: string
+  thumbnail?: string | null
+  quantity?: number
+  unit_price?: number
+  variant_id?: string
+  variant_title?: string | null
+  variant?: { title?: string | null; product?: { handle?: string | null } | null } | null
+  product?: { handle?: string | null } | null
+}
+
+export interface MedusaPaymentSession {
+  id?: string
+  provider_id?: string
+  /** Provider-specific payload (Stripe `client_secret`, PayPal approval links…). */
+  data?: Record<string, unknown>
+  status?: string
+}
+
+export interface MedusaPaymentCollection {
+  id?: string
+  payment_sessions?: MedusaPaymentSession[]
+}
+
+export interface MedusaShippingMethodLike {
+  id?: string
+  name?: string
+  provider_id?: string
+  tracking_number?: string
+  tracking_numbers?: unknown[]
+  tracking_links?: unknown[]
+  labels?: unknown[]
+}
+
+export interface MedusaCart {
+  id?: string
+  email?: string | null
+  currency_code?: string
+  region_id?: string
+  region?: MedusaRegion | null
+  total?: number
+  subtotal?: number
+  shipping_total?: number
+  discount_total?: number
+  tax_total?: number
+  items?: MedusaCartItem[]
+  shipping_address?: MedusaAddress | null
+  billing_address?: MedusaAddress | null
+  shipping_methods?: MedusaShippingMethodLike[]
+  payment_collection?: MedusaPaymentCollection | null
+}
+
+export interface MedusaShippingOption {
+  id?: string
+  name?: string
+  amount?: number | null
+  calculated_price?: CalculatedPrice | null
+}
+
+export interface MedusaPaymentProvider {
+  id?: string
+}
+
+export interface MedusaCustomer {
+  id?: string
+  email?: string
+  first_name?: string | null
+  last_name?: string | null
+  phone?: string | null
+  addresses?: MedusaAddress[]
+  /** Older Medusa versions name the same array like this. */
+  shipping_addresses?: MedusaAddress[]
+}
+
+export interface MedusaOrderItem {
+  title?: string
+  quantity?: number
+  thumbnail?: string | null
+  variant?: { product?: { thumbnail?: string | null } | null } | null
+}
+
+/** Fulfillment / order shapes read by `lib/tracking.ts` and account pages. */
+export interface MedusaOrder {
+  id?: string | number
+  display_id?: string | number
+  email?: string
+  created_at?: string
+  status?: string
+  fulfillment_status?: string
+  payment_status?: string
+  total?: number
+  summary?: { total?: number }
+  currency_code?: string
+  currency?: string
+  items?: MedusaOrderItem[]
+  line_items?: MedusaOrderItem[]
+  fulfillments?: MedusaShippingMethodLike[]
+  shipping_methods?: MedusaShippingMethodLike[]
+  tracking?: unknown[]
+  tracking_numbers?: unknown[]
+}
+
+/**
+ * Raw review row. Medusa review plugins disagree on field names
+ * (`content` vs `comment` vs `body`, `reviews` vs `product_reviews`), so the
+ * reader side deliberately accepts alternatives and normalizes.
+ */
+export interface MedusaReviewRow {
+  id?: string
+  product_id?: string
+  name?: string
+  first_name?: string
+  last_name?: string
+  customer?: { first_name?: string | null }
+  rating?: number | string
+  title?: string
+  content?: string
+  comment?: string
+  body?: string
+  created_at?: string
+  response?: string
+  reply?: string
+  admin_reply?: string
+  product_review_response?: { content?: string }
+  image?: unknown
+  images?: unknown[]
+  photos?: unknown[]
+  review_images?: unknown[]
+}
+
+/** Normalized review the storefront renders and returns from `/api/reviews`. */
+export interface NormalizedReview {
+  id?: string
+  name: string
+  rating: number
+  title: string
+  content: string
+  created_at?: string
+  response: string
+  images: string[]
+}
+
+/** Error envelope Medusa returns on 4xx/5xx: `{ message }` or `{ error }`. */
+export interface MedusaErrorBody {
+  message?: string
+  error?: string | { message?: string }
+  errors?: { message?: string }[]
+  raw?: string
+}
+
+/* -------------------------------------------------------------------------- */
 /* SEO                                                                        */
 /* -------------------------------------------------------------------------- */
 

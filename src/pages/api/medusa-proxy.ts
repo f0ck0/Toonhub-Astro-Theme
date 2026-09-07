@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro"
-import { medusaFetch, json } from "../../lib/server-medusa"
+import { medusaFetch, json, errorMessage } from "../../lib/server-medusa"
 
 export const prerender = false
 
@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     const { ok, status, data } = await medusaFetch(path, { signal: AbortSignal.timeout(5000) })
     return json(data, ok ? 200 : status)
-  } catch (e: any) {
-    return json({ error: e.message || "Medusa unreachable" }, 502)
+  } catch (e) {
+    return json({ error: errorMessage(e, "Medusa unreachable") }, 502)
   }
 }

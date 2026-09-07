@@ -208,8 +208,8 @@ const demoCatalog = isFallbackProduct(product)
 /* ------------------------------------------------------------ breadcrumbs --- */
 
 const crumbs = [
-  { name: "Home", href: "/" },
-  { name: "Shop All", href: "/collections" },
+  { name: t("nav.home"), href: "/" },
+  { name: t("nav.shopAll"), href: "/collections" },
   ...productCategories.slice(0, 2).map((category) => ({
     name: String(category.name || ""),
     href: category.handle ? `/collections/${category.handle}` : undefined,

@@ -15,7 +15,7 @@ import { breadcrumbJsonLd } from "../lib/seo"
 import { pageLocale, useTranslations } from "../lib/i18n"
 
 const t = useTranslations(pageLocale(Astro))
-const crumbs = [{ name: "Home", href: "/" }, { name: t("nav.wishlist") }]
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("nav.wishlist") }]
 ---
 
 <Base

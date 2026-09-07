@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro"
-import { medusaFetch, json } from "../../lib/server-medusa"
+import { medusaFetch, json, errorMessage } from "../../lib/server-medusa"
 
 export const prerender = false
 
@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json({
       error: "Medusa has no contact route yet. Add POST /store/contact on the backend.",
     }, 502)
-  } catch (e: any) {
-    return json({ error: e.message }, 500)
+  } catch (e) {
+    return json({ error: errorMessage(e) }, 500)
   }
 }

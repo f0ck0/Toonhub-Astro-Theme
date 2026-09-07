@@ -1,20 +1,22 @@
 import { defineMiddleware } from "astro:middleware"
-import { LOCALE_COOKIE, negotiateLocale } from "./lib/i18n"
+import { CURRENCY_COOKIE } from "./lib/currency"
+import { localeForCurrency, negotiateLocale } from "./lib/i18n"
 
 /**
  * Request middleware.
  *
- * 1. Negotiates the UI locale once per request (footer cookie → `Accept-Language`
- *    → default) and publishes it on `Astro.locals.locale`. Pages and components
- *    read it through `pageLocale(Astro)` — with `output: "server"` and no
- *    `src/pages/[locale]/` folders, `Astro.currentLocale` would always be `en`
- *    and the `zh-Hant` / `ja` dictionaries would be unreachable.
+ * 1. Negotiates the UI locale once per request (currency cookie → `Accept-Language`
+ *    → default; choosing a currency also chooses the language — see
+ *    `localeForCurrency`) and publishes it on `Astro.locals.locale`. Pages and
+ *    components read it through `pageLocale(Astro)` — with `output: "server"`
+ *    and no `src/pages/[locale]/` folders, `Astro.currentLocale` would always
+ *    be `en` and the `zh-Hant` / `ja` dictionaries would be unreachable.
  * 2. Adds baseline security headers to every response.
  * 3. Gives immutable, content-hashed static assets a one-year cache.
  */
 export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.locale = negotiateLocale(
-    context.cookies.get(LOCALE_COOKIE)?.value,
+    localeForCurrency(context.cookies.get(CURRENCY_COOKIE)?.value),
     context.request.headers.get("accept-language"),
   )
 

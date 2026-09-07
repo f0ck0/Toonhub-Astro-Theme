@@ -1,6 +1,7 @@
 /** Shared Medusa HTTP helper for API routes (checkout, reviews, newsletter). */
 
 import { medusaConfig } from "./medusa-config"
+import type { MedusaErrorBody } from "../types"
 
 export function medusaEnv() {
   const { baseUrl, publishableKey } = medusaConfig()
@@ -12,7 +13,19 @@ export function medusaEnv() {
   }
 }
 
-export async function medusaFetch(path: string, init: RequestInit = {}, extraHeaders: Record<string, string> = {}) {
+/** `data` is whatever Medusa returned (JSON or a `{ raw }` text envelope). */
+export interface MedusaResponse<T = Record<string, unknown>> {
+  ok: boolean
+  status: number
+  data: T & MedusaErrorBody
+  res: Response
+}
+
+export async function medusaFetch<T = Record<string, unknown>>(
+  path: string,
+  init: RequestInit = {},
+  extraHeaders: Record<string, string> = {},
+): Promise<MedusaResponse<T>> {
   const { baseUrl, pk } = medusaEnv()
   const headers: Record<string, string> = {
     "x-publishable-api-key": pk,
@@ -24,17 +37,38 @@ export async function medusaFetch(path: string, init: RequestInit = {}, extraHea
   }
   const res = await fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: { ...headers, ...(init.headers as any) },
+    headers: { ...headers, ...(init.headers as Record<string, string> | undefined) },
     signal: init.signal || AbortSignal.timeout(15000),
   })
   const text = await res.text()
-  let data: any = {}
-  try { data = text ? JSON.parse(text) : {} } catch { data = { raw: text } }
+  let data: T & MedusaErrorBody
+  try {
+    data = (text ? JSON.parse(text) : {}) as T & MedusaErrorBody
+  } catch {
+    data = { raw: text } as T & MedusaErrorBody
+  }
   return { ok: res.ok, status: res.status, data, res }
 }
 
-export function json(data: any, status = 200) {
+export function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } })
+}
+
+/** `catch (e)` value → displayable message. Lets routes type catches `unknown`. */
+export function errorMessage(error: unknown, fallback = "Request failed"): string {
+  if (error instanceof Error && error.message) return error.message
+  const text = String(error ?? "").trim()
+  return text || fallback
+}
+
+/** Extract a user-facing message from a Medusa error envelope. */
+export function medusaErrorMessage(data: MedusaErrorBody | null | undefined, fallback: string): string {
+  if (!data) return fallback
+  if (typeof data.error === "string" && data.error) return data.error
+  if (data.error && typeof data.error === "object" && data.error.message) return data.error.message
+  if (data.message) return data.message
+  if (data.errors?.[0]?.message) return data.errors[0].message
+  return fallback
 }
 
 export function providerLabel(id = "") {

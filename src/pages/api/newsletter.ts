@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { medusaFetch, json } from "../../lib/server-medusa"
+import { medusaFetch, json, errorMessage } from "../../lib/server-medusa"
 
 export const prerender = false
 
@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     saveLocal(value)
     return json({ success: true, stored: "local" })
-  } catch (e: any) {
-    return json({ error: e.message }, 500)
+  } catch (e) {
+    return json({ error: errorMessage(e) }, 500)
   }
 }

@@ -1,22 +1,27 @@
 ---
 import PolicyLayout from "../../components/PolicyLayout.astro"
 import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
 ---
-<PolicyLayout title="Shipping policy" description="Free worldwide shipping on Toonhub anime figures.">
-  <h2>Order processing</h2>
-  <p>Please make sure your order details are correct. Customers are liable for wrong information submitted. Check your order before placing it, or contact us within 24 hours if something is wrong.</p>
-  <p>All orders are processed within 2–3 business days. Orders are not shipped or delivered on weekends or holidays.</p>
-  <h2>Confirmation</h2>
-  <p>You will receive an email confirmation when your order is placed, and a second email with tracking once it ships. After shipment, address changes may incur a courier reshipment fee.</p>
-  <h2>International shipping</h2>
-  <p>We offer free international shipping to selected countries. Typical delivery windows:</p>
+<PolicyLayout title={t("policy.shipping.title")} description={t("policy.shipping.metaDesc")}>
+  <h2>{t("policy.shipping.procH")}</h2>
+  <p>{t("policy.shipping.procP1")}</p>
+  <p>{t("policy.shipping.procP2")}</p>
+  <h2>{t("policy.shipping.confH")}</h2>
+  <p>{t("policy.shipping.confP")}</p>
+  <h2>{t("policy.shipping.intlH")}</h2>
+  <p>{t("policy.shipping.intlP")}</p>
   <ul>
-    <li>USA, UK, Canada, Australia, Europe — 7–10 business days</li>
-    <li>Japan, Korea, China, Singapore — 5–7 business days</li>
+    <li>{t("policy.shipping.intl1")}</li>
+    <li>{t("policy.shipping.intl2")}</li>
   </ul>
-  <p>VAT is not included. The buyer is responsible for any applicable VAT or import duties.</p>
-  <h2>Tracking</h2>
-  <p>Use the tracking number in your shipping email, or our <a href="/track-order">Track Order</a> page. Questions: {SITE.email}.</p>
-  <h2>Delivery issues</h2>
-  <p>If tracking shows delivered but you have not received the parcel, contact the carrier first. If a package arrives damaged, email {SITE.email} with your order number and photos.</p>
+  <p>{t("policy.shipping.vatP")}</p>
+  <h2>{t("policy.shipping.trackH")}</h2>
+  <p>
+    {t("policy.shipping.trackP1")}{" "}<a href="/track-order">{t("nav.trackOrder")}</a>{" "}{t("policy.shipping.trackP2", { email: SITE.email })}
+  </p>
+  <h2>{t("policy.shipping.issuesH")}</h2>
+  <p>{t("policy.shipping.issuesP", { email: SITE.email })}</p>
 </PolicyLayout>

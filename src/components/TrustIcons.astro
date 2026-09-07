@@ -4,8 +4,10 @@
  *
  * Pure static markup: no script, no props fetched at runtime. Icons are inline
  * SVG marked `aria-hidden`, and the accompanying text is real text so it is
- * readable by screen readers, translators and search engines.
+ * readable by screen readers, translators and search engines. Copy comes from
+ * the UI dictionary unless the caller passes explicit `items`.
  */
+import { pageLocale, useTranslations } from "../lib/i18n"
 
 export interface TrustItem {
   /** Accessible label and visible text. */
@@ -24,21 +26,23 @@ export interface Props {
   class?: string
 }
 
+const { variant = "grid", gift = false, items, class: className = "" } = Astro.props
+
+const t = useTranslations(pageLocale(Astro))
+
 const DEFAULT_ITEMS: TrustItem[] = [
   {
-    label: "Free shipping",
+    label: t("trust.freeShipping"),
     icon: "M3 7h12v9H3zM15 10h4.2L21 13.2V16h-6M7.2 18.2h.01M17.2 18.2h.01",
   },
-  { label: "30-day returns", icon: "M8 5 4 9l4 4M4 9h9a6 6 0 1 1 0 12H8" },
-  { label: "SSL encrypted", icon: "M5 11h14v10H5zM8.2 11V8.2a3.8 3.8 0 0 1 7.6 0V11" },
+  { label: t("trust.returns"), icon: "M8 5 4 9l4 4M4 9h9a6 6 0 1 1 0 12H8" },
+  { label: t("trust.ssl"), icon: "M5 11h14v10H5zM8.2 11V8.2a3.8 3.8 0 0 1 7.6 0V11" },
 ]
 
 const GIFT_ITEM: TrustItem = {
-  label: "2nd figure 50% off",
+  label: t("trust.gift"),
   icon: "M3.5 10h17v10.5h-17zM3.5 10h17M12 10v10.5M12 10c0-3-1.8-5-4-5s-4 1.6-4 5h8Zm0 0c0-3 1.8-5 4-5s4 1.6 4 5h-8Z",
 }
-
-const { variant = "grid", gift = false, items, class: className = "" } = Astro.props
 
 const list = (items?.length ? items : [...DEFAULT_ITEMS, ...(gift ? [GIFT_ITEM] : [])]).filter(
   (item) => item?.label,

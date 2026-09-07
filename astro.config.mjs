@@ -1,7 +1,7 @@
 import { defineConfig } from "astro/config"
 import node from "@astrojs/node"
 import tailwindcss from "@tailwindcss/vite"
-import sitemap from "@astrojs/sitemap"
+import { SITE_URL } from "./src/constants/site"
 
 /**
  * Runtime configuration.
@@ -11,7 +11,6 @@ import sitemap from "@astrojs/sitemap"
  * genuinely static (policies, about) opts in per-page with `prerender = true`.
  */
 
-const SITE_URL = process.env.SITE_URL || "https://toonhubshop.com"
 const MEDUSA_URL =
   process.env.MEDUSA_URL ||
   process.env.PUBLIC_MEDUSA_URL ||
@@ -38,7 +37,14 @@ export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
 
-  integrations: [sitemap({ filter: (page) => !page.includes("/checkout") })],
+  /**
+   * No `@astrojs/sitemap` integration on purpose: with `output: "server"` it
+   * only ever saw the handful of prerendered routes (it emitted a redundant
+   * `sitemap-index.xml`/`sitemap-0.xml` pair that even listed noindex pages
+   * like /cart and /account). The single source of truth is the dynamic
+   * `src/pages/sitemap.xml.ts`, which `public/robots.txt` points at and which
+   * enumerates live products/categories/blog posts on every request.
+   */
 
   /**
    * Localisation scaffolding. `prefixDefaultLocale: false` keeps today's clean

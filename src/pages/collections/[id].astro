@@ -30,11 +30,11 @@ const sortParam = Astro.url.searchParams.get("sort") || "featured"
 const PAGE_SIZE = 24
 
 const SORTS = [
-  { value: "featured", label: "Featured" },
-  { value: "az", label: "Alphabetically, A–Z" },
-  { value: "za", label: "Alphabetically, Z–A" },
-  { value: "price-asc", label: "Price, low to high" },
-  { value: "price-desc", label: "Price, high to low" },
+  { value: "featured", label: t("sort.featured") },
+  { value: "az", label: t("sort.az") },
+  { value: "za", label: t("sort.za") },
+  { value: "price-asc", label: t("sort.priceAsc") },
+  { value: "price-desc", label: t("sort.priceDesc") },
 ] as const
 
 type SortValue = (typeof SORTS)[number]["value"]
@@ -107,14 +107,14 @@ function sortProducts(list: Product[]): Product[] {
 
 products = sortProducts(products)
 
-const title = isNewArrivals ? "New Designs" : String(category?.name || "Collection")
-const heading = isNewArrivals ? title : `Collection: ${title}`
+const title = isNewArrivals ? t("collection.newDesigns") : String(category?.name || t("collection.defaultTitle"))
+const heading = isNewArrivals ? title : t("collection.headingPrefix", { title })
 const rawDescription = String(category?.description || "").trim()
 const description = stripHtml(rawDescription)
 const showDescription = Boolean(description)
 
 const crumbs = [
-  { name: "Home", href: "/" },
+  { name: t("nav.home"), href: "/" },
   ...(parentCategory
     ? [{ name: String(parentCategory.name), href: `/collections/${parentCategory.handle}` }]
     : []),

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro"
-import { medusaFetch, json } from "../../lib/server-medusa"
+import { medusaFetch, json, errorMessage, medusaErrorMessage } from "../../lib/server-medusa"
+import type { MedusaReviewRow, NormalizedReview } from "../../types"
 
 export const prerender = false
 
@@ -10,19 +11,32 @@ interface ReviewImageLike {
   src?: string
 }
 
-function reviewImages(r: any): string[] {
+function imageUrl(x: unknown): string {
+  if (typeof x === "string") return x
+  if (x && typeof x === "object") {
+    const obj = x as ReviewImageLike
+    return String(obj.url || obj.original_url || obj.src || "")
+  }
+  return ""
+}
+
+function reviewImages(r: MedusaReviewRow): string[] {
   const lists: unknown[][] = [r?.images, r?.photos, r?.review_images].filter(Array.isArray)
   const raw: unknown[] = lists.flat()
   if (r?.image) raw.push(r.image)
-  return raw
-    .map((x) => (typeof x === "string" ? x : String((x as ReviewImageLike)?.url || (x as ReviewImageLike)?.original_url || (x as ReviewImageLike)?.src || "")))
-    .filter(Boolean)
+  return raw.map(imageUrl).filter(Boolean)
 }
 
-function normalize(r: any) {
+function normalize(r: MedusaReviewRow): NormalizedReview {
+  const name =
+    r.name ||
+    r.first_name ||
+    [r.first_name, r.last_name].filter(Boolean).join(" ") ||
+    (r.customer?.first_name ?? "") ||
+    "Anonymous"
   return {
     id: r.id,
-    name: r.name || r.first_name || [r.first_name, r.last_name].filter(Boolean).join(" ") || r.customer?.first_name || "Anonymous",
+    name,
     rating: Number(r.rating) || 0,
     title: r.title || "",
     content: r.content || r.comment || r.body || "",
@@ -32,8 +46,20 @@ function normalize(r: any) {
   }
 }
 
-function extractList(data: any): any[] {
-  return data?.product_reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : [])
+/** Review-list envelope — every plugin version uses a different key name. */
+interface ReviewListData {
+  product_reviews?: MedusaReviewRow[]
+  reviews?: MedusaReviewRow[]
+  data?: MedusaReviewRow[]
+  count?: number
+  average?: number
+  average_rating?: number
+}
+
+function extractList(data: ReviewListData | MedusaReviewRow[] | null | undefined): MedusaReviewRow[] {
+  if (!data) return []
+  if (Array.isArray(data)) return data
+  return data.product_reviews || data.reviews || data.data || []
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -48,17 +74,19 @@ export const GET: APIRoute = async ({ url }) => {
         `/store/product-reviews?limit=100`,
         `/store/reviews?limit=100`,
       ]
-  let reviews: any[] = []
+  let reviews: NormalizedReview[] = []
   let apiCount: number | null = null
   let apiAverage = 0
   for (const path of tries) {
     try {
-      const { ok, data } = await medusaFetch(path)
+      const { ok, data } = await medusaFetch<ReviewListData | MedusaReviewRow[]>(path)
       if (!ok) continue
       const list = extractList(data)
       reviews = list.map(normalize)
-      if (data?.count != null) apiCount = Number(data.count)
-      apiAverage = Number(data?.average ?? data?.average_rating) || 0
+      if (!Array.isArray(data)) {
+        if (data.count != null) apiCount = Number(data.count)
+        apiAverage = Number(data.average ?? data.average_rating) || 0
+      }
       break
     } catch { /* next */ }
   }
@@ -68,6 +96,11 @@ export const GET: APIRoute = async ({ url }) => {
     ? Math.round((rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10) / 10
     : apiAverage
   return json({ reviews, count, average })
+}
+
+interface ReviewPayload {
+  path: string
+  body: Record<string, unknown>
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -87,10 +120,20 @@ export const POST: APIRoute = async ({ request }) => {
       content = String(fd.get("content") || "")
       name = String(fd.get("name") || "Anonymous")
       title = String(fd.get("title") || "")
-      images = fd.getAll("images").filter((v) => typeof v === "string") as string[]
+      images = fd.getAll("images").filter((v): v is string => typeof v === "string")
     } else {
-      const body = await request.json()
-      productId = body.productId || body.product_id
+      const body = (await request.json()) as {
+        productId?: string
+        product_id?: string
+        rating?: number
+        content?: string
+        comment?: string
+        name?: string
+        first_name?: string
+        title?: string
+        images?: string[]
+      }
+      productId = body.productId || body.product_id || ""
       rating = Number(body.rating || 5)
       content = body.content || body.comment || ""
       name = body.name || body.first_name || "Anonymous"
@@ -102,7 +145,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const first = name.split(" ")[0]
     const last = name.split(" ").slice(1).join(" ")
-    const payloads: { path: string; body: any }[] = [
+    const payloads: ReviewPayload[] = [
       {
         path: "/store/product-reviews",
         body: { reviews: [{ product_id: productId, rating, content, name, title, images }] },
@@ -119,13 +162,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     let lastErr = "Submission failed"
     for (const p of payloads) {
-      const { ok, status, data } = await medusaFetch(p.path, { method: "POST", body: JSON.stringify(p.body) })
+      const { ok, status, data } = await medusaFetch<ReviewListData>(p.path, { method: "POST", body: JSON.stringify(p.body) })
       if (ok) return json({ success: true, reviews: extractList(data).map(normalize), data })
-      lastErr = data?.message || data?.error || `Submission failed (${status})`
+      lastErr = medusaErrorMessage(data, `Submission failed (${status})`)
       if (status === 401 || status === 403) lastErr = data?.message || "Please sign in or complete an order before reviewing."
     }
     return json({ error: lastErr }, 400)
-  } catch (e: any) {
-    return json({ error: e.message }, 500)
+  } catch (e) {
+    return json({ error: errorMessage(e) }, 500)
   }
 }

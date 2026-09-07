@@ -9,7 +9,7 @@
  */
 import { SITE } from "../lib/site"
 import { CURRENCY_OPTIONS, currencyFromCookies, currencyLabel } from "../lib/currency"
-import { localeLabel, locales, pageLocale, useTranslations, type Locale } from "../lib/i18n"
+import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
 import type { NavLink } from "../types"
 
 export interface Props {
@@ -58,8 +58,6 @@ const locale: Locale = pageLocale(Astro, lang)
 const t = useTranslations(locale)
 const currency = currencyFromCookies(Astro.cookies)
 const year = new Date().getFullYear()
-/** Where the language switcher returns to after `/api/locale` sets the cookie. */
-const returnTo = `${Astro.url.pathname}${Astro.url.search}`
 
 const columns: { heading: string; links: NavLink[] }[] = [
   { heading: t("footer.shop"), links: shopLinks },
@@ -185,22 +183,6 @@ const social = [
           ))}
         </div>
       </div>
-
-      <nav class="footer-lang" aria-label={t("a11y.language")}>
-        <svg class="footer-lang__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-          <path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6" />
-        </svg>
-        {locales.map((code) => (
-          <a
-            class="footer-lang__link"
-            href={`/api/locale?set=${code}&next=${encodeURIComponent(returnTo)}`}
-            lang={code}
-            aria-current={code === locale ? "true" : undefined}
-          >
-            {localeLabel(code)}
-          </a>
-        ))}
-      </nav>
 
       <ul class="pay-row" aria-label={t("footer.paymentMethods")}>
         {payments.map((method) => <li><span>{method}</span></li>)}

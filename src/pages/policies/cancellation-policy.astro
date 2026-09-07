@@ -1,13 +1,18 @@
 ---
 import PolicyLayout from "../../components/PolicyLayout.astro"
 import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
 ---
-<PolicyLayout title="Cancellation policy" description="How to cancel a Toonhub order.">
-  <p>You may request cancellation within 24 hours of placing an order, provided the order has not yet entered production or been handed to the carrier.</p>
-  <h2>How to cancel</h2>
-  <p>Email {SITE.email} with your order number and the subject “Cancel order”. We'll confirm by email.</p>
-  <h2>After shipping</h2>
-  <p>Once an order has shipped it cannot be cancelled. You may refuse the delivery or follow our <a href="/policies/refund-policy">Refund Policy</a> after it arrives.</p>
-  <h2>Custom items</h2>
-  <p>Made-to-order or personalized figures cannot be cancelled once production has started.</p>
+<PolicyLayout title={t("policy.cancel.title")} description={t("policy.cancel.metaDesc")}>
+  <p>{t("policy.cancel.lead")}</p>
+  <h2>{t("policy.cancel.howH")}</h2>
+  <p>{t("policy.cancel.howP", { email: SITE.email })}</p>
+  <h2>{t("policy.cancel.afterH")}</h2>
+  <p>
+    {t("policy.cancel.afterP1")}{" "}<a href="/policies/refund-policy">{t("policy.link.refund")}</a>{" "}{t("policy.cancel.afterP2")}
+  </p>
+  <h2>{t("policy.cancel.customH")}</h2>
+  <p>{t("policy.cancel.customP")}</p>
 </PolicyLayout>

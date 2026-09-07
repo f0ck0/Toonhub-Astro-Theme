@@ -1,101 +1,132 @@
 ---
+/**
+ * Checkout — a stripped-down shell (no header/footer chrome), but still a real
+ * page on the shared <Base /> layout: negotiated `<html lang>`, `noindex`,
+ * canonical and the font preloads all come from the same place as every other
+ * route. Copy lives in the UI dictionary; the client module receives its
+ * strings through the `data-checkout-messages` JSON attribute.
+ */
 import "../styles/checkout.css"
 import "../styles/checkout-layout.css"
+import Base from "../layouts/Base.astro"
 import { SITE } from "../lib/site"
 import { COUNTRIES } from "../lib/regions"
+import { NOINDEX } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
 import TrustIcons from "../components/TrustIcons.astro"
+
 export const prerender = false
+
+const t = useTranslations(pageLocale(Astro))
+
+const scriptMessages = {
+  emptyCart: t("checkout.msgEmptyCart"),
+  processing: t("checkout.msgProcessing"),
+  payNow: t("checkout.msgPayNow"),
+  placeOrder: t("checkout.msgPlaceOrder"),
+  placeOrderFree: t("checkout.placeOrder"),
+  errCountry: t("checkout.msgErrCountry"),
+  errProvince: t("checkout.msgErrProvince"),
+  failed: t("checkout.msgFailed"),
+  unavailable: t("checkout.msgUnavailable"),
+  paymentIncomplete: t("checkout.msgPaymentIncomplete"),
+  requestFailed: t("checkout.msgRequestFailed"),
+  qtyEach: t("checkout.qtyEach"),
+  free: t("checkout.free"),
+  shipLineDefault: t("checkout.shipLineDefault"),
+  shippingNameFallback: t("checkout.shippingNameFallback"),
+  provincePh: t("checkout.provincePh"),
+  provinceSelectFirst: t("checkout.provinceSelectFirst"),
+  countryOtherFallback: t("checkout.countryOtherFallback"),
+}
 ---
-<!DOCTYPE html>
-<html lang="en" style="background:#000;color-scheme:dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
-  <title>Checkout — {SITE.name}</title>
-  <link rel="stylesheet" href="/fonts/fonts.css?v=cardtype3" />
-  <link rel="preload" href="/fonts/asul-400.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="/fonts/qs-400.woff2" as="font" type="font/woff2" crossorigin />
-</head>
-<body class="co-body" style="background:#000;color:#fff">
+<Base
+  title={t("checkout.title")}
+  description={t("checkout.metaDesc")}
+  robots={NOINDEX}
+  bodyClass="co-body"
+  overlays={{ cart: false, search: false }}
+>
+  <Fragment slot="head">
+    <style is:inline>html,body{background:#000;color:#fff}</style>
+  </Fragment>
   <div class="co-wrap">
-    <main class="co-main">
+    <main class="co-main" id="MainContent">
       <a href="/" class="co-logo">{SITE.name}</a>
-      <nav class="co-crumb" aria-label="Checkout progress">
-        <a href="/cart">Cart</a><span aria-hidden="true">›</span>
-        <span aria-current="page">Checkout</span>
+      <nav class="co-crumb" aria-label={t("checkout.progressAria")}>
+        <a href="/cart">{t("checkout.crumbCart")}</a><span aria-hidden="true">›</span>
+        <span aria-current="page">{t("checkout.crumbCurrent")}</span>
       </nav>
-      <h1 class="co-sr">Secure checkout</h1>
+      <h1 class="co-sr">{t("checkout.title")}</h1>
       <div class="co-offer">
-        <strong>Limited offer</strong><br />
-        Buy 1 get 2nd 50% off · Free worldwide shipping · 30-day returns
+        <strong>{t("checkout.offerH")}</strong><br />
+        {t("checkout.offerBody")}
       </div>
 
-      <form id="coForm" autocomplete="on">
+      <form id="coForm" autocomplete="on" data-checkout-messages={JSON.stringify(scriptMessages)}>
         <div class="co-left">
         <div id="savedBox" class="co-saved" hidden>
           <div>
-            <div class="co-saved-k">Deliver to</div>
+            <div class="co-saved-k">{t("checkout.deliverTo")}</div>
             <b id="savedName"></b>
             <div id="savedLine"></div>
             <div id="savedMail"></div>
           </div>
-          <button type="button" class="co-text-btn" id="editAddr">Change</button>
+          <button type="button" class="co-text-btn" id="editAddr">{t("checkout.change")}</button>
         </div>
 
         <div id="addrFields">
-        <h2 class="co-h">Contact</h2>
+        <h2 class="co-h">{t("checkout.contact")}</h2>
         <div class="co-row">
-          <input class="co-field" type="email" name="email" id="coEmail" placeholder="Email" aria-label="Email" required autocomplete="email" inputmode="email" />
+          <input class="co-field" type="email" name="email" id="coEmail" placeholder={t("checkout.emailPh")} aria-label={t("checkout.emailPh")} required autocomplete="email" inputmode="email" />
         </div>
 
-        <h2 class="co-h">Delivery</h2>
+        <h2 class="co-h">{t("checkout.delivery")}</h2>
         <div class="co-row">
-          <select class="co-field" name="country" id="countrySelect" required autocomplete="country-name" aria-label="Country / region">
+          <select class="co-field" name="country" id="countrySelect" required autocomplete="country-name" aria-label={t("checkout.countryAria")}>
             {COUNTRIES.map((c) => <option value={c.code}>{c.name}</option>)}
-            <option value="OTHER">Other / not listed</option>
+            <option value="OTHER">{t("checkout.countryOther")}</option>
           </select>
         </div>
         <div class="co-row" id="countryOtherRow" hidden>
-          <input class="co-field" name="countryOther" id="countryOther" placeholder="Country name" aria-label="Country name" autocomplete="country-name" />
-          <p class="co-ship-line" style="margin:4px 0 0;">We’ll use this to ship to you. If it isn’t a standard country code, we’ll email to confirm.</p>
+          <input class="co-field" name="countryOther" id="countryOther" placeholder={t("checkout.countryNamePh")} aria-label={t("checkout.countryNamePh")} autocomplete="country-name" />
+          <p class="co-ship-line" style="margin:4px 0 0;">{t("checkout.countryOtherHint")}</p>
         </div>
         <div class="co-row">
-          <input class="co-field" name="name" id="coName" placeholder="Full name" aria-label="Full name" required autocomplete="name" />
+          <input class="co-field" name="name" id="coName" placeholder={t("checkout.fullName")} aria-label={t("checkout.fullName")} required autocomplete="name" />
         </div>
         <div class="co-row">
-          <input class="co-field" name="address" placeholder="Address" aria-label="Address" required autocomplete="address-line1" />
+          <input class="co-field" name="address" placeholder={t("checkout.address")} aria-label={t("checkout.address")} required autocomplete="address-line1" />
         </div>
-        <button type="button" class="co-text-btn" id="toggleApt">+ Apartment, suite</button>
+        <button type="button" class="co-text-btn" id="toggleApt">{t("checkout.addApt")}</button>
         <div class="co-row" id="aptRow" hidden>
-          <input class="co-field" name="apartment" placeholder="Apartment, suite, etc." aria-label="Apartment, suite, etc." autocomplete="address-line2" />
+          <input class="co-field" name="apartment" placeholder={t("checkout.apartment")} aria-label={t("checkout.apartment")} autocomplete="address-line2" />
         </div>
         <div class="co-row">
-          <input class="co-field" name="city" placeholder="City" aria-label="City" required autocomplete="address-level2" />
+          <input class="co-field" name="city" placeholder={t("checkout.city")} aria-label={t("checkout.city")} required autocomplete="address-level2" />
         </div>
         <div class="co-row">
-          <input class="co-field" name="postal" placeholder="Postal code" aria-label="Postal code" required autocomplete="postal-code" />
+          <input class="co-field" name="postal" placeholder={t("checkout.postal")} aria-label={t("checkout.postal")} required autocomplete="postal-code" />
         </div>
         <div class="co-row" id="regionPhoneRow">
-          <select class="co-field" name="province" id="provinceSelect" autocomplete="address-level1" aria-label="Province / state">
-            <option value="">Province / state</option>
+          <select class="co-field" name="province" id="provinceSelect" autocomplete="address-level1" aria-label={t("checkout.provincePh")}>
+            <option value="">{t("checkout.provincePh")}</option>
           </select>
-          <input class="co-field" name="provinceText" id="provinceText" placeholder="Province / state (optional)" aria-label="Province / state" autocomplete="address-level1" hidden />
+          <input class="co-field" name="provinceText" id="provinceText" placeholder={t("checkout.provinceOptionalPh")} aria-label={t("checkout.provincePh")} autocomplete="address-level1" hidden />
         </div>
-        <button type="button" class="co-text-btn" id="togglePhone">+ Phone for delivery updates</button>
+        <button type="button" class="co-text-btn" id="togglePhone">{t("checkout.addPhone")}</button>
         <div class="co-row" id="phoneRow" hidden>
-          <input class="co-field" name="phone" placeholder="Phone" aria-label="Phone" autocomplete="tel" inputmode="tel" />
+          <input class="co-field" name="phone" placeholder={t("checkout.phonePh")} aria-label={t("checkout.phonePh")} autocomplete="tel" inputmode="tel" />
         </div>
         </div>
 
-        <p class="co-ship-line" id="shipList">Free worldwide shipping included</p>
-        <input type="checkbox" name="newsletter" checked hidden aria-label="Email me news and offers" />
+        <p class="co-ship-line" id="shipList">{t("checkout.shipIncluded")}</p>
+        <input type="checkbox" name="newsletter" checked hidden aria-label={t("checkout.newsletterAria")} />
 
-        <h2 class="co-h">Payment</h2>
+        <h2 class="co-h">{t("checkout.payment")}</h2>
         <div class="co-pay-reserved" id="payReserved">
-          <b>Reserved for PayPal / Stripe / wallets</b>
-          Payment methods appear here after they are connected in Medusa. You can still place the order — we will email the next step.
+          <b>{t("checkout.payReservedH")}</b>
+          {t("checkout.payReservedBody")}
         </div>
         <div class="co-method" id="payList" hidden></div>
         <div class="co-card-box" id="cardBox" hidden>
@@ -110,35 +141,34 @@ export const prerender = false
 
         <aside class="co-aside is-open">
           <div class="co-summary-head">
-            <span>Your order</span>
+            <span>{t("checkout.yourOrder")}</span>
             <b id="coTotalMini">—</b>
           </div>
           <div class="co-aside-body" id="asideBody">
             <div id="coLines"></div>
             <div class="co-discount">
-              <input class="co-field" id="discountCode" name="discountCode" placeholder="Discount code" aria-label="Discount code" autocomplete="off" />
-              <button type="button" id="discountBtn">Apply</button>
+              <input class="co-field" id="discountCode" name="discountCode" placeholder={t("checkout.discountPh")} aria-label={t("checkout.discountPh")} autocomplete="off" />
+              <button type="button" id="discountBtn">{t("checkout.apply")}</button>
             </div>
             <div class="co-totals">
-              <div class="co-tot-row"><span>Subtotal</span><span id="coSub">—</span></div>
-              <div class="co-tot-row"><span>Shipping</span><span id="coShip">Free</span></div>
-              <div class="co-tot-row" id="coDiscRow" hidden><span>Buy 1 get 2nd 50% off</span><span id="coDisc">—</span></div>
-              <div class="co-tot-row grand"><span>Total</span><span id="coTotal">—</span></div>
+              <div class="co-tot-row"><span>{t("cart.subtotal")}</span><span id="coSub">—</span></div>
+              <div class="co-tot-row"><span>{t("cart.shipping")}</span><span id="coShip">{t("checkout.free")}</span></div>
+              <div class="co-tot-row" id="coDiscRow" hidden><span>{t("cart.discountLabel")}</span><span id="coDisc">—</span></div>
+              <div class="co-tot-row grand"><span>{t("cart.total")}</span><span id="coTotal">—</span></div>
             </div>
           </div>
         </aside>
 
-        <button type="submit" class="co-btn pay" id="payBtn">Place order — free shipping</button>
+        <button type="submit" class="co-btn pay" id="payBtn">{t("checkout.placeOrder")}</button>
         <div class="co-foot">
-          <a href="/cart">‹ Cart</a>
-          <span>Secure checkout</span>
+          <a href="/cart">{t("checkout.backToCart")}</a>
+          <span>{t("checkout.secureNote")}</span>
         </div>
-        <p class="co-lock">By placing this order you agree to our <a href="/policies/terms-of-service">Terms</a> and <a href="/policies/privacy-policy">Privacy Policy</a>.</p>
+        <p class="co-lock">{t("checkout.legalPrefix")}{" "}<a href="/policies/terms-of-service">{t("checkout.terms")}</a>{" "}{t("checkout.legalAnd")}{" "}<a href="/policies/privacy-policy">{t("checkout.privacy")}</a>.</p>
       </form>
     </main>
 
   </div>
 
   <script>import "../scripts/checkout"</script>
-</body>
-</html>
+</Base>

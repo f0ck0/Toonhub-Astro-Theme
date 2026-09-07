@@ -2,14 +2,42 @@
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+import { NOINDEX } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
 
 export const prerender = false
+
+const locale = pageLocale(Astro)
+const t = useTranslations(locale)
 
 const ssrToken = Astro.cookies.get("toonhub_token")?.value || ""
 const ssrEmail = Astro.cookies.get("toonhub_email")?.value || ""
 const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_in")?.value === "1")
+
+/** Strings the client script needs (rendered strings stay in the markup). */
+const scriptMessages = {
+  loginTitle: t("account.loginTitle"),
+  registerTitle: t("account.registerTitle"),
+  loginSub: t("account.loginSub"),
+  registerSub: t("account.registerSub"),
+  signIn: t("account.signIn"),
+  createAccount: t("account.registerTitle"),
+  pwdMismatch: t("account.msgPwdMismatch"),
+  loading: t("account.msgLoading"),
+  authFail: t("account.msgAuthFail"),
+  saveFail: t("account.msgSaveFail"),
+  welcomeBack: t("account.welcomeBack"),
+  noAddress: t("account.noAddress"),
+  addressFromCheckout: t("account.addressFromCheckout"),
+  noOrdersPre: t("account.noOrdersPre"),
+  browse: t("account.browse"),
+  orderFallback: t("account.orderFallback"),
+  trackAfterShip: t("account.trackAfterShip"),
+  trackThis: t("account.trackThis"),
+  carrierFallback: t("account.carrierFallback"),
+}
 ---
-<Base title="Account — TOONHUB" lang="en">
+<Base title={t("account.pageTitle")} description={t("account.metaDesc")} robots={NOINDEX}>
   <Header />
   <script is:inline>
     (function () {
@@ -22,81 +50,92 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
       } catch (e) {}
     })()
   </script>
-  <main id="MainContent" class:list={["page-width", "account-page", ssrIn && "is-in"]}>
-    <div id="accountGuest" class="account-guest" hidden={ssrIn}>
-      <h1 class="account-title">Login</h1>
-      <p class="account-sub">Sign in to access your orders and member benefits.</p>
+  <main
+    id="MainContent"
+    class:list={["page-width", "account-page", ssrIn && "is-in"]}
+    data-account-messages={JSON.stringify(scriptMessages)}
+  >
+    {/*
+      Exactly one <h1> for the document: the two panels are mutually exclusive
+      and both label themselves with their own <h2> below, so screen-reader
+      users and heading-audit tools see a single stable top-level heading.
+    */}
+    <h1 class="sr-only">{t("account.pageTitle")}</h1>
 
-      <div class="account-tabs">
-        <button type="button" class="account-tab is-on" data-mode="login">Login</button>
-        <button type="button" class="account-tab" data-mode="register">Create account</button>
+    <div id="accountGuest" class="account-guest" hidden={ssrIn}>
+      <h2 class="account-title">{t("account.loginTitle")}</h2>
+      <p class="account-sub">{t("account.loginSub")}</p>
+
+      <div class="account-tabs" role="tablist" aria-label={t("account.pageTitle")}>
+        <button type="button" class="account-tab is-on" data-mode="login">{t("account.loginTitle")}</button>
+        <button type="button" class="account-tab" data-mode="register">{t("account.registerTitle")}</button>
       </div>
 
       <form id="accountForm">
         <div id="registerNames" class="account-names" hidden>
-          <input class="field" id="firstName" placeholder="First name" aria-label="First name" autocomplete="given-name" maxlength="60" />
-          <input class="field" id="lastName" placeholder="Last name" aria-label="Last name" autocomplete="family-name" maxlength="60" />
+          <input class="field" id="firstName" placeholder={t("account.firstName")} aria-label={t("account.firstName")} autocomplete="given-name" maxlength="60" />
+          <input class="field" id="lastName" placeholder={t("account.lastName")} aria-label={t("account.lastName")} autocomplete="family-name" maxlength="60" />
         </div>
-        <input type="email" id="loginEmail" class="field" placeholder="Email address" aria-label="Email address" required autocomplete="email" maxlength="120" />
-        <input type="password" id="loginPassword" class="field" placeholder="Password" aria-label="Password" required autocomplete="current-password" minlength="8" />
-        <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" aria-label="Confirm password" hidden autocomplete="new-password" minlength="8" />
+        <input type="email" id="loginEmail" class="field" placeholder={t("account.emailPh")} aria-label={t("account.emailPh")} required autocomplete="email" maxlength="120" />
+        <input type="password" id="loginPassword" class="field" placeholder={t("account.password")} aria-label={t("account.password")} required autocomplete="current-password" minlength="8" />
+        <input type="password" id="loginPassword2" class="field" placeholder={t("account.confirmPassword")} aria-label={t("account.confirmPassword")} hidden autocomplete="new-password" minlength="8" />
         <p id="loginError" class="account-error" role="alert" aria-live="assertive" hidden></p>
-        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">{t("account.signIn")}</button>
       </form>
 
       <p class="account-legal">
-        By continuing, you agree to Toonhub's <a href="/policies/terms-of-service">Terms of Use</a> and <a href="/policies/privacy-policy">Privacy Policy</a>.
+        {t("account.legalPrefix")}{" "}<a href="/policies/terms-of-service">{t("policy.link.terms")}</a>{" "}{t("account.legalAnd")}{" "}<a href="/policies/privacy-policy">{t("policy.link.privacy")}</a>.
       </p>
     </div>
 
     <div id="accountHome" class="account-home" hidden={!ssrIn}>
       <header class="account-head">
         <div>
-          <h1>Your account</h1>
+          <h2>{t("account.homeTitle")}</h2>
           <p id="accountHello" class="account-hello"></p>
         </div>
-        <button type="button" id="logoutBtn" class="btn btn-outline account-logout">Log out</button>
+        <button type="button" id="logoutBtn" class="btn btn-outline account-logout">{t("account.logout")}</button>
       </header>
 
       <div class="account-grid">
         <section class="account-card" id="profileCard">
-          <h2>Account details</h2>
+          <h3 class="account-card__title">{t("account.details")}</h3>
           <dl class="account-dl">
-            <div><dt>Name</dt><dd id="infoName">—</dd></div>
-            <div><dt>Email</dt><dd id="infoEmail">—</dd></div>
-            <div><dt>Phone</dt><dd id="infoPhone">—</dd></div>
+            <div><dt>{t("account.name")}</dt><dd id="infoName">—</dd></div>
+            <div><dt>{t("account.email")}</dt><dd id="infoEmail">—</dd></div>
+            <div><dt>{t("account.phone")}</dt><dd id="infoPhone">—</dd></div>
           </dl>
           <form id="profileForm" class="account-edit" hidden>
             <div class="account-names">
-              <input class="field" id="editFirst" placeholder="First name" aria-label="First name" autocomplete="given-name" maxlength="60" />
-              <input class="field" id="editLast" placeholder="Last name" aria-label="Last name" autocomplete="family-name" maxlength="60" />
+              <input class="field" id="editFirst" placeholder={t("account.firstName")} aria-label={t("account.firstName")} autocomplete="given-name" maxlength="60" />
+              <input class="field" id="editLast" placeholder={t("account.lastName")} aria-label={t("account.lastName")} autocomplete="family-name" maxlength="60" />
             </div>
-            <input class="field" id="editPhone" placeholder="Phone" aria-label="Phone" autocomplete="tel" inputmode="tel" maxlength="40" />
+            <input class="field" id="editPhone" placeholder={t("account.phone")} aria-label={t("account.phone")} autocomplete="tel" inputmode="tel" maxlength="40" />
             <p id="profileError" class="account-error" role="alert" aria-live="assertive" hidden></p>
             <div class="account-edit-actions">
-              <button type="submit" id="profileSave" class="btn btn-primary">Save</button>
-              <button type="button" id="profileCancel" class="btn btn-outline">Cancel</button>
+              <button type="submit" id="profileSave" class="btn btn-primary">{t("account.save")}</button>
+              <button type="button" id="profileCancel" class="btn btn-outline">{t("common.cancel")}</button>
             </div>
           </form>
-          <button type="button" id="editProfileBtn" class="account-text-btn">Edit profile</button>
+          <button type="button" id="editProfileBtn" class="account-text-btn">{t("account.editProfile")}</button>
         </section>
 
         <section class="account-card">
-          <h2>Addresses</h2>
+          <h3 class="account-card__title">{t("account.addresses")}</h3>
           <div id="accountAddresses" class="account-addr-list" aria-live="polite"></div>
         </section>
       </div>
 
       <section class="account-card account-orders-card">
-        <h2>Order history</h2>
+        <h3 class="account-card__title">{t("account.orderHistory")}</h3>
         <div id="accountOrders" aria-live="polite"></div>
         <form id="parcelForm" class="account-parcel">
-          <label for="parcelNo">Track a parcel</label>
+          <label for="parcelNo">{t("account.parcelLabel")}</label>
           <div class="account-parcel-row">
-            <input class="field" id="parcelNo" placeholder="Tracking number" autocomplete="off" maxlength="60" />
-            <button type="submit" class="btn btn-primary">Track</button>
+            <input class="field" id="parcelNo" placeholder={t("account.parcelPh")} autocomplete="off" maxlength="60" />
+            <button type="submit" class="btn btn-primary">{t("account.trackBtn")}</button>
           </div>
-          <p class="account-muted">Looks up carrier tracking (17track). You can also use <a href="/track-order">Track Order</a> with your order number.</p>
+          <p class="account-muted">{t("account.parcelNote1")}{" "}<a href="/track-order">{t("nav.trackOrder")}</a>{" "}{t("account.parcelNote2")}</p>
         </form>
       </section>
     </div>
@@ -140,7 +179,7 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
     margin-bottom: 28px;
     flex-wrap: wrap;
   }
-  .account-head h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  .account-head h2 { font-size: 1.6rem; margin: 0 0 6px; }
   .account-hello { color: #888; font-size: 0.95rem; }
   .account-logout { width: auto; padding: 0.7rem 1.2rem; }
   .account-grid {
@@ -158,7 +197,7 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
     padding: 22px 20px;
     background: #0a0a0a;
   }
-  .account-card h2 {
+  .account-card__title {
     font-size: 0.82rem;
     letter-spacing: 0.1em;
     color: #aaa;

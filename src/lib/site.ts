@@ -6,13 +6,14 @@
  * in `src/i18n/ui.ts` instead — this module holds brand constants only.
  */
 
+import { SITE_URL } from "../constants/site"
 import type { AzGroup, Product, ProductCategory } from "../types"
 
 export const SITE = {
   name: "TOONHUB",
   domain: "toonhubshop.com",
   /** Canonical origin. Overridden at runtime by `Astro.site` when configured. */
-  url: "https://toonhubshop.com",
+  url: SITE_URL,
   /** BCP-47 default locale — matches `i18n.defaultLocale` in astro.config. */
   locale: "en",
   tagline: "World's Leading Anime Figures Collection",

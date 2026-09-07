@@ -43,12 +43,36 @@ export function normalizeLocale(lang?: string | null): Locale {
   return matchLocale(lang) ?? defaultLocale
 }
 
-/** Cookie that stores an explicit language choice made in the footer. */
-export const LOCALE_COOKIE = "toonhub_locale"
+/**
+ * There is no separate language switcher: **the country/currency menu is the
+ * language switcher**. Once a visitor has picked a currency, the storefront
+ * language follows it deterministically. Chinese currencies map to the only
+ * stocked Chinese dictionary (Traditional), Japanese Yen to Japanese, and
+ * every other explicit currency choice to English.
+ */
+const CURRENCY_TO_LOCALE: Record<string, Locale> = {
+  cny: "zh-Hant",
+  hkd: "zh-Hant",
+  twd: "zh-Hant",
+  jpy: "ja",
+}
 
 /**
- * Pick the UI locale for a request: an explicit choice (cookie) wins, then the
- * browser's `Accept-Language` (q-values respected), then `defaultLocale`.
+ * The locale implied by an explicit currency choice (`toonhub_currency`
+ * cookie), or `undefined` when no currency was chosen yet — in that case the
+ * browser's `Accept-Language` decides. Any explicit choice is authoritative,
+ * so picking USD also means "language: English".
+ */
+export function localeForCurrency(code?: string | null): Locale | undefined {
+  const key = String(code || "").trim().toLowerCase()
+  if (!key) return undefined
+  return CURRENCY_TO_LOCALE[key] ?? "en"
+}
+
+/**
+ * Pick the UI locale for a request: an explicit currency choice wins (see
+ * `localeForCurrency`), then the browser's `Accept-Language` (q-values
+ * respected), then `defaultLocale`.
  *
  * This theme negotiates the locale **per visitor instead of per URL**: catalogue
  * copy comes from Medusa untranslated, so `/ja/…` duplicates would be thin

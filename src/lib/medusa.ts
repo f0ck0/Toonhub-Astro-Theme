@@ -247,6 +247,39 @@ export async function getProduct(handle: string): Promise<Product | null> {
   }
 }
 
+/**
+ * Every product handle in the store (sitemap fodder). Paginates the store API
+ * 100 at a time; cached like the other getters and capped so a pathological
+ * backend cannot keep a request alive forever.
+ */
+export async function getAllProductHandles(max = 5000): Promise<Product[]> {
+  const key = `products:handles:${max}`
+  try {
+    return await cached<Product[]>(key, async () => {
+      const medusa = getStoreSdk()
+      const out: Product[] = []
+      const pageSize = 100
+      for (let offset = 0; out.length < max; offset += pageSize) {
+        const { products, count } = await medusa.store.product.list({
+          fields: "+id,+handle,+updated_at,+created_at",
+          limit: pageSize,
+          offset,
+        })
+        const batch = (products || []) as Product[]
+        if (!batch.length) break
+        out.push(...batch.filter((product) => product.handle))
+        if (count != null && out.length >= count) break
+        if (batch.length < pageSize) break
+      }
+      return out.slice(0, max)
+    })
+  } catch (error) {
+    warnOnce("getAllProductHandles", error)
+    if (!useFallback()) return []
+    return FALLBACK_PRODUCTS.filter((product) => product.handle)
+  }
+}
+
 export async function searchProducts(query: string, limit = 24): Promise<PagedProducts> {
   const term = String(query || "").trim()
   if (!term) return { products: [], count: 0 }

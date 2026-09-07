@@ -1500,27 +1500,6 @@ button, a, summary { touch-action: manipulation; }
   border-radius: 0.3rem;
   font-size: 0.82rem;
 }
-.footer-lang {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-.footer-lang__icon { color: var(--text-muted, #9a9a9a); margin-right: 6px; flex: none; }
-.footer-lang__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-button);
-  color: #bbb;
-  font-size: 0.82rem;
-  text-decoration: none;
-}
-.footer-lang__link:hover { color: #fff; border-color: var(--color-border); background: rgba(255, 255, 255, 0.06); }
-.footer-lang__link:active { transform: scale(0.96); }
-.footer-lang__link[aria-current="true"] { color: #fff; border-color: var(--color-border); }
 .footer-locale .currency-menu {
   top: auto;
   bottom: calc(100% + 8px);
@@ -1974,7 +1953,6 @@ button, a, summary { touch-action: manipulation; }
 .pdp-wish,
 .thumb-img,
 .footer-locale-btn,
-.footer-lang__link,
 .currency-option,
 .pdp-size-btn,
 .filter-pill,

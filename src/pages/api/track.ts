@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro"
 import { medusaFetch, json } from "../../lib/server-medusa"
 import { extractTracking } from "../../lib/tracking"
+import type { MedusaOrder } from "../../types"
 
 export const prerender = false
 
@@ -16,7 +17,7 @@ export const GET: APIRoute = async ({ url }) => {
   ]
   for (const path of tries) {
     try {
-      const { ok, data } = await medusaFetch(path)
+      const { ok, data } = await medusaFetch<{ order?: MedusaOrder; orders?: MedusaOrder[] }>(path)
       if (!ok) continue
       const found = data.order || data.orders?.[0]
       if (!found) continue

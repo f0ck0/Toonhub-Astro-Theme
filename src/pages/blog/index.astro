@@ -22,7 +22,7 @@ const posts = (await getCollection("posts"))
   .filter((post) => !post.data.draft)
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 
-const crumbs = [{ name: "Home", href: "/" }, { name: t("blog.title") }]
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("blog.title") }]
 
 function formatDate(date: Date, lang: string): string {
   try {

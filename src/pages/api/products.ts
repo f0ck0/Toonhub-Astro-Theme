@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro"
 import { getProducts, productImageUrl, getProductUsdPrice } from "../../lib/medusa"
 import { salePrice, formatPriceFrom, currencyFromCookies } from "../../lib/currency"
+import { errorMessage } from "../../lib/server-medusa"
+import type { Product } from "../../types"
 
 export const prerender = false
 
@@ -12,7 +14,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     const { products, count } = await getProducts(limit, offset, categoryId || undefined)
     const currency = currencyFromCookies(cookies)
 
-    const items = (products || []).map((p: any) => {
+    const items = (products || []).map((p: Product) => {
       const usd = getProductUsdPrice(p) || 0
       const { sale } = salePrice(usd, currency)
       return {
@@ -28,7 +30,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       JSON.stringify({ products: items, count, hasMore: offset + items.length < count }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     )
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "Content-Type": "application/json" } })
+  } catch (e) {
+    return new Response(JSON.stringify({ error: errorMessage(e) }), { status: 500, headers: { "Content-Type": "application/json" } })
   }
 }
