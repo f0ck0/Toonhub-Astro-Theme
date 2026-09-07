@@ -29,9 +29,14 @@ import {
   getProductsByIds,
   isCatalogDegraded,
 } from "../lib/medusa"
-import { collectReviewCards, fetchReviews } from "../lib/reviews"
+import {
+  collectReviewCards,
+  fetchReviews,
+  summarizeReviews,
+  type ReviewSummaryStats,
+} from "../lib/reviews"
 import { SITE, categoryBlurb, shopCategories } from "../lib/site"
-import { categoryImage } from "../lib/images"
+import { IMAGE_SIZES, IMAGE_WIDTHS, categoryImage } from "../lib/images"
 import { pageLocale, useTranslations } from "../lib/i18n"
 import type { Product, ProductCategory } from "../types"
 
@@ -151,9 +156,19 @@ const displayCount = totalCount || products.length
  * its product, so review product ids are enriched with catalogue records.
  */
 let reviewCards: ReviewCardItem[] = []
+/*
+ * Store-wide rating headline rendered under the marquee title. The global feed
+ * is fetched once and shared with `collectReviewCards` (Medusa responses are
+ * cached per request anyway, but this keeps it to a single round trip) so the
+ * strip and the cards can never quote different totals. Zeroes keep the strip
+ * hidden until `scripts/reviews.ts` finds data client-side.
+ */
+let reviewStats: ReviewSummaryStats = { count: 0, average: 0 }
 try {
+  const globalFeed = await fetchReviews(undefined, 60)
+  reviewStats = summarizeReviews(globalFeed)
   reviewCards = await collectReviewCards({
-    fetchGlobal: () => fetchReviews(undefined, 60),
+    fetchGlobal: async () => globalFeed,
     fetchForProduct: (id) => fetchReviews(id, 3),
     fetchProducts: async (ids) => (await getProductsByIds(ids)).products,
     arrivals: products,
@@ -249,7 +264,14 @@ try {
     </div>
     <p class="sr-only">{SITE.marquee}</p>
 
-    <ReviewMedals />
+    {/*
+      The store-wide rating strip lives under the review-marquee heading (see
+      below). It only falls back to this standalone slot when the marquees are
+      absent — the backend has no reviews server-side yet — so the strip can
+      still appear if client-side hydration finds some. Only ever one of the
+      two renders: `reviews.ts` fills the first `[data-hydrate-reviews]`.
+    */}
+    {reviewCards.length === 0 && <ReviewMedals />}
 
     <section class="page-width section-space" aria-labelledby="newArrivalsHeading" data-slider>
       <SectionHeading
@@ -278,7 +300,7 @@ try {
         <div class="slider-track" data-slider-track data-hydrate-products="home">
           {products.length ? (
             products.map((product, index) => (
-              <ProductCard product={product} priority={index < 4} sizes="(max-width: 749px) 46vw, 220px" />
+              <ProductCard product={product} priority={index < 4} sizes={IMAGE_SIZES.rail} widths={IMAGE_WIDTHS.rail} />
             ))
           ) : (
             <>
@@ -299,8 +321,11 @@ try {
       </div>
     </section>
 
-    {/* Twin review marquees — top row left→right, bottom row right→left. */}
-    <ReviewMarquees items={reviewCards} />
+    {/* Twin review marquees — top row left→right, bottom row right→left.
+        The store-wide rating strip is slotted directly under the heading. */}
+    <ReviewMarquees items={reviewCards}>
+      <ReviewMedals slot="under-heading" count={reviewStats.count} rating={reviewStats.average} />
+    </ReviewMarquees>
 
     {products.length === 0 && !catalogError && (
       <section class="page-width" aria-label={t("home.catalogueStatus")}>

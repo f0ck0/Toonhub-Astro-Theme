@@ -41,6 +41,18 @@ strings through `data-*-messages` attributes), noindex surfaces never appear in
   `product-reviews?product_id=` → `/store/products/:id/reviews` (official
   convention) → `reviews?product_id=`. Homepage marquees (`ReviewMarquees`)
   render only when real reviews exist; empty data hides the whole section.
+  The store-wide rating strip (`ReviewMedals`) is slotted into the marquee
+  heading via `slot="under-heading"` and shares the *same* global fetch —
+  `summarizeReviews()` derives both totals so the strip and the cards can never
+  quote different numbers. It only renders standalone when there are no
+  marquees, because `scripts/reviews.ts` hydrates the first
+  `[data-hydrate-reviews]` it finds and a second one would stay empty forever.
+- **Image `sizes`** — `IMAGE_SIZES`/`IMAGE_WIDTHS` (`src/lib/images.ts`)
+  transcribe the real grid geometry from `global.css`; understating a slot makes
+  the browser upscale a small variant (the cause of the blurry collection grid).
+  `scripts/catalog.ts` duplicates those literals on purpose — it cannot import
+  `lib/images.ts` without pulling `astro:assets` into the browser bundle — and
+  `tests/image-geometry.test.ts` keeps the two in sync.
 - **Language** — currency choice + `Accept-Language` decide the locale; no
   separate language switcher exists anywhere on purpose.
 

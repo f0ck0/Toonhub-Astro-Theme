@@ -44,6 +44,17 @@ first tile is preloaded as the LCP candidate; everything else is lazy. Every
 image slot reserves space with `aspect-ratio` + intrinsic dimensions, so there
 is no layout shift.
 
+**`sizes` must mirror the CSS.** The browser picks a srcset candidate from
+`sizes` *before* layout, so understating a slot makes it fetch a small variant
+and upscale it — that is what made the collection grid look soft while the PDP
+stayed sharp. `IMAGE_SIZES` / `IMAGE_WIDTHS` in `src/lib/images.ts` are
+transcribed from the real grid geometry in `global.css` and each ladder reaches
+~2× its widest slot for retina. `tests/image-geometry.test.ts` re-derives those
+slot widths and fails if a preset drifts, and it also pins the duplicated
+literals in `scripts/catalog.ts` (client-injected cards cannot import
+`lib/images.ts` — it pulls in `astro:assets`). Adjust the grid CSS and the
+preset together, or the test will tell you.
+
 ### Language
 
 The locale is negotiated **per visitor, not per URL** — one canonical URL per

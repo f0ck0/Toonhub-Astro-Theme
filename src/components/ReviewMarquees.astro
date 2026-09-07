@@ -60,9 +60,17 @@ const half = Array.from({ length: 5 })
 {items.length > 0 && (
   <section class:list={["review-marquees", className]} aria-labelledby="reviewMarqueesHeading">
     <div class="review-marquees__head">
-      <h2 id="reviewMarqueesHeading" class="review-marquees__heading">
-        {title || t("home.reviewsMarqueeTitle")}
-      </h2>
+      {/*
+        `under-heading` sits directly beneath the title text — the homepage
+        passes the store-wide rating strip (<ReviewMedals />) here so the
+        average and the individual reviews read as one block.
+      */}
+      <div class="review-marquees__headline">
+        <h2 id="reviewMarqueesHeading" class="review-marquees__heading">
+          {title || t("home.reviewsMarqueeTitle")}
+        </h2>
+        <slot name="under-heading" />
+      </div>
       <p class="review-marquees__sub">{t("home.reviewsMarqueeSub", { count: items.length })}</p>
     </div>
 
@@ -141,8 +149,19 @@ const half = Array.from({ length: 5 })
     gap: 12px;
     flex-wrap: wrap;
   }
+  .review-marquees__headline { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .review-marquees__heading { font-size: 1.05rem; letter-spacing: 0.02em; }
   .review-marquees__sub { font-size: 0.8rem; color: var(--text-muted, #9a9a9a); }
+  /*
+   * The slotted rating strip is a full-width centred band on its own (it is
+   * also used standalone under the hero); inside this heading block it should
+   * hug the title instead.
+   */
+  .review-marquees__headline :global(.trust-strip) {
+    justify-content: flex-start;
+    padding: 0;
+    background: transparent;
+  }
 
   .review-marquee {
     overflow: hidden;

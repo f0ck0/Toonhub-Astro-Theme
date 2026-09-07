@@ -84,6 +84,40 @@ export interface StoreReviewsResult {
   averageHint: number;
 }
 
+/** Store-wide rating headline: `{ count, average }`, both 0 when unknown. */
+export interface ReviewSummaryStats {
+  count: number;
+  average: number;
+}
+
+/**
+ * Collapse a review list into the numbers the rating strip shows.
+ *
+ * The average is computed from the rated rows we actually hold, and only falls
+ * back to the backend's own hint when none of them carry a rating (some plugin
+ * versions return the average but omit per-row values). Shared by `/api/reviews`
+ * and the homepage so the SSR strip and the hydrated one cannot disagree.
+ */
+export function summarizeReviews(
+  result: StoreReviewsResult,
+): ReviewSummaryStats {
+  const count =
+    result.count != null && result.count > 0
+      ? result.count
+      : result.reviews.length;
+  const rated = result.reviews.filter((review) => review.rating > 0);
+  const average = rated.length
+    ? Math.round(
+        (rated.reduce((sum, review) => sum + review.rating, 0) / rated.length) *
+          10,
+      ) / 10
+    : result.averageHint;
+  return {
+    count: Math.max(0, count),
+    average: Math.min(5, Math.max(0, average || 0)),
+  };
+}
+
 /**
  * Store-wide review list (`productId = undefined`) or one product's reviews.
  * Tries the known plugin shapes in order, first 200-response wins. Returns an

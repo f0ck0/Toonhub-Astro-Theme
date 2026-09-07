@@ -119,10 +119,22 @@ const aspectRatio =
     ? String(ratio)
     : `${intrinsicWidth} / ${intrinsicHeight}`
 
+/**
+ * Srcset ladder.
+ *
+ * `width`/`height` describe the *intrinsic* box used to reserve layout space —
+ * they are not a ceiling on the resolution the slot may need. A 400×400 card
+ * that CSS stretches to 345 CSS px still wants a ~700px source on a 2× screen,
+ * so the ladder is only clamped to the source artwork (2400px, the resizer's
+ * own limit), never to `width`. Clamping to `intrinsicWidth * 2` is what
+ * silently capped collection cards at 800px and made retina grids look soft.
+ */
+const MAX_VARIANT_WIDTH = 2400
+
 const resolvedWidths = (widths && widths.length
   ? [...new Set(widths.map((w) => Math.round(Number(w))).filter((w) => w > 0))].sort((a, b) => a - b)
   : [...new Set([intrinsicWidth, Math.min(intrinsicWidth * 2, 1600)])]
-).filter((w) => w <= Math.max(intrinsicWidth * 2, 1600))
+).filter((w) => w <= MAX_VARIANT_WIDTH)
 
 const resolvedSizes = sizes || (resolvedWidths.length > 1 ? `${intrinsicWidth}px` : undefined)
 const resolvedLoading = priority ? "eager" : (loading ?? "lazy")
@@ -146,9 +158,24 @@ const localSources =
       }))
     : []
 
+/**
+ * The `<img>` inside `<picture>` is the last-resort candidate, so it carries
+ * the same WebP ladder as its `<source>` sibling. Pointing it at the *smallest*
+ * variant (the previous behaviour) meant any browser that fell through to it —
+ * and any tool reading `src` — got a 220px file stretched across the card.
+ */
+const localFallbackSrcset =
+  resolved.kind === "local" && !unoptimized && !isPreOptimizedUrl(resolved.src as string)
+    ? resolvedWidths.map((w) => `${localVariant(resolved.src as string, w, "webp")} ${w}w`).join(", ")
+    : ""
+
 const localFallback =
   resolved.kind === "local" && !unoptimized && !isPreOptimizedUrl(resolved.src as string)
-    ? localVariant(resolved.src as string, Math.min(intrinsicWidth, resolvedWidths[0] ?? 400), "webp")
+    ? localVariant(
+        resolved.src as string,
+        resolvedWidths[resolvedWidths.length - 1] ?? intrinsicWidth,
+        "webp",
+      )
     : ""
 ---
 
@@ -242,6 +269,7 @@ const localFallback =
         ))}
         <img
           src={localFallback || (resolved.src as string)}
+          srcset={localFallbackSrcset || undefined}
           alt={alt}
           width={intrinsicWidth}
           height={intrinsicHeight}

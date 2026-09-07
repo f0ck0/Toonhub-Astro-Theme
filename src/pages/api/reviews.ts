@@ -9,6 +9,7 @@ import {
   extractReviewList,
   fetchReviews,
   normalizeReview,
+  summarizeReviews,
   type ReviewListData,
 } from "../../lib/reviews";
 
@@ -16,19 +17,9 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
   const productId = url.searchParams.get("productId") || undefined;
-  const {
-    reviews,
-    count: apiCount,
-    averageHint,
-  } = await fetchReviews(productId);
-  const count = apiCount != null ? apiCount : reviews.length;
-  const rated = reviews.filter((r) => r.rating > 0);
-  const average = rated.length
-    ? Math.round(
-        (rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10,
-      ) / 10
-    : averageHint;
-  return json({ reviews, count, average });
+  const result = await fetchReviews(productId);
+  const { count, average } = summarizeReviews(result);
+  return json({ reviews: result.reviews, count, average });
 };
 
 interface ReviewPayload {

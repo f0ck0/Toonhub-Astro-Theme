@@ -11,7 +11,6 @@ import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import Breadcrumb from "../components/Breadcrumb.astro"
-import TrustIcons from "../components/TrustIcons.astro"
 import { breadcrumbJsonLd } from "../lib/seo"
 import { pageLocale, useTranslations } from "../lib/i18n"
 
@@ -33,7 +32,6 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
 
     <header class="page-head">
       <h1 class="section-heading">{t("track.title")}</h1>
-      <p class="page-head__intro">{t("track.intro")}</p>
     </header>
 
     <form
@@ -88,8 +86,13 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
       <button class="btn btn-primary track-form__submit" type="submit">{t("track.submit")}</button>
     </form>
 
+    {/*
+      The result heading is screen-reader-only: the section still needs an
+      accessible name for `aria-labelledby`, but a permanent "Tracking result"
+      banner above an empty box reads as broken UI before a lookup runs.
+    */}
     <section class="track-result" aria-labelledby="trackResultHeading">
-      <h2 class="track-result__title" id="trackResultHeading">{t("track.resultHeading")}</h2>
+      <h2 class="sr-only" id="trackResultHeading">{t("track.resultHeading")}</h2>
       <div
         class="track-result__body rte"
         data-track-result
@@ -99,10 +102,6 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
         hidden
       ></div>
     </section>
-
-    <div class="track-trust">
-      <TrustIcons variant="list" />
-    </div>
   </main>
 
   <Footer />
@@ -115,7 +114,6 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
 <style>
   .track-page { padding: 24px 0 64px; min-height: 50vh; }
   .page-head { margin-bottom: 28px; }
-  .page-head__intro { margin-top: 10px; max-width: 68ch; color: var(--text-muted); font-size: 0.92rem; line-height: 1.65; }
   .track-form { display: grid; gap: 18px; max-width: 520px; }
   .track-form__divider {
     font-size: 0.8rem;
@@ -125,15 +123,7 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
   }
   .track-form__submit { justify-self: start; }
   .track-result { margin-top: 32px; max-width: 560px; }
-  .track-result__title {
-    font-size: 0.8rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-    margin-bottom: 12px;
-  }
   .track-result__body[hidden] { display: none; }
-  .track-trust { margin-top: 40px; }
 </style>
 
 <style is:global>

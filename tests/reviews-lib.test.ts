@@ -344,3 +344,67 @@ describe("collectReviewCards — per-product fan-out fallback", () => {
     );
   });
 });
+
+/**
+ * `summarizeReviews` — the store-wide headline shown by the rating strip. It
+ * is shared by `/api/reviews` and the homepage so the SSR strip and the
+ * client-hydrated one can never quote different numbers.
+ */
+const { summarizeReviews } = await import("../src/lib/reviews");
+
+describe("summarizeReviews", () => {
+  it("averages the rated rows and rounds to one decimal", () => {
+    expect(
+      summarizeReviews({
+        reviews: [review("a", 5), review("b", 4), review("c", 5)],
+        count: null,
+        averageHint: 0,
+      }),
+    ).toEqual({ count: 3, average: 4.7 });
+  });
+
+  it("prefers the backend's own total over the page of rows it returned", () => {
+    // A 100-row page out of 988 must not report "100 reviews".
+    const { count } = summarizeReviews({
+      reviews: [review("a", 5)],
+      count: 988,
+      averageHint: 0,
+    });
+    expect(count).toBe(988);
+  });
+
+  it("falls back to the row count when the backend reports none", () => {
+    expect(
+      summarizeReviews({
+        reviews: [review("a", 5), review("b", 5)],
+        count: null,
+        averageHint: 0,
+      }).count,
+    ).toBe(2);
+  });
+
+  it("uses the backend average only when no row carries a rating", () => {
+    expect(
+      summarizeReviews({
+        reviews: [review("a", 0), review("b", 0)],
+        count: 2,
+        averageHint: 4.9,
+      }),
+    ).toEqual({ count: 2, average: 4.9 });
+  });
+
+  it("returns zeroes for an empty feed so the strip stays hidden", () => {
+    expect(
+      summarizeReviews({ reviews: [], count: null, averageHint: 0 }),
+    ).toEqual({ count: 0, average: 0 });
+  });
+
+  it("clamps a nonsense average into the 0–5 the star fill expects", () => {
+    expect(
+      summarizeReviews({ reviews: [], count: 5, averageHint: 9 }).average,
+    ).toBe(5);
+    expect(
+      summarizeReviews({ reviews: [], count: 5, averageHint: -3 }).average,
+    ).toBe(0);
+  });
+});

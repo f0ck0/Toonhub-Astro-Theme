@@ -33,7 +33,7 @@ import {
   isFallbackProduct,
 } from "../../lib/medusa"
 import { categoryBlurb, productReviews } from "../../lib/site"
-import { productImage } from "../../lib/images"
+import { IMAGE_SIZES, IMAGE_WIDTHS, productImage } from "../../lib/images"
 import { breadcrumbJsonLd, productJsonLd, stripHtml } from "../../lib/seo"
 import { currencyFromCookies, formatCurrency, formatPriceFrom, salePrice } from "../../lib/currency"
 import { pageLocale, useTranslations } from "../../lib/i18n"
@@ -265,7 +265,8 @@ const crumbs = [
                     width={900}
                     height={900}
                     priority
-                    sizes="(max-width: 989px) 92vw, 46vw"
+                    sizes={IMAGE_SIZES.hero}
+                    widths={IMAGE_WIDTHS.hero}
                     ratio="1 / 1"
                   />
                 </button>
@@ -282,7 +283,7 @@ const crumbs = [
                       aria-pressed={index === 0 ? "true" : "false"}
                       aria-label={t("pdp.thumbLabel", { index: index + 1, total: images.length })}
                     >
-                      <Media src={source} alt="" width={180} height={180} sizes="18vw" ratio="1 / 1" />
+                      <Media src={source} alt="" width={180} height={180} sizes="(max-width: 989px) 64px, 18vw" widths={IMAGE_WIDTHS.thumb} ratio="1 / 1" />
                     </button>
                   ))}
                 </div>
@@ -579,7 +580,7 @@ const crumbs = [
         <SectionHeading headingId="relatedHeading" title={t("pdp.related")} />
         <div class="product-grid">
           {related.map((entry) => (
-            <ProductCard product={entry} sizes="(max-width: 749px) 46vw, 220px" />
+            <ProductCard product={entry} sizes={IMAGE_SIZES.rail} widths={IMAGE_WIDTHS.rail} />
           ))}
         </div>
       </section>

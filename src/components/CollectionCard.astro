@@ -9,7 +9,7 @@
  * to two lines so a 60-character description cannot break the grid.
  */
 import Media from "./Media.astro"
-import { categoryImage } from "../lib/images"
+import { IMAGE_SIZES, IMAGE_WIDTHS, categoryImage } from "../lib/images"
 import { categoryBlurb } from "../lib/site"
 import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
 import type { ImageSource, ProductCategory } from "../types"
@@ -34,6 +34,8 @@ export interface Props {
   headingLevel?: 2 | 3 | 4
   /** CSS `sizes` for the tile artwork. Defaults to the "Shop by List" grid. */
   sizes?: string
+  /** Srcset widths for the tile artwork. Defaults to the tile ladder. */
+  widths?: readonly number[]
   class?: string
   lang?: string
 }
@@ -49,7 +51,8 @@ const {
   priority = false,
   showDescription = true,
   headingLevel = 3,
-  sizes = "(max-width: 749px) 46vw, (max-width: 1199px) 30vw, 260px",
+  sizes = IMAGE_SIZES.tile,
+  widths = IMAGE_WIDTHS.tile,
   class: className = "",
   lang,
 } = Astro.props
@@ -75,6 +78,7 @@ const Heading = `h${headingLevel}` as "h2" | "h3" | "h4"
         height={400}
         ratio="1 / 1"
         sizes={sizes}
+        widths={widths}
         priority={priority}
         placeholderLabel={title}
         imgClass="shopby-media__img"

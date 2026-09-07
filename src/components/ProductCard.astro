@@ -31,6 +31,8 @@ export interface Props {
   headingLevel?: 2 | 3 | 4
   /** Responsive `sizes` — defaults to the grid preset. */
   sizes?: string
+  /** Srcset widths — defaults to the grid ladder. Pair it with `sizes`. */
+  widths?: readonly number[]
   /** Hide the wishlist heart (e.g. inside the wishlist page itself). */
   showWishlist?: boolean
   /** Hide the "Sale" badge when there is no compare-at price. */
@@ -47,6 +49,7 @@ const {
   priority = false,
   headingLevel = 3,
   sizes = IMAGE_SIZES.card,
+  widths = IMAGE_WIDTHS.card,
   showWishlist = true,
   showSaleBadge = true,
   showHoverImage = true,
@@ -122,7 +125,7 @@ const categories = (product?.categories || [])
             width={400}
             height={400}
             sizes={sizes}
-            widths={IMAGE_WIDTHS.card}
+            widths={widths}
             priority={priority}
             placeholderLabel={t("card.imageUnavailable")}
             imgClass="pc-media__img"
@@ -134,7 +137,7 @@ const categories = (product?.categories || [])
               width={400}
               height={400}
               sizes={sizes}
-              widths={IMAGE_WIDTHS.card}
+              widths={widths}
               imgClass="pc-hover"
               class="pc-hover-wrap"
             />
@@ -147,7 +150,7 @@ const categories = (product?.categories || [])
           width={400}
           height={400}
           sizes={sizes}
-          widths={IMAGE_WIDTHS.card}
+          widths={widths}
           priority={priority}
           placeholderLabel={t("card.imageUnavailable")}
           imgClass="pc-media__img"
