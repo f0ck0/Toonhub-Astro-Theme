@@ -1,47 +1,149 @@
 ---
+/**
+ * Contact page.
+ *
+ * A real, labelled `<form>` that works without JavaScript (native validation,
+ * `required`, `autocomplete`); `scripts/contact.ts` upgrades submission to
+ * `fetch()` with an `aria-live` status message and a busy submit button.
+ * Localised copy is handed to the script through `data-i18n-*` attributes so
+ * the module itself stays language-agnostic.
+ */
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+import Breadcrumb from "../components/Breadcrumb.astro"
 import { SITE } from "../lib/site"
+import { breadcrumbJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+const crumbs = [{ name: "Home", href: "/" }, { name: t("contact.title") }]
 ---
-<Base title="Contact Us — TOONHUB">
+
+<Base
+  title={t("contact.title")}
+  description={t("contact.intro", { email: SITE.email }).slice(0, 155)}
+  canonical="/contact"
+  jsonLd={breadcrumbJsonLd(crumbs, Astro.site)}
+  overlays={{ quickView: false }}
+>
   <Header />
-  <main id="MainContent" class="page-width policy-page">
-    <h1>Contact Us</h1>
-    <p class="rte">For any enquiries please contact us through {SITE.email}, or the form below.</p>
-    <h2 style="margin:28px 0 14px;font-size:1.1rem;">Contact form</h2>
-    <form id="contactForm" style="display:flex;flex-direction:column;gap:14px;max-width:560px;">
-      <input class="field" name="name" placeholder="Name" required />
-      <input class="field" type="email" name="email" placeholder="Email *" required />
-      <input class="field" name="phone" placeholder="Phone number" />
-      <textarea class="field" name="comment" placeholder="Comment" style="min-height:140px;resize:vertical;" required></textarea>
-      <button class="btn btn-primary" type="submit">Send</button>
-      <p id="contactMsg" class="hidden" style="color:#8bc34a;font-size:0.9rem;">Thanks — we'll get back to you shortly.</p>
-    </form>
+
+  <main id="MainContent" class="page-width contact-page">
+    <Breadcrumb items={crumbs} />
+
+    <header class="page-head">
+      <h1 class="section-heading">{t("contact.title")}</h1>
+      <p class="page-head__intro">{t("contact.intro", { email: SITE.email })}</p>
+      <p class="page-head__mail">
+        <a class="link-btn" href={`mailto:${SITE.email}`}>{SITE.email}</a>
+      </p>
+    </header>
+
+    <section class="contact-body" aria-labelledby="contactFormHeading">
+      <h2 class="contact-heading" id="contactFormHeading">{t("contact.formHeading")}</h2>
+
+      <form
+        class="contact-form"
+        data-contact-form
+        data-i18n-sending={t("contact.sending")}
+        data-i18n-success={t("contact.success")}
+        data-i18n-error={t("contact.error")}
+        data-i18n-network={t("contact.networkError")}
+      >
+        <div class="field-row">
+          <label class="field-row__label" for="contactName">
+            {t("contact.name")} <span class="req" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="input"
+            id="contactName"
+            name="name"
+            type="text"
+            autocomplete="name"
+            maxlength="80"
+            required
+          />
+        </div>
+
+        <div class="field-row">
+          <label class="field-row__label" for="contactEmail">
+            {t("contact.email")} <span class="req" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="input"
+            id="contactEmail"
+            name="email"
+            type="email"
+            autocomplete="email"
+            maxlength="120"
+            required
+          />
+        </div>
+
+        <div class="field-row">
+          <label class="field-row__label" for="contactPhone">
+            {t("contact.phone")}
+            <span class="field-row__opt">({t("common.optional")})</span>
+          </label>
+          <input
+            class="input"
+            id="contactPhone"
+            name="phone"
+            type="tel"
+            autocomplete="tel"
+            maxlength="40"
+          />
+        </div>
+
+        <div class="field-row">
+          <label class="field-row__label" for="contactMessage">
+            {t("contact.message")} <span class="req" aria-hidden="true">*</span>
+          </label>
+          <textarea
+            class="input"
+            id="contactMessage"
+            name="comment"
+            rows="6"
+            maxlength="2000"
+            required
+          ></textarea>
+        </div>
+
+        <p class="form-message" data-contact-message role="status" aria-live="polite" hidden></p>
+
+        <div class="contact-form__actions">
+          <button class="btn btn-primary" type="submit" data-contact-submit>
+            {t("contact.submit")}
+          </button>
+          <p class="field-row__hint">{t("contact.requiredNote", { mark: "*" })}</p>
+        </div>
+      </form>
+    </section>
   </main>
+
   <Footer />
 </Base>
+
 <script>
-  document.getElementById("contactForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault()
-    const form = e.target as HTMLFormElement
-    const data = Object.fromEntries(new FormData(form).entries())
-    const msg = document.getElementById("contactMsg")
-    try {
-      const res = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-      const out = await res.json()
-      if (msg) {
-        msg.classList.remove("hidden")
-        msg.style.color = res.ok ? "#8bc34a" : "#e53935"
-        msg.textContent = res.ok ? "Thanks — we'll get back to you shortly." : (out.error || "Could not send. Try again.")
-      }
-      if (res.ok) form.reset()
-    } catch {
-      if (msg) {
-        msg.classList.remove("hidden")
-        msg.style.color = "#e53935"
-        msg.textContent = "Network error. Please try again."
-      }
-    }
-  })
+  import "../scripts/contact"
 </script>
+
+<style>
+  .contact-page { padding: 24px 0 64px; min-height: 50vh; }
+  .page-head { margin-bottom: 28px; }
+  .page-head__intro { margin-top: 10px; max-width: 68ch; color: var(--text-muted); font-size: 0.92rem; line-height: 1.65; }
+  .page-head__mail { margin-top: 12px; font-size: 0.95rem; }
+  .page-head__mail a { text-decoration: underline; }
+  .contact-heading {
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+  .contact-form { display: grid; gap: 18px; max-width: 560px; }
+  .contact-form__actions { display: grid; gap: 10px; justify-items: start; }
+  .req { color: var(--color-danger); }
+  .field-row__opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-faint); }
+</style>

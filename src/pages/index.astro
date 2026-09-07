@@ -1,189 +1,390 @@
 ---
+/**
+ * Homepage.
+ *
+ * Rendering contract:
+ * - everything above the fold is server-rendered (tiles, headings, copy);
+ * - when the catalogue request comes back empty the grid ships **skeletons**,
+ *   which `scripts/catalog.ts` either replaces with real cards (browser-side
+ *   retry) or with an explanatory empty state — the page never shows a blank
+ *   hole and never lies about product counts;
+ * - the first six tiles are `priority` (eager + `fetchpriority="high"`) and the
+ *   very first one is preloaded as the LCP candidate;
+ * - the slider, countdown and marquee are progressively enhanced: without JS
+ *   the slider is a native scroller and the countdown shows its initial values.
+ */
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import ProductCard from "../components/ProductCard.astro"
 import CollectionCard from "../components/CollectionCard.astro"
 import ReviewMedals from "../components/ReviewMedals.astro"
-import { getProducts, getProductsByIds, getAllCategories, productImageUrl } from "../lib/medusa"
-import { SITE, COLLECTION_IMAGES, shopCategories } from "../lib/site"
-import { cardImage } from "../lib/img"
+import SectionHeading from "../components/SectionHeading.astro"
+import Skeleton from "../components/Skeleton.astro"
+import EmptyState from "../components/EmptyState.astro"
+import {
+  getAllCategories,
+  getProducts,
+  getProductsByIds,
+  isCatalogDegraded,
+} from "../lib/medusa"
+import { SITE, categoryBlurb, shopCategories } from "../lib/site"
+import { categoryImage, productImage } from "../lib/images"
+import { pageLocale, useTranslations } from "../lib/i18n"
+import type { Product, ProductCategory } from "../types"
+
+const t = useTranslations(pageLocale(Astro))
+
+const FEATURED_LIMIT = 18
+const RAIL_LIMIT = 24
 
 function shuffle<T>(list: T[]): T[] {
-  const a = [...list]
-  for (let i = a.length - 1; i > 0; i--) {
+  const copy = [...list]
+  for (let i = copy.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
-  return a
+  return copy
 }
 
-function stubId(p: any) {
-  return typeof p === "string" ? p : p?.id || ""
-}
+const stubId = (value: unknown): string =>
+  typeof value === "string" ? value : String((value as { id?: string })?.id || "")
 
-let products: any[] = []
+let products: Product[] = []
 let totalCount = 0
-let categories: any[] = []
+let categories: ProductCategory[] = []
+let catalogError = false
 
 try {
   categories = await getAllCategories()
-} catch (e) {}
+} catch {
+  categories = []
+}
 
 try {
-  try {
-    const extra = await getProducts(1, 0)
-    totalCount = extra.count
-  } catch {}
+  const probe = await getProducts(1, 0)
+  totalCount = probe.count
 
-  const shop = shuffle(shopCategories(categories))
+  /* Pick one product per series so the rail is not a wall of one franchise. */
+  const series = shuffle(shopCategories(categories))
   const ids: string[] = []
-  const seenIds = new Set<string>()
-  for (let pass = 0; pass < 2; pass++) {
-    for (const c of shop) {
-      if (ids.length >= 24) break
-      const pool = shuffle(c.products || [])
+  const seen = new Set<string>()
+
+  for (let pass = 0; pass < 2 && ids.length < RAIL_LIMIT; pass += 1) {
+    for (const category of series) {
+      if (ids.length >= RAIL_LIMIT) break
+      const pool = shuffle(category.products || [])
         .map(stubId)
-        .filter((id: string) => id && !seenIds.has(id))
+        .filter((id) => id && !seen.has(id))
       if (!pool.length) continue
-      seenIds.add(pool[0])
+      seen.add(pool[0])
       ids.push(pool[0])
     }
   }
 
-  let full: any[] = []
-  if (ids.length) full = (await getProductsByIds(ids)).products || []
-  const byId = new Map(full.map((p: any) => [p.id, p]))
-  let mixed = ids
-    .map((id) => byId.get(id))
-    .filter((p: any) => p && (p.title || p.handle))
+  let rail: Product[] = []
+  if (ids.length) {
+    const fetched = await getProductsByIds(ids)
+    const byId = new Map(fetched.products.map((product) => [product.id, product]))
+    rail = ids
+      .map((id) => byId.get(id))
+      .filter((product): product is Product => Boolean(product && (product.title || product.handle)))
+  }
 
-  if (mixed.length < 12) {
+  /* Top up from per-category queries when the stub route came up short. */
+  if (rail.length < 12) {
     const batches = await Promise.all(
-      shop.slice(0, 12).map((c: any) =>
-        getProducts(6, 0, c.id)
-          .then((r) => r.products || [])
-          .catch(() => []),
+      series.slice(0, 12).map((category) =>
+        getProducts(6, 0, category.id)
+          .then((result) => result.products)
+          .catch(() => [] as Product[]),
       ),
     )
-    const have = new Set(mixed.map((p: any) => p.id))
-    const fromCats: any[] = []
+    const have = new Set(rail.map((product) => product.id))
     for (const list of batches) {
-      let took = 0
-      for (const p of shuffle(list)) {
-        if (!p?.id || have.has(p.id) || !(p.title || p.handle)) continue
-        have.add(p.id)
-        fromCats.push(p)
-        took++
-        if (took >= 2) break
+      let taken = 0
+      for (const product of shuffle(list)) {
+        if (!product?.id || have.has(product.id) || !(product.title || product.handle)) continue
+        have.add(product.id)
+        rail.push(product)
+        taken += 1
+        if (taken >= 2) break
       }
     }
-    mixed = [...mixed, ...fromCats]
   }
 
-  products = shuffle(mixed).slice(0, 24)
+  products = shuffle(rail).slice(0, RAIL_LIMIT)
+
   if (!products.length) {
-    const extra = await getProducts(48, 0)
-    if (!totalCount) totalCount = extra.count
-    products = shuffle(extra.products || []).filter((p: any) => p && (p.title || p.handle)).slice(0, 24)
+    const wide = await getProducts(48, 0)
+    if (!totalCount) totalCount = wide.count
+    products = shuffle(wide.products)
+      .filter((product) => product && (product.title || product.handle))
+      .slice(0, RAIL_LIMIT)
   }
-} catch (e) {
-  console.error("Failed to fetch products:", e)
+} catch (error) {
+  catalogError = true
+  console.error("[home] catalogue fetch failed:", error)
 }
 
-const ipCats = shopCategories(categories)
-
-function catTileImage(cat: any): string {
-  const p = cat.products?.find((p: any) => p.thumbnail)
-  return p?.thumbnail ? productImageUrl(p.thumbnail) : ""
-}
-
-const shopByList = ipCats.map((cat: any) => ({
-  name: cat.name,
-  handle: cat.handle,
-  description: `Shop our exclusive ${cat.name} figures — premium quality, worldwide shipping.`,
-  count: cat.products?.length || 0,
-  img: COLLECTION_IMAGES[cat.handle] || catTileImage(cat),
+const series = shopCategories(categories)
+const tiles = series.map((category) => ({
+  category,
+  name: String(category.name || ""),
+  handle: String(category.handle || ""),
+  description: categoryBlurb(String(category.name || "")),
+  count: (category.products || []).length,
+  img: categoryImage(category),
 }))
 
-const featuredCols = shopByList.slice(0, 18)
-const moreCols = shopByList.slice(18)
-const lcpImage = cardImage(featuredCols[0]?.img).src
+const featured = tiles.slice(0, FEATURED_LIMIT)
+const more = tiles.slice(FEATURED_LIMIT)
+const lcpImage = featured[0]?.img ?? null
+const displayCount = totalCount || products.length
 ---
-<Base lcpImage={lcpImage}>
+
+<Base
+  title={SITE.defaultTitle}
+  description={SITE.description}
+  image="/images/og/og-default.webp"
+  lcpImage={lcpImage}
+  overlays={{ quickView: true }}
+  jsonLd={{
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Anime figure collections",
+    itemListElement: featured.slice(0, 12).map((tile, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: tile.name,
+      url: new URL(`/collections/${tile.handle}`, Astro.site ?? SITE.url).href,
+    })),
+  }}
+>
   <Header />
+
   <main id="MainContent">
-    <section class="page-width shopby-section" style="padding-top:48px;padding-bottom:8px;">
-      <h2 class="section-heading" style="margin:0 0 24px;">Shop by List</h2>
-      <div class="shopby-grid" data-hydrate-cats>
-        {featuredCols.map((sec, i) => (
-          <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} eager={i < 6} high={i === 0} />
+    {/* One h1 per page: the storefront's keyword line. Sections below are h2,
+        tiles and cards h3 — a correct heading outline for AT and crawlers. */}
+    <h1 class="sr-only">{t("home.h1")}</h1>
+
+    <section class="page-width shopby-section section-space" aria-labelledby="shopByListHeading">
+      <SectionHeading
+        headingId="shopByListHeading"
+        title={t("home.shopByList")}
+        description={series.length ? t("home.shopByListDesc", { count: series.length }) : ""}
+      />
+
+      {tiles.length ? (
+        <div class="shopby-grid" data-hydrate-cats>
+          {featured.map((tile, index) => (
+            <CollectionCard
+              category={tile.category}
+              name={tile.name}
+              handle={tile.handle}
+              description={tile.description}
+              img={tile.img}
+              count={tile.count}
+              priority={index < 6}
+            />
+          ))}
+        </div>
+      ) : (
+        <div data-hydrate-cats>
+          <Skeleton variant="tile" count={12} layout="grid" label={t("a11y.loading")} />
+        </div>
+      )}
+    </section>
+
+    <section class="sale-band" aria-labelledby="clearanceHeading">
+      <h2 id="clearanceHeading">{t("home.clearance")} <span aria-hidden="true">🔥</span></h2>
+      <p>{t("home.clearanceBody")}</p>
+
+      <div class="countdown" data-countdown>
+        <p class="countdown__label">{t("home.offerEnds")}</p>
+        <div class="countdown__units" role="timer" aria-atomic="true">
+          <div class="unit">
+            <b data-countdown-days>00</b><span>Days</span>
+          </div>
+          <div class="unit">
+            <b data-countdown-hours>00</b><span>Hours</span>
+          </div>
+          <div class="unit">
+            <b data-countdown-minutes>00</b><span>Minutes</span>
+          </div>
+          <div class="unit">
+            <b data-countdown-seconds>00</b><span>Seconds</span>
+          </div>
+        </div>
+        <p class="sr-only" data-countdown-summary>{SITE.offer}</p>
+      </div>
+    </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        {Array.from({ length: 8 }).map(() => (
+          <span>{SITE.marquee}</span>
         ))}
       </div>
-    </section>
-
-    <section class="sale-band">
-      <h2>Seasonal Clearance Sale🔥</h2>
-      <p>Buy 1 get Second Half Price on top of Free Shipping. Prices are also 50% off right now!</p>
-      <p style="margin-top:18px;font-size:0.8rem;letter-spacing:0.12em;color:#888;">OFFER ENDS IN</p>
-      <div class="countdown" id="countdown">
-        <div class="unit"><b id="cdD">00</b><span>Days</span></div>
-        <div class="unit"><b id="cdH">00</b><span>Hours</span></div>
-        <div class="unit"><b id="cdM">00</b><span>Minutes</span></div>
-        <div class="unit"><b id="cdS">00</b><span>Seconds</span></div>
-      </div>
-    </section>
-
-    <div class="marquee">
-      <div class="marquee-track">
-        {Array.from({ length: 8 }).map(() => <span>{SITE.marquee}</span>)}
-      </div>
     </div>
+    <p class="sr-only">{SITE.marquee}</p>
 
     <ReviewMedals />
 
-    <section class="page-width" style="padding:48px 0 8px;" data-slider>
-      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
-        <h2 class="section-heading" style="margin:0;">New Arrived Anime Figures</h2>
-        <div style="display:flex;gap:8px;">
-          <button class="slider-btn" data-prev type="button" aria-label="Previous">←</button>
-          <button class="slider-btn" data-next type="button" aria-label="Next">→</button>
+    <section class="page-width section-space" aria-labelledby="newArrivalsHeading" data-slider>
+      <SectionHeading
+        headingId="newArrivalsHeading"
+        title={t("home.newArrivals")}
+        actions
+        description={displayCount ? t("home.newArrivalsDesc", { count: displayCount }) : ""}
+      >
+        <div slot="actions" class="slider-controls">
+          <button class="slider-btn" type="button" data-slider-prev aria-label={t("a11y.previousSlide")}>
+            <span aria-hidden="true">←</span>
+          </button>
+          <button class="slider-btn" type="button" data-slider-next aria-label={t("a11y.nextSlide")}>
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
-      </div>
-      <div class="product-drag-slider">
-        <div class="slider-track" data-hydrate-products="home">
-          {products.length > 0 ? (
-            products.map((product: any) => <ProductCard product={product} />)
+      </SectionHeading>
+
+      <div
+        class="product-drag-slider"
+        data-slider-scroller
+        role="region"
+        aria-label={t("home.newArrivals")}
+        tabindex="0"
+      >
+        <div class="slider-track" data-slider-track data-hydrate-products="home">
+          {products.length ? (
+            products.map((product, index) => (
+              <ProductCard product={product} priority={index < 4} sizes="(max-width: 749px) 46vw, 220px" />
+            ))
           ) : (
-            <div style="text-align:center;padding:60px 0;width:100%;color:#888;">Loading products…</div>
+            <>
+              <Skeleton variant="product-card" count={6} layout="none" label={t("grid.loadingProducts")} />
+              <p class="sr-only" data-grid-status>{t("grid.loadingProducts")}</p>
+            </>
           )}
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:12px;">
-        <span style="font-size:0.85rem;color:#888;">Drag or use arrows to browse · {totalCount || products.length} products</span>
-        <a href="/collections/new-arrivals" style="font-size:0.9rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #fff;padding-bottom:2px;">View all →</a>
+
+      <div class="rail-footer">
+        <p class="rail-footer__meta">
+          {t("home.railHint")}{displayCount ? ` · ${t("grid.productCount", { count: displayCount })}` : ""}
+        </p>
+        <a class="rail-footer__link" href="/collections/new-arrivals">
+          {t("home.viewAll")} <span aria-hidden="true">→</span>
+        </a>
       </div>
     </section>
 
-    {moreCols.length > 0 && (
-      <section class="page-width shopby-section" style="padding-top:64px;padding-bottom:8px;">
-        <h2 class="section-heading" style="margin:0 0 24px;">400+ More Figures in Collections Below</h2>
+    {products.length === 0 && !catalogError && (
+      <section class="page-width" aria-label={t("home.catalogueStatus")}>
+        <EmptyState
+          icon="box"
+          title={t("grid.emptyTitle")}
+          description={t("grid.emptyBody")}
+          action={{ label: t("grid.browseAll"), href: "/collections", variant: "outline" }}
+        />
+      </section>
+    )}
+
+    {isCatalogDegraded() && (
+      <p class="dev-notice page-width" data-medusa-warning hidden>
+        {t("home.demoNotice")}
+      </p>
+    )}
+
+    {more.length > 0 && (
+      <section class="page-width shopby-section section-space" aria-labelledby="moreCollectionsHeading">
+        <SectionHeading
+          headingId="moreCollectionsHeading"
+          title={t("home.moreTitle")}
+          description={t("home.moreDesc")}
+        />
         <div class="shopby-grid">
-          {moreCols.map((sec) => (
-            <CollectionCard name={sec.name} handle={sec.handle} description={sec.description} img={sec.img} count={sec.count} />
+          {more.map((tile) => (
+            <CollectionCard
+              category={tile.category}
+              name={tile.name}
+              handle={tile.handle}
+              description={tile.description}
+              img={tile.img}
+              count={tile.count}
+            />
           ))}
         </div>
-        <div style="text-align:center;margin-top:28px;">
-          <a href="/collections" class="btn btn-outline">View all</a>
+        <div class="section-cta">
+          <a href="/collections" class="btn btn-outline">{t("home.viewAll")}</a>
         </div>
       </section>
     )}
 
-    <section class="page-width seo-block">
-      <h2 class="section-heading">Anime Figures at Toonhub</h2>
-      <p>Discover 40+ anime-inspired figure collections at Toonhub, with hundreds of unique designs featuring vibrant, detailed sculpting and dynamic themes loved by anime fans. From action-packed heroes to mystical worlds and intense fantasy battles.</p>
-      <p>Our high-quality figures are perfect for collectors and otakus, offering premium materials and display-ready finishes. Every piece showcases bold colors, detailed illustration, and eye-catching aesthetics that bring your favorite anime vibes to life.</p>
+    <section class="page-width seo-block" aria-labelledby="seoHeading">
+      <h2 class="section-heading" id="seoHeading">{t("home.seoTitle")}</h2>
+      <p>{t("home.seoBody1")}</p>
+      <p>{t("home.seoBody2")}</p>
     </section>
   </main>
+
   <Footer />
 </Base>
+
+<script>
+  // Homepage-only behaviour that is not part of the global chrome.
+  import "../scripts/catalog"
+  import "../scripts/reviews"
+</script>
+
+<style>
+  .section-space { padding-top: 48px; padding-bottom: 8px; }
+  .slider-controls { display: flex; gap: 8px; }
+  .rail-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
+  }
+  .rail-footer__meta { font-size: 0.85rem; color: var(--text-muted); }
+  .rail-footer__link {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid #fff;
+    padding-bottom: 2px;
+    transition: opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+  .rail-footer__link:hover { opacity: 0.8; transform: translateX(2px); }
+  .section-cta { text-align: center; margin-top: 28px; }
+  .countdown__label {
+    margin-top: 18px;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .countdown__units {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .dev-notice {
+    margin-top: 20px;
+    padding: 10px 14px;
+    border: 1px solid #4a3b12;
+    background: #1d1708;
+    color: #f5c16c;
+    font-size: 0.82rem;
+    border-radius: 0.3rem;
+  }
+</style>

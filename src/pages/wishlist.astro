@@ -1,56 +1,80 @@
 ---
+/**
+ * Wishlist — saved figures, device-local.
+ *
+ * The list lives in `localStorage`, so the server cannot render it. The page
+ * ships the empty state (correct for a first visit and for no-JS) and
+ * `scripts/wishlist.ts` replaces it when saved items exist.
+ */
 import Base from "../layouts/Base.astro"
 import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
+import EmptyState from "../components/EmptyState.astro"
+import Breadcrumb from "../components/Breadcrumb.astro"
+import { SITE } from "../lib/site"
+import { breadcrumbJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+const crumbs = [{ name: "Home", href: "/" }, { name: t("nav.wishlist") }]
 ---
-<Base title="Wishlist — TOONHUB">
+
+<Base
+  title={`${t("nav.wishlist")} — ${SITE.brand}`}
+  description="Your saved anime figures on this device. Open a wishlist item to buy it or add it to your cart."
+  canonical="/wishlist"
+  robots="noindex,follow"
+  jsonLd={breadcrumbJsonLd(crumbs, Astro.site)}
+  overlays={{ quickView: true }}
+>
   <Header />
-  <main id="MainContent" class="page-width" style="padding:48px 0;">
-    <h1 class="section-heading" style="margin-bottom:12px;">Wishlist</h1>
-    <p style="color:#888;font-size:0.9rem;margin-bottom:28px;">Saved figures on this device. Sign in later to keep them across browsers.</p>
-    <div class="product-grid" id="wishGrid"></div>
-    <div id="wishEmpty" style="text-align:center;padding:80px 0;">
-      <h3 style="font-size:1.25rem;">Your wishlist is empty</h3>
-      <a href="/collections" class="btn btn-outline" style="margin-top:20px;">Continue shopping</a>
+
+  <main id="MainContent" class="page-width wishlist-page">
+    <Breadcrumb items={crumbs} />
+
+    <header class="page-head">
+      <h1 class="section-heading">{t("nav.wishlist")}</h1>
+      <p class="page-head__intro">{t("wishlist.intro")}</p>
+      <p class="page-head__count" data-wishlist-count hidden>0</p>
+    </header>
+
+    <div class="product-grid" data-wishlist-grid aria-live="polite"></div>
+
+    <div data-wishlist-empty>
+      <EmptyState
+        icon="heart"
+        title={t("empty.wishlistTitle")}
+        description={t("empty.wishlistBody")}
+        action={{ label: t("grid.browseAll"), href: "/collections" }}
+      />
     </div>
+
+    <noscript>
+      <EmptyState
+        icon="alert"
+        title={t("cart.jsTitle")}
+        description={t("wishlist.jsBody")}
+      />
+    </noscript>
   </main>
+
   <Footer />
 </Base>
+
 <script>
-  const grid = document.getElementById("wishGrid")!
-  const empty = document.getElementById("wishEmpty")!
-  function esc(s: string) {
-    return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
-  }
-  function render() {
-    let items: any[] = []
-    try { items = JSON.parse(localStorage.getItem("toonhub_wishlist") || "[]") } catch { items = [] }
-    if (!items.length) {
-      grid.innerHTML = ""
-      empty.style.display = ""
-      return
-    }
-    empty.style.display = "none"
-    grid.innerHTML = items.map((p) => {
-      const img = p.thumbnail || ""
-      const price = p.unit_price ? `From $${(Number(p.unit_price) / 100).toFixed(2)}` : ""
-      return `<article class="product-card card">
-        <div class="pc-media">
-          <a href="/products/${esc(p.handle)}" style="position:absolute;inset:0;z-index:1;">
-            ${img ? `<img src="${esc(img)}" alt="${esc(p.title)}" loading="lazy" decoding="async" width="600" height="600" />` : ""}
-          </a>
-          <button class="wish-btn is-on" type="button" data-wish data-wish-id="${esc(p.id)}" data-wish-handle="${esc(p.handle)}" data-wish-title="${esc(p.title)}" data-wish-img="${esc(img)}" data-wish-price="${p.unit_price || 0}" aria-label="Remove from wishlist">♥</button>
-          <a class="choose-options" href="/products/${esc(p.handle)}">View</a>
-        </div>
-        <a href="/products/${esc(p.handle)}" class="pc-info">
-          <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">${esc(p.title)}</div>
-          <div class="pc-price-row"><span class="pc-price" style="font-family:'Quattrocento Sans',Arial,sans-serif;font-weight:400;font-style:italic;">${price}</span></div>
-        </a>
-      </article>`
-    }).join("")
-  }
-  render()
-  document.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest("[data-wish]")) setTimeout(render, 0)
-  })
+  import "../scripts/wishlist"
+  import "../scripts/reviews"
 </script>
+
+<style>
+  .wishlist-page { padding: 24px 0 64px; min-height: 50vh; }
+  .page-head { margin-bottom: 28px; }
+  .page-head__intro { margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); max-width: 62ch; }
+  .page-head__count {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .page-head__count:not([hidden])::before { content: "Saved items: "; }
+</style>

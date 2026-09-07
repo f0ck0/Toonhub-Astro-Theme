@@ -9,7 +9,7 @@ const ssrToken = Astro.cookies.get("toonhub_token")?.value || ""
 const ssrEmail = Astro.cookies.get("toonhub_email")?.value || ""
 const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_in")?.value === "1")
 ---
-<Base title="Account — TOONHUB">
+<Base title="Account — TOONHUB" lang="en">
   <Header />
   <script is:inline>
     (function () {
@@ -34,13 +34,13 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
 
       <form id="accountForm">
         <div id="registerNames" class="account-names" hidden>
-          <input class="field" id="firstName" placeholder="First name" autocomplete="given-name" />
-          <input class="field" id="lastName" placeholder="Last name" autocomplete="family-name" />
+          <input class="field" id="firstName" placeholder="First name" aria-label="First name" autocomplete="given-name" maxlength="60" />
+          <input class="field" id="lastName" placeholder="Last name" aria-label="Last name" autocomplete="family-name" maxlength="60" />
         </div>
-        <input type="email" id="loginEmail" class="field" placeholder="Email address" required autocomplete="email" />
-        <input type="password" id="loginPassword" class="field" placeholder="Password" required autocomplete="current-password" minlength="8" />
-        <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" hidden autocomplete="new-password" minlength="8" />
-        <div id="loginError" class="account-error" hidden></div>
+        <input type="email" id="loginEmail" class="field" placeholder="Email address" aria-label="Email address" required autocomplete="email" maxlength="120" />
+        <input type="password" id="loginPassword" class="field" placeholder="Password" aria-label="Password" required autocomplete="current-password" minlength="8" />
+        <input type="password" id="loginPassword2" class="field" placeholder="Confirm password" aria-label="Confirm password" hidden autocomplete="new-password" minlength="8" />
+        <p id="loginError" class="account-error" role="alert" aria-live="assertive" hidden></p>
         <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
       </form>
 
@@ -68,11 +68,11 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
           </dl>
           <form id="profileForm" class="account-edit" hidden>
             <div class="account-names">
-              <input class="field" id="editFirst" placeholder="First name" autocomplete="given-name" />
-              <input class="field" id="editLast" placeholder="Last name" autocomplete="family-name" />
+              <input class="field" id="editFirst" placeholder="First name" aria-label="First name" autocomplete="given-name" maxlength="60" />
+              <input class="field" id="editLast" placeholder="Last name" aria-label="Last name" autocomplete="family-name" maxlength="60" />
             </div>
-            <input class="field" id="editPhone" placeholder="Phone" autocomplete="tel" inputmode="tel" />
-            <div id="profileError" class="account-error" hidden></div>
+            <input class="field" id="editPhone" placeholder="Phone" aria-label="Phone" autocomplete="tel" inputmode="tel" maxlength="40" />
+            <p id="profileError" class="account-error" role="alert" aria-live="assertive" hidden></p>
             <div class="account-edit-actions">
               <button type="submit" id="profileSave" class="btn btn-primary">Save</button>
               <button type="button" id="profileCancel" class="btn btn-outline">Cancel</button>
@@ -83,17 +83,17 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
 
         <section class="account-card">
           <h2>Addresses</h2>
-          <div id="accountAddresses" class="account-addr-list"></div>
+          <div id="accountAddresses" class="account-addr-list" aria-live="polite"></div>
         </section>
       </div>
 
       <section class="account-card account-orders-card">
         <h2>Order history</h2>
-        <div id="accountOrders"></div>
+        <div id="accountOrders" aria-live="polite"></div>
         <form id="parcelForm" class="account-parcel">
           <label for="parcelNo">Track a parcel</label>
           <div class="account-parcel-row">
-            <input class="field" id="parcelNo" placeholder="Tracking number" autocomplete="off" />
+            <input class="field" id="parcelNo" placeholder="Tracking number" autocomplete="off" maxlength="60" />
             <button type="submit" class="btn btn-primary">Track</button>
           </div>
           <p class="account-muted">Looks up carrier tracking (17track). You can also use <a href="/track-order">Track Order</a> with your order number.</p>
@@ -128,7 +128,7 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
   }
   .account-tab.is-on { color: #fff; border-bottom-color: #fff; }
   #accountForm { display: flex; flex-direction: column; gap: 16px; }
-  .account-error { font-size: 0.82rem; color: #e53935; }
+  .account-error { font-size: 0.82rem; color: #e53935; margin: 0; }
   .account-legal { font-size: 0.72rem; color: #666; text-align: center; margin-top: 20px; line-height: 18px; }
   .account-legal a { text-decoration: underline; }
   .account-home { width: 100%; max-width: 920px; margin: 0 auto; }
@@ -238,6 +238,65 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
   }
 </style>
 <script>
+  /**
+   * Account data (names, addresses, order titles, tracking URLs) comes from the
+   * Medusa API and from `localStorage`, and is injected as HTML — every value is
+   * escaped here so a crafted product title cannot inject markup.
+   */
+  function esc(value: unknown): string {
+    return String(value ?? "").replace(/[&<>"']/g, (c) =>
+      c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
+    )
+  }
+
+  interface AddressLike {
+    first_name?: string
+    last_name?: string
+    name?: string
+    address_1?: string
+    address?: string
+    street?: string
+    address_2?: string
+    apartment?: string
+    city?: string
+    province?: string
+    province_code?: string
+    state?: string
+    postal_code?: string
+    postal?: string
+    country_code?: string
+    country?: string
+    phone?: string
+  }
+
+  interface TrackingLike {
+    tracking_number?: string
+    number?: string
+    url?: string
+    tracking_url?: string
+    carrier?: string
+  }
+
+  interface OrderLine { title?: string }
+
+  interface OrderLike {
+    id?: string
+    display_id?: string | number
+    created_at?: string
+    created?: string
+    status?: string
+    fulfillment_status?: string
+    total?: number
+    summary?: { total?: number }
+    currency_code?: string
+    currency?: string
+    email?: string
+    items?: OrderLine[]
+    line_items?: OrderLine[]
+    tracking?: (TrackingLike | string)[]
+    tracking_numbers?: (TrackingLike | string)[]
+  }
+
   const TOKEN_KEY = "toonhub_token"
   const EMAIL_KEY = "toonhub_email"
   const CUSTOMER_KEY = "toonhub_customer"
@@ -382,7 +441,7 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
     try { return JSON.parse(localStorage.getItem("toonhub_checkout") || "null") } catch { return null }
   }
 
-  function formatAddr(a: any) {
+  function formatAddr(a: AddressLike | string | null | undefined): string {
     if (!a) return ""
     if (typeof a === "string") return a
     const lines = [
@@ -396,27 +455,36 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
     return lines.join("\n")
   }
 
-  function renderAddresses(addresses: any[], email: string) {
+  function renderAddresses(addresses: AddressLike[], email: string) {
     const box = document.getElementById("accountAddresses")!
     const list = Array.isArray(addresses) ? addresses.filter(Boolean) : []
     if (list.length) {
-      box.innerHTML = list.map((a) => `<div class="account-addr">${formatAddr(a).replace(/\n/g, "<br>")}</div>`).join("")
+      box.innerHTML = list
+        .map((a) => `<div class="account-addr">${esc(formatAddr(a)).replace(/\n/g, "<br>")}</div>`)
+        .join("")
       return
     }
-    const saved = savedCheckout()
+    const saved = savedCheckout() as AddressLike & { countryOther?: string } | null
     if (saved?.address) {
-      const line = [saved.name, saved.address, saved.apartment, [saved.city, saved.province, saved.postal].filter(Boolean).join(", "), saved.country === "OTHER" ? saved.countryOther : saved.country, saved.phone].filter(Boolean)
-      box.innerHTML = `<div class="account-addr">${line.join("<br>")}</div><p class="account-muted" style="margin-top:10px;">From your last checkout.</p>`
+      const line = [
+        saved.name,
+        saved.address,
+        saved.apartment,
+        [saved.city, saved.province, saved.postal].filter(Boolean).join(", "),
+        saved.country === "OTHER" ? saved.countryOther : saved.country,
+        saved.phone,
+      ].filter(Boolean)
+      box.innerHTML = `<div class="account-addr">${line.map(esc).join("<br>")}</div><p class="account-muted" style="margin-top:10px;">From your last checkout.</p>`
       return
     }
     box.innerHTML = `<p class="account-muted">No saved address yet. Addresses appear after you place an order.</p>`
   }
 
-  function renderOrders(remote: any[], email: string) {
+  function renderOrders(remote: OrderLike[], email: string) {
     const box = document.getElementById("accountOrders")!
     const local = localOrders(email)
     const seen = new Set<string>()
-    const rows: any[] = []
+    const rows: OrderLike[] = []
     for (const o of [...(remote || []), ...local]) {
       const id = String(o.display_id || o.id || "")
       if (id && seen.has(id)) continue
@@ -428,16 +496,18 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
       return
     }
     box.innerHTML = rows.map((o) => {
-      const id = o.display_id || o.id || "Order"
+      const id = String(o.display_id || o.id || "Order")
       const when = o.created_at || o.created
       const date = when ? new Date(when).toLocaleDateString() : ""
       const status = o.status || o.fulfillment_status || "placed"
       const total = Number(o.total ?? o.summary?.total ?? 0)
       const cur = o.currency_code || o.currency || "usd"
       const items = o.items || o.line_items || []
-      const titles = items.map((i: any) => i.title).filter(Boolean).slice(0, 3).join(", ")
+      const titles = items.map((i) => i.title).filter(Boolean).slice(0, 3).join(", ")
       const mail = o.email || email
-      const tracks = [].concat(o.tracking || o.tracking_numbers || []).map((t: any) => {
+      const tracks = ([] as (TrackingLike | string)[])
+        .concat(o.tracking || o.tracking_numbers || [])
+        .map((t): TrackingLike | null => {
         if (!t) return null
         if (typeof t === "string") return { tracking_number: t, url: `https://t.17track.net/en#nums=${encodeURIComponent(t)}`, carrier: "Carrier" }
         const num = t.tracking_number || t.number || ""
@@ -446,13 +516,20 @@ const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_
         return { tracking_number: num, url: href, carrier: t.carrier || "Carrier" }
       }).filter(Boolean)
       const trackBtns = tracks.length
-        ? tracks.map((t: any) => `<a href="${t.url}" target="_blank" rel="noopener">${t.carrier}${t.tracking_number ? " · " + t.tracking_number : " track"}</a>`).join("")
+        ? tracks
+            .map(
+              (t) =>
+                `<a href="${esc(t?.url)}" target="_blank" rel="noopener noreferrer">${esc(t?.carrier)}${
+                  t?.tracking_number ? " · " + esc(t.tracking_number) : " track"
+                }</a>`,
+            )
+            .join("")
         : `<span class="meta">Tracking appears here after the parcel ships.</span>`
-      const lookup = `/track-order?order=${encodeURIComponent(String(id))}&email=${encodeURIComponent(mail || "")}`
+      const lookup = `/track-order?order=${encodeURIComponent(id)}&email=${encodeURIComponent(mail || "")}`
       return `<div class="account-order">
         <div>
-          <b>#${id}</b>
-          <div class="meta">${[date, status].filter(Boolean).join(" · ")}${titles ? `<br>${titles}` : ""}</div>
+          <b>#${esc(id)}</b>
+          <div class="meta">${esc([date, status].filter(Boolean).join(" · "))}${titles ? `<br>${esc(titles)}` : ""}</div>
           <div class="account-track">
             ${trackBtns}
             <a href="${lookup}">Track this order</a>

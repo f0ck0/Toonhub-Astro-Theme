@@ -1,26 +1,185 @@
 ---
+/**
+ * Blog post.
+ *
+ * Unknown or draft slugs return a real 404 (status + the shared 404 view).
+ * The article is semantic (`<article>` inside `<main>`, `<time datetime>`,
+ * author/publisher JSON-LD) and its hero image goes through `<Media />` so it
+ * carries width/height and modern formats.
+ */
 import Base from "../../layouts/Base.astro"
 import Header from "../../components/Header.astro"
 import Footer from "../../components/Footer.astro"
+import Media from "../../components/Media.astro"
+import Breadcrumb from "../../components/Breadcrumb.astro"
 import { getCollection, render } from "astro:content"
+import { SITE } from "../../lib/site"
+import { blogPostingJsonLd, breadcrumbJsonLd } from "../../lib/seo"
+import { pageLocale, useTranslations } from "../../lib/i18n"
 
-const slug = Astro.params.slug || ""
+const t = useTranslations(pageLocale(Astro))
+const slug = String(Astro.params.slug || "")
+
 const posts = await getCollection("posts")
-const post = posts.find((p) => p.id === slug && !p.data.draft)
+const post = posts.find((entry) => entry.id === slug && !entry.data.draft)
+
 if (!post) {
-  return new Response(null, { status: 404, statusText: "Not found" })
+  Astro.response.status = 404
+  return Astro.rewrite("/404")
 }
+
 const { Content } = await render(post)
+const title = String(post.data.title || "")
+const description = String(post.data.description || "").trim()
+const heroImage = String(post.data.heroImage || "").trim()
+const pubDate = post.data.pubDate
+
+const crumbs = [
+  { name: "Home", href: "/" },
+  { name: t("blog.title"), href: "/blog" },
+  { name: title },
+]
+
+/** Newest-first "more from the blog" rail, excluding the current post. */
+const more = posts
+  .filter((entry) => !entry.data.draft && entry.id !== post.id)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3)
+
+const lang = pageLocale(Astro)
+const dateText = (() => {
+  try {
+    return pubDate.toLocaleDateString(lang, { year: "numeric", month: "long", day: "numeric" })
+  } catch {
+    return pubDate.toISOString().slice(0, 10)
+  }
+})()
 ---
-<Base title={`${post.data.title} — TOONHUB`} description={post.data.description}>
-    <Header />
-    <main id="MainContent" class="page-width" style="padding:48px 0 8px;max-width:820px;min-height:50vh;">
-        <a href="/blog" style="font-size:0.8rem;color:#888;text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;">← Back to Blog</a>
-        <h1 style="margin-top:16px;font-size:1.9rem;font-weight:700;color:#fff;line-height:1.25;">{post.data.title}</h1>
-        <div style="margin-top:12px;font-size:0.8rem;color:#888;">{post.data.pubDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
-        <article class="rte" style="margin-top:28px;color:#ddd;">
-            <Content />
-        </article>
-    </main>
-    <Footer />
+
+<Base
+  title={title}
+  description={description || `${title} — ${SITE.description}`}
+  canonical={`/blog/${post.id}`}
+  image={heroImage || null}
+  lcpImage={heroImage || null}
+  ogType="article"
+  jsonLd={[
+    breadcrumbJsonLd(crumbs, Astro.site),
+    blogPostingJsonLd({
+      title,
+      description,
+      pubDate,
+      slug: post.id,
+      image: heroImage || null,
+      site: Astro.site,
+    }),
+  ]}
+  overlays={{ quickView: false }}
+>
+  <Header />
+
+  <main id="MainContent" class="page-width post-page">
+    <Breadcrumb items={crumbs} />
+
+    <article class="post" aria-labelledby="postTitle">
+      <header class="post__head">
+        <p class="post__meta">
+          <time datetime={pubDate.toISOString()}>{dateText}</time>
+          <span aria-hidden="true">·</span>
+          <span>{SITE.name}</span>
+        </p>
+        <h1 class="post__title" id="postTitle">{title}</h1>
+        {description && <p class="post__standfirst">{description}</p>}
+      </header>
+
+      {heroImage && (
+        <figure class="post__hero">
+          <Media
+            src={heroImage}
+            alt={title}
+            width={1200}
+            height={675}
+            ratio="16 / 9"
+            sizes="(max-width: 899px) 92vw, 820px"
+            priority
+          />
+        </figure>
+      )}
+
+      <div class="rte post__body">
+        <Content />
+      </div>
+
+      <footer class="post__foot">
+        <a class="link-btn" href="/blog">
+          <span aria-hidden="true">←</span> {t("blog.back")}
+        </a>
+      </footer>
+    </article>
+
+    {more.length > 0 && (
+      <aside class="post-more" aria-labelledby="postMoreHeading">
+        <h2 class="post-more__heading" id="postMoreHeading">{t("blog.title")}</h2>
+        <ul class="post-more__list">
+          {more.map((entry) => (
+            <li>
+              <a class="post-more__link" href={`/blog/${entry.id}`}>
+                <span class="post-more__title truncate">{entry.data.title}</span>
+                <span class="post-more__date">
+                  <time datetime={entry.data.pubDate.toISOString()}>
+                    {entry.data.pubDate.toISOString().slice(0, 10)}
+                  </time>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    )}
+  </main>
+
+  <Footer />
 </Base>
+
+<style>
+  .post-page { padding: 24px 0 64px; max-width: 860px; min-height: 50vh; }
+  .post__meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .post__title { margin-top: 10px; font-size: 2rem; line-height: 1.2; }
+  .post__standfirst { margin-top: 12px; font-size: 1rem; color: var(--text-muted); line-height: 1.65; max-width: 70ch; }
+  .post__hero { margin: 28px 0 0; }
+  .post__body { margin-top: 28px; }
+  .post__foot { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+  .post-more { margin-top: 40px; }
+  .post-more__heading {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .post-more__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .post-more__link {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    transition: border-color var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+  .post-more__link:hover { border-color: #fff; transform: translateX(2px); }
+  .post-more__title { font-size: 0.9rem; }
+  .post-more__date { font-size: 0.75rem; color: var(--text-faint); flex-shrink: 0; }
+  @media (max-width: 749px) {
+    .post__title { font-size: 1.5rem; }
+  }
+</style>
