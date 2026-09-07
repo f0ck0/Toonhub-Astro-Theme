@@ -1,17 +1,95 @@
 ---
+/**
+ * <PolicyLayout /> — shared shell for long-form legal / editorial pages.
+ *
+ * Passes its `title`/`description` straight through to `Base.astro` (the single
+ * SEO interface), adds a breadcrumb with matching JSON-LD, and wraps the content
+ * in `<article>` inside `<main>` so the reading order and heading hierarchy are
+ * unambiguous.
+ */
 import Base from "../layouts/Base.astro"
 import Header from "./Header.astro"
 import Footer from "./Footer.astro"
-const { title, description } = Astro.props
+import Breadcrumb from "./Breadcrumb.astro"
+import { breadcrumbJsonLd } from "../lib/seo"
+import type { SeoMeta } from "../types"
+
+export interface Props extends SeoMeta {
+  /** Page heading. Also used for `<title>` when `title` is omitted. */
+  title: string
+  /** Optional intro line rendered above the slotted content. */
+  intro?: string
+  /** "Last updated" date — rendered as `<time>` and in the JSON-LD. */
+  updated?: string | Date
+  /** Hide the breadcrumb (e.g. when embedded). */
+  breadcrumb?: boolean
+  class?: string
+}
+
+const {
+  title,
+  intro = "",
+  updated,
+  breadcrumb = true,
+  class: className = "",
+  ...seo
+} = Astro.props
+
+const updatedDate = updated
+  ? updated instanceof Date
+    ? updated
+    : new Date(updated)
+  : null
+const hasUpdated = Boolean(updatedDate && !Number.isNaN(updatedDate.valueOf()))
+
+const crumbs = [
+  { name: "Home", href: "/" },
+  { name: title },
+]
 ---
-<Base title={`${title} — TOONHUB`} description={description}>
+
+<Base
+  title={title}
+  lang={seo.lang ?? "en"}
+  description={seo.description}
+  image={seo.image}
+  robots={seo.robots}
+  jsonLd={[
+    breadcrumbJsonLd(crumbs, Astro.site),
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: title,
+      description: seo.description,
+      url: new URL(Astro.url.pathname, Astro.site ?? "https://toonhubshop.com").href,
+      ...(hasUpdated ? { dateModified: updatedDate!.toISOString() } : {}),
+      isPartOf: { "@type": "WebSite", name: "TOONHUB" },
+    },
+  ]}
+  overlays={{ quickView: false }}
+>
   <Header />
-  <main id="MainContent" class="page-width policy-page">
-    <nav class="breadcrumb" style="margin-bottom:16px;"><a href="/">Home</a><span>/</span><span style="color:#fff;">{title}</span></nav>
-    <h1>{title}</h1>
-    <div class="rte">
-      <slot />
-    </div>
+  <main id="MainContent" class:list={["page-width", "policy-page", className]}>
+    {breadcrumb && <Breadcrumb items={crumbs} />}
+
+    <article class="policy-article">
+      <header class="policy-article__head">
+        <h1>{title}</h1>
+        {hasUpdated && (
+          <p class="policy-article__updated">
+            Last updated
+            <time datetime={updatedDate!.toISOString()}>
+              {updatedDate!.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            </time>
+          </p>
+        )}
+        {intro && <p class="policy-article__intro rte">{intro}</p>}
+      </header>
+
+      <div class="rte">
+        <slot />
+      </div>
+    </article>
   </main>
   <Footer />
 </Base>

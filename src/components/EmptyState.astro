@@ -1,0 +1,106 @@
+---
+/**
+ * <EmptyState /> — the single UI for "no data".
+ *
+ * Every list surface (catalogue grid, search results, wishlist, cart, reviews)
+ * renders this instead of an empty `<div>` so the page always explains itself
+ * and always offers a way forward. `<slot />` accepts extra content such as
+ * popular collections or a retry button.
+ */
+
+export interface EmptyStateAction {
+  label: string
+  href?: string
+  /** `button` renders a `<button>` (pair with a `data-*` hook for JS). */
+  as?: "link" | "button"
+  variant?: "primary" | "outline" | "ghost"
+  type?: "button" | "submit"
+  data?: Record<string, string>
+}
+
+export interface Props {
+  title: string
+  description?: string
+  icon?: "box" | "search" | "heart" | "star" | "cart" | "alert" | "page" | "review"
+  action?: EmptyStateAction | null
+  secondaryAction?: EmptyStateAction | null
+  /** Tighter padding for in-card / drawer use. */
+  compact?: boolean
+  /** Announce changes to screen readers (used when results load async). */
+  live?: boolean
+  /**
+   * Element used for `title`. Defaults to a `<p>` because most empty states sit
+   * *inside* a section that already has its own heading. Pass `1` on pages whose
+   * empty state IS the page content (e.g. 404) so the document keeps a single
+   * `<h1>` for screen readers and crawlers.
+   */
+  headingLevel?: 1 | 2 | 3
+  id?: string
+  class?: string
+}
+
+const {
+  title,
+  description = "",
+  icon = "box",
+  action = null,
+  secondaryAction = null,
+  compact = false,
+  live = false,
+  headingLevel = 0,
+  id,
+  class: className = "",
+} = Astro.props
+
+const ICONS: Record<string, string> = {
+  box: "M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m0 0 2.6-3.5A2 2 0 0 1 7.2 3.6h9.6a2 2 0 0 1 1.6.9L21 8M3 8h18M9.5 12.5h5",
+  search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.35-4.35",
+  heart:
+    "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z",
+  star: "m12 2.4 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.2 6.2 20.3l1.1-6.5L2.6 9.2l6.5-.9L12 2.4Z",
+  cart: "M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12M8 21h.01M19 21h.01",
+  alert: "M12 3.5 1.8 20.5h20.4L12 3.5Zm0 6v5m0 3h.01",
+  page: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 0v6h6",
+  review:
+    "M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 20.5l1.6-4.6A8.4 8.4 0 0 1 3.6 11 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z",
+}
+const Title = (headingLevel ? `h${headingLevel}` : "p") as "p" | "h1" | "h2" | "h3"
+---
+
+<div
+  id={id}
+  class:list={["empty-state", compact && "empty-state--compact", className]}
+  role={live ? "status" : undefined}
+  aria-live={live ? "polite" : undefined}
+>
+  <svg class="empty-state__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d={ICONS[icon] || ICONS.box} />
+  </svg>
+  <Title class="empty-state__title">{title}</Title>
+  {description && <p class="empty-state__body">{description}</p>}
+  <slot />
+  {(action || secondaryAction) && (
+    <div class="empty-state__actions">
+      {[action, secondaryAction]
+        .filter(Boolean)
+        .map((item) =>
+          item!.as === "button" ? (
+            <button
+              type={item!.type || "button"}
+              class:list={["btn", item!.variant === "outline" ? "btn-outline" : item!.variant === "ghost" ? "btn-ghost" : "btn-primary"]}
+              {...(item!.data || {})}
+            >
+              {item!.label}
+            </button>
+          ) : (
+            <a
+              href={item!.href || "/collections"}
+              class:list={["btn", item!.variant === "outline" ? "btn-outline" : item!.variant === "ghost" ? "btn-ghost" : "btn-primary"]}
+            >
+              {item!.label}
+            </a>
+          ),
+        )}
+    </div>
+  )}
+</div>

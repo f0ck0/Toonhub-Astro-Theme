@@ -1,72 +1,218 @@
 ---
-import { getProductImage, getProductUsdPrice, productImageUrl } from "../lib/medusa"
-import { salePrice, formatCurrency, currencyFromCookies } from "../lib/currency"
-import { productReviews } from "../lib/site"
-import { cardImage } from "../lib/img"
+/**
+ * <ProductCard /> — one product in a grid or slider.
+ *
+ * Fully static: everything the client needs (quick-view payload, price for
+ * sorting, wishlist metadata) is serialised into `data-*` attributes, so no
+ * per-card script ships and the card still works before hydration.
+ *
+ * Defensive by design — a half-populated Medusa record must never crash the
+ * grid or render "undefined":
+ * - no title → falls back to the handle, then to a generic label;
+ * - no image → `<Media />` placeholder with an accessible name;
+ * - no price → the price row is omitted instead of showing $0.00;
+ * - no variants → the CTA links to the PDP instead of opening quick view.
+ */
+import Media from "./Media.astro"
 import Stars from "./Stars.astro"
+import { getProductUsdPrice } from "../lib/medusa"
+import { currencyFromCookies, formatCurrency, salePrice } from "../lib/currency"
+import { productReviews } from "../lib/site"
+import { IMAGE_SIZES, IMAGE_WIDTHS, productHoverImage, productImage } from "../lib/images"
+import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
+import type { Product, ProductVariant, QuickViewData } from "../types"
 
-const { product } = Astro.props
-const title = product?.title || product?.handle || ""
-const img = getProductImage(product)
-const hoverRaw = (product?.images || []).map((i: any) => i.url || i).find((u: string) => u && u !== img)
-const usdPrice = getProductUsdPrice(product) || 0
+export interface Props {
+  /** Medusa product. `null` renders nothing — the parent grid owns empty states. */
+  product: Product | null | undefined
+  /** Above-the-fold cards: eager + `fetchpriority="high"`. */
+  priority?: boolean
+  /** Heading level for the title (3 in grids, 2 in featured rails). */
+  headingLevel?: 2 | 3 | 4
+  /** Responsive `sizes` — defaults to the grid preset. */
+  sizes?: string
+  /** Hide the wishlist heart (e.g. inside the wishlist page itself). */
+  showWishlist?: boolean
+  /** Hide the "Sale" badge when there is no compare-at price. */
+  showSaleBadge?: boolean
+  /** Second image on hover. Disabled automatically on touch devices. */
+  showHoverImage?: boolean
+  /** Extra classes on the root `<article>`. */
+  class?: string
+  lang?: string
+}
+
+const {
+  product,
+  priority = false,
+  headingLevel = 3,
+  sizes = IMAGE_SIZES.card,
+  showWishlist = true,
+  showSaleBadge = true,
+  showHoverImage = true,
+  class: className = "",
+  lang,
+} = Astro.props
+
+const locale: Locale = pageLocale(Astro, lang)
+const t = useTranslations(locale)
+
+const Heading = `h${headingLevel}` as "h2" | "h3" | "h4"
+
+const handle = String(product?.handle || "").trim()
+const title = String(product?.title || handle || t("card.viewProduct")).trim()
+const href = handle ? `/products/${encodeURIComponent(handle)}` : ""
+const image = productImage(product)
+const hoverImage = showHoverImage ? productHoverImage(product) : ""
+
+const usdPrice = product ? (getProductUsdPrice(product) ?? 0) : 0
 const currency = currencyFromCookies(Astro.cookies)
 const { original, sale } = salePrice(usdPrice, currency)
-const saleFmt = formatCurrency(sale, currency)
-const originalFmt = formatCurrency(original, currency)
+const hasPrice = usdPrice > 0 && sale > 0
+const saleText = hasPrice ? formatCurrency(sale, currency) : ""
+const compareText = hasPrice && original > sale ? formatCurrency(original, currency) : ""
+
 const { rating, count } = productReviews(product)
-const variants = (product?.variants || []).map((v: any) => ({ id: v.id, title: v.title || v.options?.map((o: any) => o.value).join(" / ") || "Default" }))
-const qv = encodeURIComponent(JSON.stringify({
+
+const variants = (product?.variants || [])
+  .map((variant: ProductVariant) => ({
+    id: String(variant?.id || ""),
+    title:
+      String(variant?.title || "") ||
+      (variant?.options || []).map((option) => option?.value).filter(Boolean).join(" / ") ||
+      "Default",
+  }))
+  .filter((variant) => variant.id)
+
+const hasOptions = variants.length > 1
+
+/** Serialised once at build/render time; `quick-view.ts` parses it on demand. */
+const quickView: QuickViewData = {
   variantId: variants[0]?.id || "",
   title,
-  thumbnail: productImageUrl(img),
-  handle: product.handle,
+  thumbnail: image,
+  handle,
   unit_price: usdPrice,
   variant_title: variants[0]?.title,
   variants,
-}))
-const hasOptions = variants.length > 1
-const href = `/products/${product.handle}`
-const cats = (product?.categories || []).map((c: any) => c.handle || c.id).filter(Boolean).join(" ")
-const imgSrc = productImageUrl(img)
-const hoverSrc = hoverRaw ? productImageUrl(hoverRaw) : ""
-const pic = cardImage(imgSrc)
-const hoverPic = hoverSrc ? cardImage(hoverSrc) : null
+}
+
+const categories = (product?.categories || [])
+  .map((category) => category?.handle || category?.id)
+  .filter(Boolean)
+  .join(" ")
 ---
-<article class="product-card card" data-qv={qv} data-price-usd={usdPrice} data-title={title} data-cats={cats} data-id={product?.id || ""}>
-  <div class="pc-media">
-    <a href={href} aria-label={title} style="position:absolute;inset:0;z-index:1;">
-      {pic.src ? (
-        <img src={pic.src} alt={title} loading="lazy" decoding="async" width="400" height="400" />
+
+{product && (
+  <article
+    class:list={["product-card", "card", className]}
+    data-qv={encodeURIComponent(JSON.stringify(quickView))}
+    data-price-usd={usdPrice}
+    data-title={title}
+    data-cats={categories}
+    data-id={product.id || ""}
+    data-slider-item=""
+  >
+    <div class="pc-media">
+      {href ? (
+        <a class="pc-media__link" href={href} aria-label={title}>
+          <Media
+            src={image}
+            alt={title}
+            width={400}
+            height={400}
+            sizes={sizes}
+            widths={IMAGE_WIDTHS.card}
+            priority={priority}
+            placeholderLabel={t("card.imageUnavailable")}
+            imgClass="pc-media__img"
+          />
+          {hoverImage && (
+            <Media
+              src={hoverImage}
+              alt=""
+              width={400}
+              height={400}
+              sizes={sizes}
+              widths={IMAGE_WIDTHS.card}
+              imgClass="pc-hover"
+              class="pc-hover-wrap"
+            />
+          )}
+        </a>
       ) : (
-        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;"><span style="font-size:48px;">📦</span></div>
+        <Media
+          src={image}
+          alt={title}
+          width={400}
+          height={400}
+          sizes={sizes}
+          widths={IMAGE_WIDTHS.card}
+          priority={priority}
+          placeholderLabel={t("card.imageUnavailable")}
+          imgClass="pc-media__img"
+        />
       )}
-      {hoverPic?.src && <img class="pc-hover" src={hoverPic.src} alt="" loading="lazy" decoding="async" width="400" height="400" />}
-    </a>
-    <button
-      class="wish-btn"
-      type="button"
-      data-wish
-      data-wish-id={product?.id || ""}
-      data-wish-handle={product.handle}
-      data-wish-title={title}
-      data-wish-img={imgSrc}
-      data-wish-price={usdPrice}
-      aria-label="Add to wishlist"
-    >♡</button>
-    <span class="sale-badge">Sale</span>
-    <button class="choose-options" type="button" data-action="quickview">
-      {hasOptions ? "Choose options" : "Add to cart"}
-    </button>
-  </div>
-  <a href={href} class="pc-info">
-    <div class="pc-title" style="font-family:'Asul',Georgia,serif;font-weight:400;font-style:normal;text-transform:none;letter-spacing:0.03em;">{title}</div>
-    <Stars rating={rating} count={count} productId={product?.id || ""} />
-    {usdPrice > 0 && (
-      <div class="pc-price-row">
-        <span class="pc-price product-card-price" style="font-family:'Quattrocento Sans','Helvetica Neue',Arial,sans-serif;font-weight:400;font-style:italic;"><span class="pc-from">From</span>{saleFmt}</span>
-        <span class="pc-compare" data-price-strike style="font-family:'Quattrocento Sans',Arial,sans-serif;font-style:italic;font-weight:400;">{originalFmt}</span>
+
+      {showWishlist && product.id && (
+        <button
+          class="wish-btn"
+          type="button"
+          data-wish
+          data-wish-id={product.id}
+          data-wish-handle={handle}
+          data-wish-title={title}
+          data-wish-img={image}
+          data-wish-price={usdPrice}
+          data-wish-label-off={t("card.addToWishlist", { title })}
+          data-wish-label-on={t("card.removeFromWishlist", { title })}
+          aria-pressed="false"
+          aria-label={t("card.addToWishlist", { title })}
+        >
+          <span data-wish-glyph aria-hidden="true">♡</span>
+        </button>
+      )}
+
+      {showSaleBadge && hasPrice && compareText && <span class="sale-badge">{t("card.sale")}</span>}
+
+      {href && (
+        variants.length ? (
+          <button class="choose-options" type="button" data-action="quickview">
+            {hasOptions ? t("card.chooseOptions") : t("card.addToCart")}
+          </button>
+        ) : (
+          <a class="choose-options" href={href}>{t("card.viewProduct")}</a>
+        )
+      )}
+    </div>
+
+    {href ? (
+      <a href={href} class="pc-info">
+        <Heading class="pc-title">{title}</Heading>
+        <Stars rating={rating} count={count} productId={product.id} />
+        {hasPrice && (
+          <p class="pc-price-row">
+            <span class="pc-price product-card-price">
+              <span class="pc-from">{t("card.from")}</span>{saleText}
+            </span>
+            {compareText && (
+              <span class="pc-compare" data-price-strike>{compareText}</span>
+            )}
+          </p>
+        )}
+      </a>
+    ) : (
+      <div class="pc-info">
+        <Heading class="pc-title">{title}</Heading>
+        <Stars rating={rating} count={count} productId={product.id} />
+        {hasPrice && (
+          <p class="pc-price-row">
+            <span class="pc-price product-card-price">
+              <span class="pc-from">{t("card.from")}</span>{saleText}
+            </span>
+          </p>
+        )}
       </div>
     )}
-  </a>
-</article>
+  </article>
+)}

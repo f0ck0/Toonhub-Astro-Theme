@@ -1,0 +1,62 @@
+---
+/**
+ * <Breadcrumb /> — semantic trail with matching BreadcrumbList JSON-LD.
+ *
+ * Renders `<nav aria-label>` + `<ol>` (the only markup screen readers announce
+ * as a trail), marks the last crumb `aria-current="page"`, truncates long names
+ * with `text-overflow: ellipsis`, and hands the same items back to the page so
+ * it can emit structured data through `breadcrumbJsonLd()`.
+ */
+import type { HTMLAttributes } from "astro/types"
+
+export interface Crumb {
+  name: string
+  href?: string
+}
+
+export interface Props extends HTMLAttributes<"nav"> {
+  items: Crumb[]
+  /** Accessible name — keep "Breadcrumb" unless the page needs a variant. */
+  label?: string
+  /** Hide the trail visually but keep it in the a11y tree. */
+  visuallyHidden?: boolean
+  class?: string
+}
+
+const { items, label = "Breadcrumb", visuallyHidden = false, class: className = "", ...rest } =
+  Astro.props
+
+const crumbs = (Array.isArray(items) ? items : []).filter((c) => c && String(c.name).trim())
+---
+
+{crumbs.length > 0 && (
+  <nav
+    aria-label={label}
+    class:list={["breadcrumb", visuallyHidden && "sr-only", className]}
+    {...rest}
+  >
+    <ol class="breadcrumb__list">
+      {crumbs.map((crumb, index) => {
+        const last = index === crumbs.length - 1
+        return (
+          <li class="breadcrumb__item">
+            {last || !crumb.href ? (
+              <span class="breadcrumb__current" aria-current={last ? "page" : undefined}>
+                {crumb.name}
+              </span>
+            ) : (
+              <a class="breadcrumb__link" href={crumb.href}>
+                {crumb.name}
+              </a>
+            )}
+            {!last && (
+              <svg class="breadcrumb__sep" viewBox="0 0 8 12" aria-hidden="true" focusable="false">
+                <path d="M1.5 1 6.5 6l-5 5" />
+              </svg>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  </nav>
+)}
