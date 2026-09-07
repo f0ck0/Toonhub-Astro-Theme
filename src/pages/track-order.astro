@@ -1,0 +1,153 @@
+---
+/**
+ * Order tracking.
+ *
+ * Two lookups in one form (Medusa order, or a carrier tracking number), both
+ * driven by `scripts/track-order.ts`. The result region is an `aria-live`
+ * status so screen readers hear the outcome; every interpolated value is
+ * escaped in the script because it originates from an API response.
+ */
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import Breadcrumb from "../components/Breadcrumb.astro"
+import TrustIcons from "../components/TrustIcons.astro"
+import { breadcrumbJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("track.title") }]
+---
+
+<Base
+  title={t("track.title")}
+  description={t("track.intro").slice(0, 155)}
+  canonical="/track-order"
+  jsonLd={breadcrumbJsonLd(crumbs, Astro.site)}
+  overlays={{ quickView: false }}
+>
+  <Header />
+
+  <main id="MainContent" class="page-width track-page">
+    <Breadcrumb items={crumbs} />
+
+    <header class="page-head">
+      <h1 class="section-heading">{t("track.title")}</h1>
+      <p class="page-head__intro">{t("track.intro")}</p>
+    </header>
+
+    <form
+      class="track-form"
+      data-track-form
+      data-i18n-looking={t("track.looking")}
+      data-i18n-need-both={t("track.needBoth")}
+      data-i18n-opening-carrier={t("track.openingCarrier")}
+      data-i18n-not-found={t("track.notFound")}
+      data-i18n-no-match-parcel={t("track.noMatchParcel")}
+      data-i18n-order-heading={t("track.orderHeading")}
+      data-i18n-status={t("track.statusLabel")}
+      data-i18n-placed={t("track.placed")}
+      data-i18n-tracking={t("track.trackingLink")}
+      data-i18n-open-carrier={t("track.openCarrier")}
+      data-i18n-no-tracking={t("track.noTracking")}
+      data-i18n-parcel={t("track.parcelLabel")}
+      data-i18n-updates-to={t("track.updatesTo")}
+    >
+      <div class="field-row">
+        <label class="field-row__label" for="trackOrder">{t("track.orderNumber")}</label>
+        <input
+          class="input"
+          id="trackOrder"
+          name="order"
+          type="text"
+          autocomplete="off"
+          maxlength="40"
+          inputmode="numeric"
+        />
+      </div>
+
+      <div class="field-row">
+        <label class="field-row__label" for="trackEmail">{t("track.emailLabel")}</label>
+        <input
+          class="input"
+          id="trackEmail"
+          name="email"
+          type="email"
+          autocomplete="email"
+          maxlength="120"
+        />
+      </div>
+
+      <p class="track-form__divider">{t("track.parcelNote")}</p>
+
+      <div class="field-row">
+        <label class="field-row__label" for="trackParcel">{t("track.parcel")}</label>
+        <input class="input" id="trackParcel" name="parcel" type="text" autocomplete="off" maxlength="60" />
+      </div>
+
+      <button class="btn btn-primary track-form__submit" type="submit">{t("track.submit")}</button>
+    </form>
+
+    <section class="track-result" aria-labelledby="trackResultHeading">
+      <h2 class="track-result__title" id="trackResultHeading">{t("track.resultHeading")}</h2>
+      <div
+        class="track-result__body rte"
+        data-track-result
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        hidden
+      ></div>
+    </section>
+
+    <div class="track-trust">
+      <TrustIcons variant="list" />
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import "../scripts/track-order"
+</script>
+
+<style>
+  .track-page { padding: 24px 0 64px; min-height: 50vh; }
+  .page-head { margin-bottom: 28px; }
+  .page-head__intro { margin-top: 10px; max-width: 68ch; color: var(--text-muted); font-size: 0.92rem; line-height: 1.65; }
+  .track-form { display: grid; gap: 18px; max-width: 520px; }
+  .track-form__divider {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border);
+  }
+  .track-form__submit { justify-self: start; }
+  .track-result { margin-top: 32px; max-width: 560px; }
+  .track-result__title {
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .track-result__body[hidden] { display: none; }
+  .track-trust { margin-top: 40px; }
+</style>
+
+<style is:global>
+  /* Injected by `scripts/track-order.ts` — global so it styles created nodes. */
+  .track-result__heading { font-size: 1.05rem; margin-bottom: 10px; }
+  .track-result__row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 0.9rem;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .track-result__row span { color: var(--text-muted); min-width: 8ch; }
+  .track-result__row a { text-decoration: underline; }
+  .track-result__meta { font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; line-height: 1.6; }
+</style>

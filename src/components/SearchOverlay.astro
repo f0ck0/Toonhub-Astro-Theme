@@ -1,0 +1,63 @@
+---
+/**
+ * <SearchOverlay /> — predictive search dialog.
+ *
+ * The `<form>` still posts to `/search` with `method="get"`, so search works
+ * with JavaScript disabled and is crawlable; `search.ts` only adds the
+ * type-ahead suggestions on top.
+ */
+import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
+
+export interface Props {
+  lang?: string
+  /** Prefill (e.g. from `?q=` when re-opening on the results page). */
+  initialValue?: string
+  class?: string
+}
+
+const { lang, initialValue = "", class: className = "" } = Astro.props
+
+const locale: Locale = pageLocale(Astro, lang)
+const t = useTranslations(locale)
+---
+
+<div
+  id="searchModal"
+  lang={locale}
+  class:list={["search-modal", className]}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="searchModalLabel"
+  aria-hidden="true"
+  inert
+>
+  <form id="searchForm" class="search-bar" action="/search" method="get" role="search">
+    <label id="searchModalLabel" class="sr-only" for="searchInput">{t("a11y.openSearch")}</label>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+    </svg>
+    <input
+      id="searchInput"
+      class="search-bar__input"
+      type="search"
+      name="q"
+      value={initialValue}
+      placeholder={t("search.placeholder")}
+      autocomplete="off"
+      spellcheck="false"
+      enterkeyhint="search"
+      data-search-input
+      aria-describedby="searchResults"
+    />
+    <button class="search-bar__submit btn btn-primary btn-sm" type="submit">{t("search.submit")}</button>
+    <button class="close-x" type="button" data-close-search aria-label={t("a11y.closeSearch")}>×</button>
+  </form>
+
+  <div id="searchResults" class="search-results" data-search-results aria-live="polite" aria-relevant="additions text">
+    <p class="search-note">{t("search.hint")}</p>
+  </div>
+</div>
+
+<script>
+  import "../scripts/search"
+</script>

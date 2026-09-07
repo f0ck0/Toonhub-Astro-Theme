@@ -1,0 +1,30 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("policy.terms.title")} description={t("policy.terms.metaDesc")}>
+  <p>{t("policy.terms.lead")}</p>
+  <h2>{t("policy.terms.storeH")}</h2>
+  <p>{t("policy.terms.storeP")}</p>
+  <h2>{t("policy.terms.generalH")}</h2>
+  <p>{t("policy.terms.generalP")}</p>
+  <h2>{t("policy.terms.accuracyH")}</h2>
+  <p>{t("policy.terms.accuracyP")}</p>
+  <h2>{t("policy.terms.pricesH")}</h2>
+  <p>{t("policy.terms.pricesP")}</p>
+  <h2>{t("policy.terms.productsH")}</h2>
+  <p>
+    {t("policy.terms.productsP1")}{" "}<a href="/policies/refund-policy">{t("policy.link.refund")}</a>.{" "}{t("policy.terms.productsP2")}
+  </p>
+  <h2>{t("policy.terms.toolsH")}</h2>
+  <p>{t("policy.terms.toolsP")}</p>
+  <h2>{t("policy.terms.commentsH")}</h2>
+  <p>{t("policy.terms.commentsP")}</p>
+  <h2>{t("policy.terms.personalH")}</h2>
+  <p>{t("policy.terms.personalP1")}{" "}<a href="/policies/privacy-policy">{t("policy.link.privacy")}</a>.</p>
+  <h2>{t("policy.terms.contactH")}</h2>
+  <p>{t("policy.terms.contactP", { email: SITE.email })}</p>
+</PolicyLayout>

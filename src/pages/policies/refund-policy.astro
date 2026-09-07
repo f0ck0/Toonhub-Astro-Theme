@@ -1,0 +1,22 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("policy.refund.title")} description={t("policy.refund.metaDesc")}>
+  <p>{t("policy.refund.lead")}</p>
+  <p><strong>{t("policy.refund.clearanceStrong")}</strong>{" "}{t("policy.refund.clearanceRest")}</p>
+  <p>{t("policy.refund.eligible")}</p>
+  <h2>{t("policy.refund.startH")}</h2>
+  <p>{t("policy.refund.startP", { email: SITE.email })}</p>
+  <h2>{t("policy.refund.detailsH")}</h2>
+  <p>{t("policy.refund.detailsP")}</p>
+  <h2>{t("policy.refund.damageH")}</h2>
+  <p>{t("policy.refund.damageP")}</p>
+  <h2>{t("policy.refund.refundsH")}</h2>
+  <p>{t("policy.refund.refundsP")}</p>
+  <h2>{t("policy.refund.euH")}</h2>
+  <p>{t("policy.refund.euP")}</p>
+</PolicyLayout>

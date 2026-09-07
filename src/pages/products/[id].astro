@@ -1,0 +1,690 @@
+---
+/**
+ * Product detail page (PDP).
+ *
+ * Rendering rules:
+ * - **404 is real.** An unknown handle sets `Astro.response.status = 404` and
+ *   rewrites to the shared 404 view — no 200 page with an empty shell.
+ * - **No-JS purchase path.** The first variant is preselected server-side and
+ *   both CTAs are real links/forms carrying `/checkout?buy=…&qty=…&v=…`, using
+ *   the exact parameter contract `scripts/cart.ts` writes.
+ * - **Class names follow the theme.** `.pdp-grid`, `.pdp-hero`, `.pdp-media`,
+ *   `.thumb-row`, `.pdp-size-btn`, `.pdp-buy`, `.pdp-sticky`, `.lightbox` are the
+ *   existing global styles, so the page inherits the store's design language
+ *   instead of shipping a second one.
+ * - `scripts/pdp.ts` only changes *state* (selected variant, quantity, gallery
+ *   index, price text) through `data-*` hooks — never structure.
+ */
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import Media from "../../components/Media.astro"
+import Stars from "../../components/Stars.astro"
+import Breadcrumb from "../../components/Breadcrumb.astro"
+import TrustIcons from "../../components/TrustIcons.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import SectionHeading from "../../components/SectionHeading.astro"
+import EmptyState from "../../components/EmptyState.astro"
+import {
+  getAllCategories,
+  getProduct,
+  getProductsByIds,
+  getProductUsdPrice,
+  isFallbackProduct,
+} from "../../lib/medusa"
+import { categoryBlurb, productReviews } from "../../lib/site"
+import { productImage } from "../../lib/images"
+import { breadcrumbJsonLd, productJsonLd, stripHtml } from "../../lib/seo"
+import { currencyFromCookies, formatCurrency, formatPriceFrom, salePrice } from "../../lib/currency"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+import type { Product, ProductVariant } from "../../types"
+
+const t = useTranslations(pageLocale(Astro))
+
+const { id } = Astro.params
+const handle = String(id || "")
+const product = await getProduct(handle)
+
+if (!product || !(product.title || product.handle)) {
+  Astro.response.status = 404
+  return Astro.rewrite("/404")
+}
+
+const productHandle = String(product.handle || "")
+const canonical = `/products/${productHandle}`
+const title = String(product.title || product.handle || "Product")
+const subtitle = product.subtitle ? String(product.subtitle) : ""
+const MAX_QTY = 99
+const MAX_GALLERY = 5
+
+/* ---------------------------------------------------------------- gallery --- */
+
+/** Medusa image entries: objects with a `url`, or bare strings on older payloads. */
+interface ImageLike {
+  url: string
+}
+
+function isImageLike(value: unknown): value is ImageLike {
+  if (!value || typeof value !== "object") return false
+  return typeof (value as { url?: unknown }).url === "string"
+}
+
+const imageSources = [
+  ...(Array.isArray(product.images)
+    ? product.images.filter(isImageLike).map((image) => image.url)
+    : []),
+  product.thumbnail,
+]
+  .map((source) => String(source || "").trim())
+  .filter((source, index, list) => source && list.indexOf(source) === index)
+
+const images = (imageSources.length ? imageSources : [productImage(product)].filter(Boolean)).slice(
+  0,
+  MAX_GALLERY,
+)
+const primaryImage = images[0] || ""
+const showGallery = primaryImage.length > 0
+
+/* --------------------------------------------------------------- variants --- */
+
+interface VariantOption {
+  id: string
+  title: string
+  /** USD minor units, or `null` when Medusa did not return a price. */
+  price: number | null
+}
+
+/**
+ * USD minor units for one variant. Medusa deployments differ — some return
+ * `calculated_price`, some only raw `prices[]`, a few store major units — so
+ * every shape is probed and `null` means "unknown" (never $0.00).
+ */
+function variantUsdPrice(variant: ProductVariant): number | null {
+  const prices = variant.prices || []
+  const usd = prices.find((price) => String(price.currency_code || "").toLowerCase() === "usd")
+  const candidates = [
+    variant.calculated_price?.calculated_amount,
+    variant.calculated_price?.original_amount,
+    usd?.amount,
+    prices[0]?.amount,
+  ]
+  for (const raw of candidates) {
+    if (raw == null) continue
+    const value = Number(raw)
+    if (!Number.isFinite(value) || value <= 0) continue
+    return value < 1000 ? Math.round(value * 100) : Math.round(value)
+  }
+  return null
+}
+
+const variants: VariantOption[] = (product.variants || [])
+  .map((variant) => ({
+    id: String(variant?.id || ""),
+    title: String(variant?.title || "").trim() || "Standard",
+    price: variantUsdPrice(variant),
+  }))
+  .filter((variant) => variant.id)
+
+const firstVariant = variants[0] || null
+const showVariants = variants.length > 1
+
+/* ------------------------------------------------------------------ price --- */
+
+const currency = currencyFromCookies(Astro.cookies)
+const firstPriceUsd = firstVariant?.price ?? getProductUsdPrice(product) ?? 0
+const { original: compareUsd, sale: saleUsd } = salePrice(firstPriceUsd, currency)
+const hasPrice = saleUsd > 0
+/** "From $29.00" while a range is unchosen; the exact price once one is. */
+const priceText = hasPrice
+  ? showVariants
+    ? formatPriceFrom(saleUsd, currency)
+    : formatCurrency(saleUsd, currency)
+  : ""
+const compareText = hasPrice && compareUsd > saleUsd ? formatCurrency(compareUsd, currency) : ""
+
+/**
+ * `/checkout?buy=…` deep link — same parameter contract as `checkoutHref()` in
+ * `scripts/cart.ts`, so the no-JS path and the JS path land in the same state.
+ */
+function buyHref(variant: VariantOption | null, qty = 1): string {
+  const params = new URLSearchParams({
+    buy: String(variant?.id || ""),
+    qty: String(Math.max(1, qty)),
+    p: String(variant?.price ?? firstPriceUsd),
+    t: title.slice(0, 120),
+    h: productHandle,
+    v: String(variant?.title || ""),
+    i: primaryImage,
+  })
+  return `/checkout?${params.toString()}`
+}
+
+/** `data-*` payload read by `payloadFromTrigger()` in `scripts/cart.ts`. */
+const triggerData = {
+  "data-variant-target": "",
+  "data-variant-id": firstVariant?.id || "",
+  "data-vtitle": firstVariant?.title || "",
+  "data-title": title,
+  "data-handle": String(product.handle || ""),
+  "data-thumbnail": primaryImage,
+  "data-price": String(firstPriceUsd),
+  "data-qty": "1",
+} as const
+
+/* ------------------------------------------------------------ related ------- */
+
+const productCategories = product.categories || []
+const firstCategoryId = productCategories[0]?.id || ""
+let related: Product[] = []
+
+try {
+  const all = await getAllCategories()
+  const siblings = firstCategoryId
+    ? all.filter((entry) => entry.parent_category_id === firstCategoryId)
+    : []
+  const pool = siblings.length ? siblings : all
+  const ids = pool
+    .flatMap((entry) => (entry.products || []).map((stub) => String(stub.id || "")))
+    .filter((entry) => entry && entry !== product.id)
+
+  if (ids.length) {
+    const fetched = await getProductsByIds([...new Set(ids)].slice(0, 18))
+    related = fetched.products.filter((entry) => entry.id !== product.id).slice(0, 8)
+  }
+} catch {
+  related = []
+}
+
+/* ------------------------------------------------------------- reviews ------ */
+
+/** Real review stats only — `productReviews()` never invents numbers. */
+const { count: reviewCount, rating } = productReviews(product)
+const seriesBlurb = productCategories[0]?.name
+  ? categoryBlurb(String(productCategories[0].name))
+  : ""
+const descriptionText = stripHtml(product.description || "")
+const demoCatalog = isFallbackProduct(product)
+
+/* ------------------------------------------------------------ breadcrumbs --- */
+
+const crumbs = [
+  { name: t("nav.home"), href: "/" },
+  { name: t("nav.shopAll"), href: "/collections" },
+  ...productCategories.slice(0, 2).map((category) => ({
+    name: String(category.name || ""),
+    href: category.handle ? `/collections/${category.handle}` : undefined,
+  })),
+  { name: title },
+].filter((crumb) => Boolean(crumb.name))
+---
+
+<Base
+  title={title}
+  description={
+    (descriptionText || `${title}${subtitle ? ` — ${subtitle}` : ""} — premium anime figure.`).slice(0, 155)
+  }
+  canonical={canonical}
+  image={primaryImage}
+  lcpImage={primaryImage}
+  ogType="product"
+  jsonLd={[
+    breadcrumbJsonLd(crumbs, Astro.site),
+    productJsonLd({
+      product,
+      price: firstPriceUsd,
+      currency,
+      images,
+      rating,
+      reviewCount,
+      site: Astro.site,
+    }),
+  ]}
+  overlays={{ quickView: true }}
+>
+  <Header />
+
+  <main id="MainContent" data-pdp-product={product.id}>
+    <div class="page-width pdp-top">
+      <Breadcrumb items={crumbs} />
+
+      <div class="pdp-grid">
+        <div class="pdp-hero">
+          {showGallery ? (
+            <>
+              <div class="pdp-media">
+                <button
+                  class="pdp-zoom"
+                  type="button"
+                  data-gallery-stage
+                  aria-label={t("pdp.zoomImage")}
+                  aria-haspopup="dialog"
+                >
+                  <Media
+                    src={primaryImage}
+                    alt={t("pdp.imageAlt", { title })}
+                    width={900}
+                    height={900}
+                    priority
+                    sizes="(max-width: 989px) 92vw, 46vw"
+                    ratio="1 / 1"
+                  />
+                </button>
+              </div>
+
+              {images.length > 1 && (
+                <div class="thumb-row" role="group" aria-label={t("pdp.galleryThumbs")}>
+                  {images.map((source, index) => (
+                    <button
+                      class="thumb-img"
+                      type="button"
+                      data-gallery-thumb
+                      data-full-src={source}
+                      aria-pressed={index === 0 ? "true" : "false"}
+                      aria-label={t("pdp.thumbLabel", { index: index + 1, total: images.length })}
+                    >
+                      <Media src={source} alt="" width={180} height={180} sizes="18vw" ratio="1 / 1" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p class="sr-only" data-gallery-live aria-live="polite">
+                {t("pdp.imageAlt", { title })}
+              </p>
+            </>
+          ) : (
+            <EmptyState
+              icon="page"
+              compact
+              title={t("card.imageUnavailable")}
+              description={t("pdp.noImageBody")}
+            />
+          )}
+        </div>
+
+        <div class="pdp-info">
+          <h1 class="pdp-title">{title}</h1>
+          {subtitle && <p class="pdp-sub">{subtitle}</p>}
+
+          <p class="pdp-price pc-price">
+            {hasPrice ? (
+              <span data-variant-price>{priceText}</span>
+            ) : (
+              <span>{t("card.priceUnavailable")}</span>
+            )}
+          </p>
+
+          {compareText && (
+            <p class="pc-price-row">
+              <s class="pdp-original pc-compare" data-variant-compare>
+                {compareText}
+                <span class="sr-only"> — {t("card.sale")}</span>
+              </s>
+              <span class="sale-badge">{t("card.sale")}</span>
+            </p>
+          )}
+
+          <p class="pdp-tax">{t("cart.taxesNote")}</p>
+
+          {rating > 0 && reviewCount > 0 && (
+            <a class="pdp-rating-link" href="#reviews">
+              <Stars rating={rating} count={reviewCount} productId={product.id} />
+            </a>
+          )}
+
+          {productCategories.length > 0 && (
+            <p class="pdp-cats">
+              {t("pdp.seriesLabel")}:{" "}
+              {productCategories.map((category, index) => (
+                <>
+                  {index > 0 && ", "}
+                  <a class="link-btn" href={`/collections/${category.handle}`}>
+                    {category.name}
+                  </a>
+                </>
+              ))}
+            </p>
+          )}
+
+          {showVariants && (
+            <fieldset class="pdp-options" data-variant-row>
+              <legend class="pdp-label">{t("quickView.selectOption")}</legend>
+              <div class="pdp-size-row">
+                {variants.map((variant, index) => (
+                  <button
+                    class="pdp-size-btn"
+                    type="button"
+                    data-variant={variant.id}
+                    data-vtitle={variant.title}
+                    data-vprice={String(variant.price ?? firstPriceUsd)}
+                    aria-pressed={index === 0 ? "true" : "false"}
+                  >
+                    <span class="pdp-size-btn__title truncate">{variant.title}</span>
+                    {variant.price ? (
+                      <span class="pdp-size-btn__price">
+                        {formatCurrency(salePrice(variant.price, currency).sale, currency)}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+              <p class="pdp-selected" data-selected-option aria-live="polite">
+                {t("pdp.selectedOption", { title: firstVariant?.title || "" })}
+              </p>
+            </fieldset>
+          )}
+
+          <div class="pdp-qty" data-pdp-qty-row data-max={MAX_QTY}>
+            <label class="pdp-label pdp-qty__label" for="pdpQty">
+              {t("quickView.quantity")}
+            </label>
+            <div class="qty-row">
+              <button
+                type="button"
+                data-pdp-qty-step="-1"
+                aria-label={t("a11y.decreaseQty")}
+                disabled
+              >
+                −
+              </button>
+              <input
+                class="qty-input"
+                id="pdpQty"
+                type="number"
+                inputmode="numeric"
+                name="qty"
+                value="1"
+                min="1"
+                max={MAX_QTY}
+                step="1"
+                data-pdp-qty
+              />
+              <button type="button" data-pdp-qty-step="1" aria-label={t("a11y.increaseQty")}>
+                +
+              </button>
+            </div>
+          </div>
+
+          <div class="pdp-buy" data-pdp-buy>
+            <a
+              class="btn btn-primary"
+              href={buyHref(firstVariant)}
+              data-action="buynow"
+              data-busy-label={t("quickView.goingToCheckout")}
+              {...triggerData}
+            >
+              {t("quickView.buyNow")}
+            </a>
+            <button class="btn btn-outline" type="button" data-action="add" {...triggerData}>
+              {t("quickView.addToCart")}
+            </button>
+            <button
+              class="pdp-wish"
+              type="button"
+              data-wish
+              data-wish-id={product.id}
+              data-wish-handle={String(product.handle || "")}
+              data-wish-title={title}
+              data-wish-img={primaryImage}
+              data-wish-price={String(firstPriceUsd)}
+              data-wish-label-off={t("card.addToWishlist", { title })}
+              data-wish-label-on={t("card.removeFromWishlist", { title })}
+              aria-pressed="false"
+              aria-label={t("card.addToWishlist", { title })}
+            >
+              <span data-wish-glyph aria-hidden="true">♡</span>
+            </button>
+          </div>
+
+          {demoCatalog && (
+            <p class="limited-banner" data-medusa-warning>{t("pdp.demoNotice")}</p>
+          )}
+
+          <div class="pdp-accordion">
+            <details open>
+              <summary>{t("pdp.descriptionTab")}</summary>
+              {product.description ? (
+                <div class="rte" set:html={product.description} />
+              ) : (
+                <p class="pdp-fallback-copy">
+                  {title}
+                  {seriesBlurb ? ` — ${seriesBlurb}` : ""}
+                </p>
+              )}
+            </details>
+            <details>
+              <summary>{t("pdp.shippingTab")}</summary>
+              <TrustIcons variant="list" />
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {seriesBlurb && (
+      <section class="page-width pdp-details" aria-labelledby="detailsHeading">
+        <h2 class="section-heading" id="detailsHeading">{t("pdp.detailsTitle")}</h2>
+        <p class="pdp-details__body">{seriesBlurb}</p>
+      </section>
+    )}
+
+    <section class="page-width pdp-reviews" id="reviews" aria-labelledby="reviewsHeading">
+      <h2 class="section-heading" id="reviewsHeading">
+        {t("pdp.reviewsLabel")}
+        <span data-reviews-heading-count>{reviewCount ? `(${reviewCount})` : ""}</span>
+      </h2>
+
+      <div class="review-summary" data-reviews-summary hidden>
+        <span class="review-summary__stars" data-reviews-average></span>
+        <span class="review-summary__meta" data-reviews-count></span>
+      </div>
+
+      {/* `scripts/reviews.ts` injects skeletons, then rows or an empty state. */}
+      <div class="reviews-list" data-reviews-list aria-busy="false"></div>
+
+      <form class="review-form" data-review-form data-product-id={product.id}>
+        <h3 class="review-form__heading">{t("pdp.writeReview")}</h3>
+
+        <fieldset class="review-form__rating">
+          <legend>{t("pdp.yourRating")}</legend>
+          <div class="star-input" role="radiogroup" aria-label={t("pdp.yourRating")}>
+            {[5, 4, 3, 2, 1].map((value) => (
+              <>
+                <input
+                  type="radio"
+                  id={`star-${value}`}
+                  name="rating"
+                  value={String(value)}
+                  checked={value === 5}
+                  required
+                />
+                <label
+                  for={`star-${value}`}
+                  title={t(value > 1 ? "pdp.starMany" : "pdp.starOne", { n: value })}
+                >
+                  <span aria-hidden="true">★</span>
+                  <span class="sr-only">
+                    {t(value > 1 ? "pdp.starMany" : "pdp.starOne", { n: value })}
+                  </span>
+                </label>
+              </>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="reviewTitle">{t("pdp.reviewTitleLabel")}</label>
+          <input
+            class="input"
+            id="reviewTitle"
+            type="text"
+            name="title"
+            maxlength="120"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <label for="reviewBody">
+            {t("pdp.reviewBodyLabel")} <span class="field__req">{t("common.required")}</span>
+          </label>
+          {/* Single line on purpose: whitespace inside <textarea> becomes its value. */}
+          <textarea class="input" id="reviewBody" name="content" rows="5" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="field">
+          <label for="reviewName">
+            {t("pdp.reviewNameLabel")} <span class="field__req">{t("common.required")}</span>
+          </label>
+          <input
+            class="input"
+            id="reviewName"
+            type="text"
+            name="name"
+            maxlength="60"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="reviewImages">{t("pdp.reviewImagesLabel")}</label>
+          <input
+            class="input"
+            id="reviewImages"
+            type="file"
+            name="images"
+            accept="image/*"
+            multiple
+            data-review-images
+          />
+          <p class="field__note" data-review-photo-note></p>
+          <div class="review-preview" data-review-preview hidden aria-live="polite"></div>
+        </div>
+
+        <p class="form-message" data-review-error hidden role="alert"></p>
+        <p class="form-message" data-review-success hidden role="status"></p>
+
+        <div class="review-form__actions">
+          <button class="btn btn-primary" type="submit" data-review-submit>
+            {t("pdp.submitReview")}
+          </button>
+          <button class="btn btn-ghost" type="reset">{t("common.cancel")}</button>
+        </div>
+      </form>
+    </section>
+
+    {related.length > 0 && (
+      <section class="page-width pdp-related" aria-labelledby="relatedHeading">
+        <SectionHeading headingId="relatedHeading" title={t("pdp.related")} />
+        <div class="product-grid">
+          {related.map((entry) => (
+            <ProductCard product={entry} sizes="(max-width: 749px) 46vw, 220px" />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <div class="pdp-sticky" data-pdp-sticky>
+      <div class="pdp-sticky__text">
+        <p class="pdp-sticky-title">{title}</p>
+        <p class="pdp-sticky-price" data-variant-price>
+          {hasPrice ? formatCurrency(saleUsd, currency) : ""}
+        </p>
+      </div>
+      <a
+        class="btn btn-primary"
+        href={buyHref(firstVariant)}
+        data-action="buynow"
+        data-busy-label={t("quickView.goingToCheckout")}
+        {...triggerData}
+      >
+        {t("quickView.buyNow")}
+      </a>
+    </div>
+
+    <dialog class="lightbox" data-lightbox aria-label={t("pdp.lightboxTitle")}>
+      <img
+        class="lightbox__img"
+        data-lightbox-img
+        src={primaryImage}
+        alt={t("pdp.imageAlt", { title })}
+        width="1200"
+        height="1200"
+      />
+      <button class="lightbox__close icon-btn" type="button" data-lightbox-close aria-label={t("a11y.close")}>
+        <span aria-hidden="true">✕</span>
+      </button>
+    </dialog>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import "../../scripts/pdp"
+  import "../../scripts/reviews"
+</script>
+
+<style>
+  /* Only what the global PDP styles do not already cover. */
+  .pdp-top { padding-top: 24px; padding-bottom: 8px; }
+  .pdp-zoom {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+  }
+  .pdp-original { margin-right: 10px; color: var(--text-faint); font-size: 0.95rem; }
+  .pdp-rating-link { display: inline-block; margin-top: 12px; }
+  .pdp-cats { margin-top: 12px; font-size: 0.85rem; color: var(--text-muted); }
+  .pdp-cats a { text-decoration: underline; }
+  .pdp-options { border: 0; padding: 0; margin: 24px 0 0; min-width: 0; }
+  .pdp-size-btn__title { display: block; }
+  .pdp-size-btn__price {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 400;
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .pdp-selected { margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); }
+  .pdp-qty__label { margin: 0; }
+  .qty-input {
+    width: 52px;
+    height: 32px;
+    text-align: center;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    font: inherit;
+    font-size: 0.85rem;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-row button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .pdp-fallback-copy { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+  .pdp-details { padding: 32px 0 8px; }
+  .pdp-details__body { margin-top: 10px; max-width: 82ch; color: var(--text-muted); font-size: 0.92rem; line-height: 1.65; }
+  .pdp-reviews { padding: 40px 0 8px; }
+  .pdp-reviews .section-heading { margin-bottom: 16px; }
+  [data-reviews-heading-count] { color: var(--text-faint); font-weight: 400; margin-left: 6px; }
+  .reviews-list { display: grid; gap: 4px; margin-top: 8px; }
+  .review-summary__meta { font-size: 0.82rem; color: var(--text-muted); }
+  .review-form { margin-top: 32px; display: grid; gap: 18px; max-width: 640px; }
+  .review-form__heading { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .review-form__rating { border: 0; padding: 0; margin: 0; }
+  .review-form__rating legend { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .review-form__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .review-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .review-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #111; }
+  .field__req { font-size: 0.7rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .field__note { font-size: 0.75rem; color: var(--text-faint); margin-top: 6px; }
+  .pdp-related { padding: 40px 0 48px; }
+  .pdp-sticky__text { min-width: 0; }
+</style>

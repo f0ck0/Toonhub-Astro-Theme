@@ -1,0 +1,188 @@
+---
+/**
+ * `/search?q=…` — the accessible, no-JS search route.
+ *
+ * The form is a native GET submit, so search works with scripting disabled.
+ * `scripts/search-page.ts` adds the client-side retry (when SSR found nothing)
+ * plus series / price / sort filtering over the rendered cards.
+ */
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import ProductCard from "../components/ProductCard.astro"
+import Breadcrumb from "../components/Breadcrumb.astro"
+import Skeleton from "../components/Skeleton.astro"
+import EmptyState from "../components/EmptyState.astro"
+import { getNavCategories, searchProducts } from "../lib/medusa"
+import { SITE, shopCategories } from "../lib/site"
+import { breadcrumbJsonLd, searchPageJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+import type { Product, ProductCategory } from "../types"
+
+const t = useTranslations(pageLocale(Astro))
+
+const term = (Astro.url.searchParams.get("q") || "").trim().slice(0, 120)
+const LIMIT = 48
+
+let products: Product[] = []
+let totalCount = 0
+let series: ProductCategory[] = []
+
+if (term) {
+  try {
+    const result = await searchProducts(term, LIMIT)
+    products = result.products.filter((product) => product && product.handle)
+    totalCount = result.count
+  } catch (error) {
+    console.error("[search] query failed:", error)
+  }
+}
+
+try {
+  series = shopCategories(await getNavCategories())
+} catch {
+  series = []
+}
+
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: term ? `${t("search.title")}: ${term}` : t("search.title") }]
+const noResults = Boolean(term) && products.length === 0
+---
+
+<Base
+  title={term ? `Search: ${term}` : "Search"}
+  description={
+    term
+      ? `Results for “${term}” at ${SITE.name} — anime figures with free worldwide shipping.`
+      : `Search the ${SITE.name} catalogue of anime figures by series, character or title.`
+  }
+  canonical="/search"
+  robots="noindex,follow"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site), searchPageJsonLd(term, Astro.site)]}
+  overlays={{ quickView: true }}
+>
+  <Header />
+
+  <main id="MainContent" class="page-width search-page" data-search-page data-search-q={term}>
+    <Breadcrumb items={crumbs} />
+
+    <header class="page-head">
+      <h1 class="section-heading">{t("search.title")}</h1>
+    </header>
+
+    <form class="search-page-form" method="get" action="/search" role="search">
+      <label class="sr-only" for="searchPageQuery">{t("search.placeholder")}</label>
+      <input
+        class="input search-page-form__input"
+        id="searchPageQuery"
+        type="search"
+        name="q"
+        value={term}
+        placeholder={t("search.placeholder")}
+        autocomplete="off"
+        maxlength="120"
+      />
+      <button class="btn btn-solid" type="submit">{t("search.submit")}</button>
+    </form>
+
+    {term && (
+      <div class="search-page__filters" data-search-filters hidden={!products.length}>
+        <div class="field field--inline">
+          <label class="field__label" for="filterSeries">{t("search.filtersSeries")}</label>
+          <select class="input" id="filterSeries" name="series" data-search-series>
+            <option value="">All series</option>
+            {series.map((category) => (
+              <option value={category.handle}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="field field--inline">
+          <label class="field__label" for="filterPrice">{t("search.filtersPrice")}</label>
+          <select class="input" id="filterPrice" name="price" data-search-price>
+            <option value="">Any price</option>
+            <option value="0-5000">Under $50</option>
+            <option value="5000-10000">$50 – $100</option>
+            <option value="10000-25000">$100 – $250</option>
+            <option value="25000-99999999">$250+</option>
+          </select>
+        </div>
+
+        <div class="field field--inline">
+          <label class="field__label" for="filterSort">{t("search.filtersSort")}</label>
+          <select class="input" id="filterSort" name="sort" data-search-sort>
+            <option value="featured">Featured</option>
+            <option value="az">Alphabetically, A–Z</option>
+            <option value="za">Alphabetically, Z–A</option>
+            <option value="price-asc">Price, low to high</option>
+            <option value="price-desc">Price, high to low</option>
+          </select>
+        </div>
+      </div>
+    )}
+
+    <p class="search-page__count" data-search-count role="status" aria-live="polite" hidden={!term}>
+      {term
+        ? `${totalCount} result${totalCount === 1 ? "" : "s"} for “${term}”`
+        : ""}
+    </p>
+
+    <div class="product-grid" data-search-grid>
+      {products.length ? (
+        products.map((product, index) => (
+          <ProductCard product={product} headingLevel={2} priority={index < 4} />
+        ))
+      ) : term ? (
+        <Skeleton variant="product-card" count={6} layout="grid" label={t("grid.loadingProducts")} />
+      ) : null}
+    </div>
+
+    <div data-search-empty hidden={!noResults}>
+      <EmptyState
+        icon="search"
+        title={t("search.emptyTitle", { query: term })}
+        description={t("search.emptyBody")}
+        action={{ label: t("grid.browseAll"), href: "/collections", variant: "outline" }}
+      />
+    </div>
+
+    {!term && (
+      <EmptyState
+        icon="search"
+        title={t("search.emptyTitle", { query: "" })}
+        description={t("search.emptyBody")}
+        action={{ label: t("grid.browseAll"), href: "/collections", variant: "outline" }}
+      />
+    )}
+
+    <noscript>
+      <style>
+        [data-search-filters] { display: none; }
+      </style>
+    </noscript>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import "../scripts/search-page"
+  import "../scripts/reviews"
+</script>
+
+<style>
+  .search-page { padding: 24px 0 64px; }
+  .page-head { margin-bottom: 20px; }
+  .search-page-form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .search-page-form__input { flex: 1 1 260px; }
+  .search-page__filters {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+  }
+  .field--inline { display: flex; align-items: center; gap: 8px; }
+  .field__label { font-size: 0.78rem; color: var(--text-muted); }
+  .search-page__count { margin: 16px 0; font-size: 0.85rem; color: var(--text-muted); }
+</style>

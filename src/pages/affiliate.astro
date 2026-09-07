@@ -1,0 +1,19 @@
+---
+import PolicyLayout from "../components/PolicyLayout.astro"
+import { SITE } from "../lib/site"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("affiliate.title")} description={t("affiliate.metaDesc")}>
+  <p>{t("affiliate.intro")}</p>
+  <h2>{t("affiliate.howH")}</h2>
+  <ul>
+    <li>{t("affiliate.how1")}</li>
+    <li>{t("affiliate.how2")}</li>
+    <li>{t("affiliate.how3")}</li>
+    <li>{t("affiliate.how4")}</li>
+  </ul>
+  <h2>{t("affiliate.applyH")}</h2>
+  <p>{t("affiliate.applyP", { email: SITE.email })}</p>
+</PolicyLayout>

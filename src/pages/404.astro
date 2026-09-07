@@ -1,0 +1,102 @@
+---
+/**
+ * 404. Also the target of `Astro.rewrite("/404")` from product and collection
+ * pages, so it must be cheap and never fail: category links are best-effort.
+ */
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import EmptyState from "../components/EmptyState.astro"
+import { getAllCategories } from "../lib/medusa"
+import { SITE, shopCategories } from "../lib/site"
+import { pageLocale, useTranslations } from "../lib/i18n"
+import type { ProductCategory } from "../types"
+
+const t = useTranslations(pageLocale(Astro))
+const requested = new URL(Astro.request.url).pathname
+
+let popular: ProductCategory[] = []
+try {
+  popular = shopCategories(await getAllCategories())
+    .filter((category) => category.handle)
+    .slice(0, 8)
+} catch {
+  popular = []
+}
+---
+
+<Base
+  title={t("empty.notFoundTitle")}
+  description={`We could not find ${requested} on ${SITE.name}. Try the search box or browse our anime figure collections.`}
+  canonical="/404"
+  robots="noindex,follow"
+  overlays={{ quickView: false, search: true }}
+>
+  <Header />
+
+  <main id="MainContent" class="page-width notfound">
+    <EmptyState
+      icon="search"
+      title={t("empty.notFoundTitle")}
+      description={t("empty.notFoundBody")}
+      headingLevel={1}
+      action={{ label: t("notFound.shopAll"), href: "/collections" }}
+      secondaryAction={{ label: t("notFound.goHome"), href: "/", variant: "outline" }}
+    >
+      <form class="notfound__search" method="get" action="/search" role="search">
+        <label class="sr-only" for="notFoundQuery">{t("search.placeholder")}</label>
+        <input
+          class="input"
+          id="notFoundQuery"
+          type="search"
+          name="q"
+          placeholder={t("search.placeholder")}
+          autocomplete="off"
+          maxlength="120"
+        />
+        <button class="btn btn-outline" type="submit">{t("search.submit")}</button>
+      </form>
+
+      {popular.length > 0 && (
+        <nav class="notfound__nav" aria-label={t("notFound.popular")}>
+          <p class="notfound__nav-label">{t("notFound.popular")}</p>
+          <ul class="notfound__list">
+            {popular.map((category) => (
+              <li>
+                <a class="filter-pill truncate" href={`/collections/${category.handle}`}>
+                  {category.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </EmptyState>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .notfound { padding: 72px 0 96px; min-height: 52vh; }
+  .notfound__search {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 24px;
+    width: min(520px, 100%);
+    margin-inline: auto;
+  }
+  .notfound__search .input { flex: 1 1 220px; }
+  .notfound__nav { margin-top: 28px; }
+  .notfound__nav-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .notfound__list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .notfound__list .filter-pill { max-width: 22ch; }
+</style>

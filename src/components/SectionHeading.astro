@@ -1,0 +1,63 @@
+---
+/**
+ * <SectionHeading /> — consistent `<section>` header.
+ *
+ * Enforces one `<h2>` per band (heading order matters for SEO and screen
+ * readers), keeps the eyebrow/kicker optional, truncates long titles, and lets
+ * the page attach an action (slider arrows, "View all") without each page
+ * re-inventing the flex row.
+ */
+import type { HTMLAttributes } from "astro/types"
+
+export interface Props extends HTMLAttributes<"div"> {
+  title: string
+  /** Small uppercase line above the title. */
+  eyebrow?: string
+  /** Supporting sentence under the title. Clamped to `descriptionLines`. */
+  description?: string
+  descriptionLines?: number
+  /** Heading level — bump to 3 inside nested sections. */
+  level?: 2 | 3 | 4
+  /** Put this id on the heading so a section can use `aria-labelledby`. */
+  headingId?: string
+  align?: "start" | "center"
+  /** Render an actions slot on the right: links, slider controls, counters. */
+  actions?: boolean
+  class?: string
+}
+
+const {
+  title,
+  eyebrow = "",
+  description = "",
+  descriptionLines = 3,
+  level = 2,
+  headingId,
+  align = "start",
+  actions = false,
+  class: className = "",
+  ...rest
+} = Astro.props
+
+const Heading = `h${level}` as "h2" | "h3" | "h4"
+---
+
+<div
+  class:list={["section-head", `section-head--${align}`, className]}
+  data-section-head=""
+  {...rest}
+>
+  <div class="section-head__text">
+    {eyebrow && <p class="section-head__eyebrow">{eyebrow}</p>}
+    <Heading class="section-heading" id={headingId} title={title}>
+      {title}
+    </Heading>
+    {description && (
+      <p class="section-head__desc line-clamp" style={`--line-clamp:${descriptionLines};`}>
+        {description}
+      </p>
+    )}
+  </div>
+  {actions && <div class="section-head__actions"><slot name="actions" /></div>}
+  <slot />
+</div>

@@ -1,0 +1,27 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("policy.privacy.title")} description={t("policy.privacy.metaDesc")}>
+  <p>{t("policy.privacy.lead", { domain: SITE.domain })}</p>
+  <h2>{t("policy.privacy.collectH")}</h2>
+  <ul>
+    <li>{t("policy.privacy.collect1")}</li>
+    <li>{t("policy.privacy.collect2")}</li>
+    <li>{t("policy.privacy.collect3")}</li>
+    <li>{t("policy.privacy.collect4")}</li>
+  </ul>
+  <h2>{t("policy.privacy.useH")}</h2>
+  <p>{t("policy.privacy.useP")}</p>
+  <h2>{t("policy.privacy.cookiesH")}</h2>
+  <p>{t("policy.privacy.cookiesP")}</p>
+  <h2>{t("policy.privacy.sharingH")}</h2>
+  <p>{t("policy.privacy.sharingP")}</p>
+  <h2>{t("policy.privacy.rightsH")}</h2>
+  <p>{t("policy.privacy.rightsP", { email: SITE.email })}</p>
+  <h2>{t("policy.privacy.contactH")}</h2>
+  <p>{SITE.email}</p>
+</PolicyLayout>

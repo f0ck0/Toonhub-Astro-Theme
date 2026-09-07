@@ -1,0 +1,279 @@
+---
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import { NOINDEX } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+export const prerender = false
+
+const locale = pageLocale(Astro)
+const t = useTranslations(locale)
+
+const ssrToken = Astro.cookies.get("toonhub_token")?.value || ""
+const ssrEmail = Astro.cookies.get("toonhub_email")?.value || ""
+const ssrIn = Boolean(ssrToken || ssrEmail || Astro.cookies.get("toonhub_signed_in")?.value === "1")
+
+/** Strings the client script needs (rendered strings stay in the markup). */
+const scriptMessages = {
+  loginTitle: t("account.loginTitle"),
+  registerTitle: t("account.registerTitle"),
+  loginSub: t("account.loginSub"),
+  registerSub: t("account.registerSub"),
+  signIn: t("account.signIn"),
+  createAccount: t("account.registerTitle"),
+  pwdMismatch: t("account.msgPwdMismatch"),
+  loading: t("account.msgLoading"),
+  authFail: t("account.msgAuthFail"),
+  saveFail: t("account.msgSaveFail"),
+  welcomeBack: t("account.welcomeBack"),
+  noAddress: t("account.noAddress"),
+  addressFromCheckout: t("account.addressFromCheckout"),
+  noOrdersPre: t("account.noOrdersPre"),
+  browse: t("account.browse"),
+  orderFallback: t("account.orderFallback"),
+  trackAfterShip: t("account.trackAfterShip"),
+  trackThis: t("account.trackThis"),
+  carrierFallback: t("account.carrierFallback"),
+}
+---
+<Base title={t("account.pageTitle")} description={t("account.metaDesc")} robots={NOINDEX}>
+  <Header />
+  <script is:inline>
+    (function () {
+      try {
+        var cookie = document.cookie || ""
+        var inCookie = /(?:^|; )toonhub_signed_in=1(?:;|$)/.test(cookie) || /(?:^|; )toonhub_token=/.test(cookie) || /(?:^|; )toonhub_email=/.test(cookie)
+        if (inCookie || localStorage.getItem("toonhub_token") || localStorage.getItem("toonhub_email")) {
+          document.documentElement.classList.add("has-account")
+        }
+      } catch (e) {}
+    })()
+  </script>
+  <main
+    id="MainContent"
+    class:list={["page-width", "account-page", ssrIn && "is-in"]}
+    data-account-messages={JSON.stringify(scriptMessages)}
+  >
+    {/*
+      Exactly one <h1> for the document: the two panels are mutually exclusive
+      and both label themselves with their own <h2> below, so screen-reader
+      users and heading-audit tools see a single stable top-level heading.
+    */}
+    <h1 class="sr-only">{t("account.pageTitle")}</h1>
+
+    <div id="accountGuest" class="account-guest" hidden={ssrIn}>
+      <h2 class="account-title">{t("account.loginTitle")}</h2>
+      <p class="account-sub">{t("account.loginSub")}</p>
+
+      <div class="account-tabs" role="tablist" aria-label={t("account.pageTitle")}>
+        <button type="button" class="account-tab is-on" data-mode="login">{t("account.loginTitle")}</button>
+        <button type="button" class="account-tab" data-mode="register">{t("account.registerTitle")}</button>
+      </div>
+
+      <form id="accountForm">
+        <div id="registerNames" class="account-names" hidden>
+          <input class="field" id="firstName" placeholder={t("account.firstName")} aria-label={t("account.firstName")} autocomplete="given-name" maxlength="60" />
+          <input class="field" id="lastName" placeholder={t("account.lastName")} aria-label={t("account.lastName")} autocomplete="family-name" maxlength="60" />
+        </div>
+        <input type="email" id="loginEmail" class="field" placeholder={t("account.emailPh")} aria-label={t("account.emailPh")} required autocomplete="email" maxlength="120" />
+        <input type="password" id="loginPassword" class="field" placeholder={t("account.password")} aria-label={t("account.password")} required autocomplete="current-password" minlength="8" />
+        <input type="password" id="loginPassword2" class="field" placeholder={t("account.confirmPassword")} aria-label={t("account.confirmPassword")} hidden autocomplete="new-password" minlength="8" />
+        <p id="loginError" class="account-error" role="alert" aria-live="assertive" hidden></p>
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">{t("account.signIn")}</button>
+      </form>
+
+      <p class="account-legal">
+        {t("account.legalPrefix")}{" "}<a href="/policies/terms-of-service">{t("policy.link.terms")}</a>{" "}{t("account.legalAnd")}{" "}<a href="/policies/privacy-policy">{t("policy.link.privacy")}</a>.
+      </p>
+    </div>
+
+    <div id="accountHome" class="account-home" hidden={!ssrIn}>
+      <header class="account-head">
+        <div>
+          <h2>{t("account.homeTitle")}</h2>
+          <p id="accountHello" class="account-hello"></p>
+        </div>
+        <button type="button" id="logoutBtn" class="btn btn-outline account-logout">{t("account.logout")}</button>
+      </header>
+
+      <div class="account-grid">
+        <section class="account-card" id="profileCard">
+          <h3 class="account-card__title">{t("account.details")}</h3>
+          <dl class="account-dl">
+            <div><dt>{t("account.name")}</dt><dd id="infoName">—</dd></div>
+            <div><dt>{t("account.email")}</dt><dd id="infoEmail">—</dd></div>
+            <div><dt>{t("account.phone")}</dt><dd id="infoPhone">—</dd></div>
+          </dl>
+          <form id="profileForm" class="account-edit" hidden>
+            <div class="account-names">
+              <input class="field" id="editFirst" placeholder={t("account.firstName")} aria-label={t("account.firstName")} autocomplete="given-name" maxlength="60" />
+              <input class="field" id="editLast" placeholder={t("account.lastName")} aria-label={t("account.lastName")} autocomplete="family-name" maxlength="60" />
+            </div>
+            <input class="field" id="editPhone" placeholder={t("account.phone")} aria-label={t("account.phone")} autocomplete="tel" inputmode="tel" maxlength="40" />
+            <p id="profileError" class="account-error" role="alert" aria-live="assertive" hidden></p>
+            <div class="account-edit-actions">
+              <button type="submit" id="profileSave" class="btn btn-primary">{t("account.save")}</button>
+              <button type="button" id="profileCancel" class="btn btn-outline">{t("common.cancel")}</button>
+            </div>
+          </form>
+          <button type="button" id="editProfileBtn" class="account-text-btn">{t("account.editProfile")}</button>
+        </section>
+
+        <section class="account-card">
+          <h3 class="account-card__title">{t("account.addresses")}</h3>
+          <div id="accountAddresses" class="account-addr-list" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <section class="account-card account-orders-card">
+        <h3 class="account-card__title">{t("account.orderHistory")}</h3>
+        <div id="accountOrders" aria-live="polite"></div>
+        <form id="parcelForm" class="account-parcel">
+          <label for="parcelNo">{t("account.parcelLabel")}</label>
+          <div class="account-parcel-row">
+            <input class="field" id="parcelNo" placeholder={t("account.parcelPh")} autocomplete="off" maxlength="60" />
+            <button type="submit" class="btn btn-primary">{t("account.trackBtn")}</button>
+          </div>
+          <p class="account-muted">{t("account.parcelNote1")}{" "}<a href="/track-order">{t("nav.trackOrder")}</a>{" "}{t("account.parcelNote2")}</p>
+        </form>
+      </section>
+    </div>
+  </main>
+  <Footer />
+</Base>
+<style>
+  html.has-account #accountGuest,
+  .account-page.is-in #accountGuest { display: none !important; }
+  html.has-account #accountHome,
+  .account-page.is-in #accountHome { display: block !important; }
+  .account-page { padding: 40px 0 80px; min-height: 60vh; }
+  .account-guest { width: 100%; max-width: 460px; margin: 0 auto; }
+  .account-title { font-size: 1.5rem; margin-bottom: 12px; }
+  .account-sub { font-size: 0.85rem; color: #888; margin-bottom: 24px; }
+  .account-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--color-border); }
+  .account-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #888;
+    padding: 12px 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .account-tab.is-on { color: #fff; border-bottom-color: #fff; }
+  #accountForm { display: flex; flex-direction: column; gap: 16px; }
+  .account-error { font-size: 0.82rem; color: #e53935; margin: 0; }
+  .account-legal { font-size: 0.72rem; color: #666; text-align: center; margin-top: 20px; line-height: 18px; }
+  .account-legal a { text-decoration: underline; }
+  .account-home { width: 100%; max-width: 920px; margin: 0 auto; }
+  .account-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .account-head h2 { font-size: 1.6rem; margin: 0 0 6px; }
+  .account-hello { color: #888; font-size: 0.95rem; }
+  .account-logout { width: auto; padding: 0.7rem 1.2rem; }
+  .account-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 800px) {
+    .account-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .account-card {
+    border: 1px solid var(--color-border);
+    border-radius: 0.45rem;
+    padding: 22px 20px;
+    background: #0a0a0a;
+  }
+  .account-card__title {
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    color: #aaa;
+    margin: 0 0 16px;
+  }
+  .account-dl { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+  .account-dl div { display: grid; grid-template-columns: 88px 1fr; gap: 8px; align-items: baseline; }
+  .account-dl dt { font-size: 0.75rem; color: #777; text-transform: uppercase; letter-spacing: 0.08em; }
+  .account-dl dd { margin: 0; color: #fff; font-size: 0.95rem; word-break: break-word; }
+  .account-text-btn {
+    margin-top: 16px;
+    background: none;
+    border: none;
+    color: #ccc;
+    text-decoration: underline;
+    padding: 0;
+    font-size: 0.85rem;
+  }
+  .account-edit { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .account-edit-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .account-edit-actions .btn { width: auto; padding: 0.7rem 1.2rem; }
+  .account-addr { font-size: 0.9rem; color: #ddd; line-height: 1.55; }
+  .account-addr + .account-addr { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+  .account-muted { color: #888; font-size: 0.88rem; }
+  .account-order {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+  }
+  .account-order:last-child { border-bottom: 0; }
+  .account-order b { color: #fff; letter-spacing: 0.04em; }
+  .account-order .meta { color: #888; font-size: 0.82rem; }
+  .account-order .amt { font-style: italic; }
+  .account-track {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  .account-track a, .account-track button {
+    background: none;
+    border: 1px solid #444;
+    color: #B5C771;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    border-radius: 0.3rem;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  .account-track a:hover, .account-track button:hover { border-color: #B5C771; color: #fff; }
+  .account-parcel {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-border);
+  }
+  .account-parcel label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .account-parcel-row { display: flex; gap: 10px; }
+  .account-parcel-row .field { flex: 1; min-width: 0; }
+  .account-parcel-row .btn { width: auto; padding: 0.7rem 1.1rem; flex-shrink: 0; }
+  .account-parcel .account-muted { margin-top: 8px; }
+  .account-parcel .account-muted a { color: #fff; text-decoration: underline; }
+  @media (max-width: 749px) {
+    .account-head { flex-direction: column; }
+    .account-logout { width: 100%; }
+    .account-dl div { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+<script>import "../scripts/account"</script>

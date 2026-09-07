@@ -1,0 +1,86 @@
+---
+/**
+ * <QuickView /> — option chooser for product cards.
+ *
+ * Only rendered when a page opts in via `Base`'s `overlays.quickView`, because
+ * it is the one global overlay that only makes sense next to a product grid.
+ * The panel is filled from the card's `data-qv` payload (no request, no flash)
+ * by `quick-view.ts`.
+ *
+ * "Buy now" is a real anchor to `/checkout?buy=…`, so the purchase path keeps
+ * working even if the module has not executed yet.
+ */
+import { SITE } from "../lib/site"
+import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
+
+export interface Props {
+  lang?: string
+  /** Show the Buy-1-Get-2nd-50%-off banner inside the panel. */
+  showOffer?: boolean
+  class?: string
+}
+
+const { lang, showOffer = true, class: className = "" } = Astro.props
+
+const locale: Locale = pageLocale(Astro, lang)
+const t = useTranslations(locale)
+---
+
+<div
+  id="quickView"
+  lang={locale}
+  class:list={["qv", className]}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="qvTitle"
+  aria-hidden="true"
+  inert
+>
+  <div class="qv-panel" data-qv-panel>
+    <div class="qv-media">
+      <span class="qv-media__placeholder" data-qv-image-placeholder aria-hidden="true">📦</span>
+      <img class="media__img" data-qv-image src="" alt="" width="600" height="600" hidden decoding="async" />
+    </div>
+
+    <div class="qv-body">
+      <button class="close-x qv-body__close" type="button" data-close-qv aria-label={t("a11y.closeMenu")}>
+        ×
+      </button>
+
+      <h2 id="qvTitle" class="qv-title" data-qv-title></h2>
+      <p class="pc-price qv-price" data-qv-price></p>
+      <p class="pc-compare qv-compare" data-qv-compare></p>
+
+      <a class="qv-link underline" data-qv-link href="#" hidden>{t("card.viewProduct")}</a>
+
+      {showOffer && <p class="limited-banner">{SITE.offer}</p>}
+
+      <div class="qv-options">
+        <p class="pdp-label" id="qvOptionLabel">{t("quickView.selectOption")}</p>
+        <div class="pdp-size-row" data-qv-variants role="group" aria-labelledby="qvOptionLabel"></div>
+      </div>
+
+      <div class="qv-qty">
+        <p class="pdp-label" id="qvQtyLabel">{t("quickView.quantity")}</p>
+        <div class="qty-row" data-qv-qty-row role="group" aria-labelledby="qvQtyLabel">
+          <button type="button" data-qv-qty-step="-1" aria-label={t("a11y.decreaseQty")} disabled>&minus;</button>
+          <span class="qty-row__value" data-qv-qty aria-live="polite">1</span>
+          <button type="button" data-qv-qty-step="1" aria-label={t("a11y.increaseQty")}>+</button>
+        </div>
+      </div>
+
+      <div class="qv-actions">
+        <a id="qvBuy" class="btn btn-primary btn-block" data-qv-buy data-action="buynow" href="/checkout">
+          {t("quickView.buyNow")}
+        </a>
+        <button id="qvAdd" class="btn btn-outline btn-block" type="button" data-qv-add data-action="add">
+          {t("quickView.addToCart")}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import "../scripts/quick-view"
+</script>

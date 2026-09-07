@@ -1,0 +1,54 @@
+---
+/**
+ * Order confirmation. Same rules as /checkout: shared <Base /> shell
+ * (negotiated lang, noindex, canonical) with localized copy from the
+ * dictionary — no standalone hand-rolled <html> document.
+ */
+import "../../styles/checkout.css"
+import Base from "../../layouts/Base.astro"
+import { SITE } from "../../lib/site"
+import { NOINDEX } from "../../lib/seo"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+import TrustIcons from "../../components/TrustIcons.astro"
+
+export const prerender = false
+
+const locale = pageLocale(Astro)
+const t = useTranslations(locale)
+
+const order = Astro.url.searchParams.get("order") || ""
+const email = Astro.url.searchParams.get("email") || ""
+---
+<Base
+  title={t("success.heading")}
+  description={t("success.metaDesc")}
+  robots={NOINDEX}
+  bodyClass="co-body"
+  skipLink={false}
+  overlays={{ cart: false, search: false }}
+>
+  <Fragment slot="head">
+    <style is:inline>html,body{background:#000!important;color:#fff}</style>
+  </Fragment>
+  <main class="co-main co-success" style="margin:0 auto;padding:48px 1.35rem 64px;text-align:center;max-width:560px;">
+    <a href="/" class="co-logo">{SITE.name}</a>
+    <h1 class="co-h" style="margin-top:36px;font-size:1.6rem;">{t("success.heading")}</h1>
+    <p style="color:#bbb;margin-top:12px;line-height:1.55;">
+      {order ? t("success.orderConfirmed", { order }) : t("success.confirmed")}
+      {email ? t("success.receipt", { email }) : ""}
+    </p>
+    <div class="co-offer" style="text-align:left;margin-top:22px;">
+      <strong>{t("success.nextH")}</strong><br />
+      {t("success.nextBody")}
+    </div>
+    <TrustIcons gift />
+    <a href="/collections" class="co-btn pay" style="max-width:320px;margin:28px auto 0;">{t("cart.continueShopping")}</a>
+    <p class="co-lock"><a href="/track-order">{t("success.trackThis")}</a> · <a href="/">{t("notFound.goHome")}</a></p>
+  </main>
+  <script>
+    try {
+      localStorage.removeItem("cartId")
+      localStorage.removeItem("toonhub_local_cart")
+    } catch {}
+  </script>
+</Base>

@@ -1,0 +1,112 @@
+---
+/**
+ * <CartDrawer /> — slide-in cart.
+ *
+ * The markup is static and the state lives in `cart.ts`, which this component
+ * imports: pages that don't render a drawer don't download the cart runtime.
+ * Every dynamic value is written into a `data-cart-*` hook, so the same module
+ * also drives the full `/cart` page from one implementation.
+ *
+ * A11y: `role="dialog"` + `aria-modal`, `inert` while closed (background leaves
+ * the tab order), focus moves in on open and back to the trigger on close —
+ * all handled by `setOpen()` in `scripts/lib/dom.ts`.
+ */
+import { SITE } from "../lib/site"
+import { pageLocale, useTranslations, type Locale } from "../lib/i18n"
+
+export interface Props {
+  lang?: string
+  /** Show the Buy-1-Get-2nd-50%-off banner above the lines. */
+  showOffer?: boolean
+  /** Secondary link back to the full cart page. */
+  showCartLink?: boolean
+  class?: string
+}
+
+const {
+  lang,
+  showOffer = true,
+  showCartLink = true,
+  class: className = "",
+} = Astro.props
+
+const locale: Locale = pageLocale(Astro, lang)
+const t = useTranslations(locale)
+---
+
+<div id="cartOverlay" class="overlay" data-overlay hidden></div>
+
+<aside
+  id="cartDrawer"
+  lang={locale}
+  class:list={["drawer", "drawer-right", className]}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cartDrawerTitle"
+  aria-hidden="true"
+  inert
+>
+  <div class="drawer-head">
+    <h2 id="cartDrawerTitle" data-cart-title>{t("cart.title")}</h2>
+    <button class="close-x" type="button" data-close-cart aria-label={t("a11y.closeMenu")}>×</button>
+  </div>
+
+  <div class="drawer-body">
+    {showOffer && <div class="offer-note" data-cart-added-note hidden>{SITE.offer}</div>}
+
+    <div class="empty-state empty-state--compact" data-cart-empty>
+      <svg class="empty-state__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12M8 21h.01M19 21h.01" />
+      </svg>
+      <p class="empty-state__title">{t("cart.emptyTitle")}</p>
+      <p class="empty-state__body">{t("cart.emptyBody")}</p>
+      <div class="empty-state__actions">
+        <button class="btn btn-primary" type="button" data-close-cart>
+          {t("cart.continueShopping")}
+        </button>
+      </div>
+    </div>
+
+    <ul class="cart-lines" data-cart-lines data-cart-filled></ul>
+  </div>
+
+  <div class="drawer-foot" data-cart-summary hidden>
+    <dl class="cart-totals">
+      <div class="cart-totals__row cart-totals__row--primary">
+        <dt>{t("cart.total")}</dt>
+        <dd data-cart-total>$0.00</dd>
+      </div>
+      <div class="cart-totals__row">
+        <dt>{t("cart.subtotal")}</dt>
+        <dd data-cart-subtotal>$0.00</dd>
+      </div>
+      <div class="cart-totals__row cart-totals__row--discount" data-cart-discount-row hidden>
+        <dt>{t("cart.discount")}</dt>
+        <dd data-cart-discount>−$0.00</dd>
+      </div>
+    </dl>
+
+    <p class="offer-note" data-cart-nudge hidden></p>
+
+    <a href="/checkout" class="btn btn-primary btn-block" data-cart-checkout>
+      {t("cart.checkout")}
+    </a>
+    <button type="button" data-close-cart class="btn btn-outline btn-block btn-sm">
+      {t("cart.keepShopping")}
+    </button>
+
+    <p class="drawer-foot__note">
+      {t("cart.freeShippingNote")}
+      {showCartLink && (
+        <>
+          {" · "}
+          <a href="/cart" class="underline">{t("cart.viewCart")}</a>
+        </>
+      )}
+    </p>
+  </div>
+</aside>
+
+<script>
+  import "../scripts/cart"
+</script>

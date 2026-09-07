@@ -1,0 +1,76 @@
+---
+/**
+ * <Stars /> — compact rating row.
+ *
+ * Renders nothing unless there are real numbers to show (`count > 0` and
+ * `rating > 0`): fabricated social proof is worse than none. The glyphs are
+ * `aria-hidden` and a screen-reader-only sentence carries the actual value, so
+ * "★★★★☆" is announced as "Rated 4.2 out of 5 from 18 reviews".
+ *
+ * `productId` marks the slot for `reviews.ts` to fill in live data.
+ */
+
+export interface Props {
+  /** 0–5 average. Non-positive hides the widget. */
+  rating?: number
+  /** Review count. Zero hides the widget. */
+  count?: number
+  /** Glyph size. */
+  size?: string
+  /** Product id — lets the reviews module upgrade this slot client-side. */
+  productId?: string
+  /** Show the numeric summary next to the glyphs. */
+  showMeta?: boolean
+  /** Link the row to the review section on the PDP. */
+  href?: string
+  class?: string
+}
+
+const {
+  rating = 0,
+  count = 0,
+  size = "0.85rem",
+  productId = "",
+  showMeta = true,
+  href = "",
+  class: className = "",
+} = Astro.props
+
+const total = Math.max(0, Number(count) || 0)
+const value = Math.min(5, Math.max(0, Number(rating) || 0))
+const show = total > 0 && value > 0
+const filled = Math.round(value)
+const glyphs = "★".repeat(filled) + "☆".repeat(Math.max(0, 5 - filled))
+const summary = `Rated ${value.toFixed(1)} out of 5 from ${total} review${total === 1 ? "" : "s"}`
+---
+
+<div
+  class:list={["stars", className]}
+  data-review-product={productId || undefined}
+  role={show ? "img" : undefined}
+  aria-label={show ? summary : undefined}
+>
+  {show && (
+    href ? (
+      <a class="stars__link" href={href}>
+        <span class="star-glyphs" style={`font-size:${size};`} aria-hidden="true">{glyphs}</span>
+        <span class="sr-only">{summary}</span>
+        {showMeta && (
+          <span class="star-meta" aria-hidden="true">
+            {value.toFixed(1)} / 5.0 ({total})
+          </span>
+        )}
+      </a>
+    ) : (
+      <>
+        <span class="star-glyphs" style={`font-size:${size};`} aria-hidden="true">{glyphs}</span>
+        <span class="sr-only">{summary}</span>
+        {showMeta && (
+          <span class="star-meta" aria-hidden="true">
+            {value.toFixed(1)} / 5.0 ({total})
+          </span>
+        )}
+      </>
+    )
+  )}
+</div>

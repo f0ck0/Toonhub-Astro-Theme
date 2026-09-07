@@ -1,0 +1,27 @@
+---
+import PolicyLayout from "../../components/PolicyLayout.astro"
+import { SITE } from "../../lib/site"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("policy.shipping.title")} description={t("policy.shipping.metaDesc")}>
+  <h2>{t("policy.shipping.procH")}</h2>
+  <p>{t("policy.shipping.procP1")}</p>
+  <p>{t("policy.shipping.procP2")}</p>
+  <h2>{t("policy.shipping.confH")}</h2>
+  <p>{t("policy.shipping.confP")}</p>
+  <h2>{t("policy.shipping.intlH")}</h2>
+  <p>{t("policy.shipping.intlP")}</p>
+  <ul>
+    <li>{t("policy.shipping.intl1")}</li>
+    <li>{t("policy.shipping.intl2")}</li>
+  </ul>
+  <p>{t("policy.shipping.vatP")}</p>
+  <h2>{t("policy.shipping.trackH")}</h2>
+  <p>
+    {t("policy.shipping.trackP1")}{" "}<a href="/track-order">{t("nav.trackOrder")}</a>{" "}{t("policy.shipping.trackP2", { email: SITE.email })}
+  </p>
+  <h2>{t("policy.shipping.issuesH")}</h2>
+  <p>{t("policy.shipping.issuesP", { email: SITE.email })}</p>
+</PolicyLayout>

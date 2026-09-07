@@ -1,0 +1,79 @@
+---
+/**
+ * Wishlist — saved figures, device-local.
+ *
+ * The list lives in `localStorage`, so the server cannot render it. The page
+ * ships the empty state (correct for a first visit and for no-JS) and
+ * `scripts/wishlist.ts` replaces it when saved items exist.
+ */
+import Base from "../layouts/Base.astro"
+import Header from "../components/Header.astro"
+import Footer from "../components/Footer.astro"
+import EmptyState from "../components/EmptyState.astro"
+import Breadcrumb from "../components/Breadcrumb.astro"
+import { breadcrumbJsonLd } from "../lib/seo"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("nav.wishlist") }]
+---
+
+<Base
+  title={t("nav.wishlist")}
+  description="Your saved anime figures on this device. Open a wishlist item to buy it or add it to your cart."
+  canonical="/wishlist"
+  robots="noindex,follow"
+  jsonLd={breadcrumbJsonLd(crumbs, Astro.site)}
+  overlays={{ quickView: true }}
+>
+  <Header />
+
+  <main id="MainContent" class="page-width wishlist-page">
+    <Breadcrumb items={crumbs} />
+
+    <header class="page-head">
+      <h1 class="section-heading">{t("nav.wishlist")}</h1>
+      <p class="page-head__intro">{t("wishlist.intro")}</p>
+      <p class="page-head__count" data-wishlist-count hidden>0</p>
+    </header>
+
+    <div class="product-grid" data-wishlist-grid aria-live="polite"></div>
+
+    <div data-wishlist-empty>
+      <EmptyState
+        icon="heart"
+        title={t("empty.wishlistTitle")}
+        description={t("empty.wishlistBody")}
+        action={{ label: t("grid.browseAll"), href: "/collections" }}
+      />
+    </div>
+
+    <noscript>
+      <EmptyState
+        icon="alert"
+        title={t("cart.jsTitle")}
+        description={t("wishlist.jsBody")}
+      />
+    </noscript>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import "../scripts/wishlist"
+  import "../scripts/reviews"
+</script>
+
+<style>
+  .wishlist-page { padding: 24px 0 64px; min-height: 50vh; }
+  .page-head { margin-bottom: 28px; }
+  .page-head__intro { margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); max-width: 62ch; }
+  .page-head__count {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .page-head__count:not([hidden])::before { content: "Saved items: "; }
+</style>

@@ -1,0 +1,270 @@
+---
+/**
+ * <Media /> — the only way this theme renders a bitmap.
+ *
+ * Why a wrapper instead of raw `<img>` or bare `<Picture>`:
+ * - `alt`, `width` and `height` are *required by the type system*, so a card
+ *   can never ship an image that causes CLS or fails an a11y audit;
+ * - first-party artwork (`src/assets/**`, imported) is emitted as the
+ *   pre-built, content-hashed file it already is. `astro:assets` would also work,
+ *   but in SSR mode its `/_image` endpoint re-encodes **per request** (~170 ms
+ *   per AVIF variant, uncached), so opt in per call site with `optimizeAsset`
+ *   — worth it on prerendered pages or behind an image CDN;
+ * - remote catalogue artwork (Medusa CDN) already arrives sized and compressed,
+ *   so it is emitted with explicit dimensions instead of being re-encoded
+ *   through this Node process. Flip `MEDIA_REMOTE_OPTIMIZE=true` to route those
+ *   through Astro's `/_image` service (requires `image.remotePatterns`);
+ * - `public/` artwork cannot be handled by `astro:assets`, so it goes through
+ *   the theme's own sharp endpoint (`/img/w{size}/…?fmt=avif|webp`);
+ * - a missing source renders a labelled placeholder rather than a broken icon.
+ *
+ * Layout shift is prevented twice over: the wrapper reserves space with
+ * `aspect-ratio`, and the `<img>` carries intrinsic `width`/`height`.
+ */
+import { Picture } from "astro:assets"
+import type { HTMLAttributes } from "astro/types"
+import { isPreOptimizedUrl, resolveImageSource } from "../lib/images"
+import type { ImageSource } from "../types"
+
+type PictureFormat = "avif" | "webp" | "jpeg" | "jpg" | "png"
+
+export interface Props extends Omit<HTMLAttributes<"div">, "slot"> {
+  /** Imported asset, remote URL, or `public/` path. `null`/`""` → placeholder. */
+  src: ImageSource
+  /**
+   * Required. Pass `""` for purely decorative imagery — the wrapper then gets
+   * `aria-hidden="true"` so screen readers skip it.
+   */
+  alt: string
+  /** Intrinsic width in CSS pixels. Defaults to the asset's own width. */
+  width?: number
+  /** Intrinsic height in CSS pixels. Defaults to the asset's own height. */
+  height?: number
+  /**
+   * Aspect ratio of the *slot* (`1`, `4/5`, `16/9`, …). Defaults to
+   * `width / height`. Used to reserve space before the image arrives.
+   */
+  ratio?: number | string
+  /** CSS `sizes` — required for responsive sources to be useful. */
+  sizes?: string
+  /** Srcset widths. Defaults to `[width, width * 2]`, clamped to sane values. */
+  widths?: readonly number[]
+  /** Emitted `<source>` types, best first. */
+  formats?: PictureFormat[]
+  /** Above-the-fold shorthand: eager + `fetchpriority="high"` + no placeholder. */
+  priority?: boolean
+  loading?: "lazy" | "eager"
+  decoding?: "async" | "sync" | "auto"
+  fetchpriority?: "high" | "low" | "auto"
+  quality?: number
+  /** Skip `astro:assets` entirely (remote CDN, data URI, animated source). */
+  unoptimized?: boolean
+  /**
+   * Send an *imported* asset through `astro:assets` (`<picture>` with AVIF/WebP
+   * srcset) instead of emitting the pre-built file directly.
+   *
+   * Default `false` on purpose: this theme renders on the server, where Astro's
+   * `/_image` endpoint re-encodes **on every request** (measured ~170 ms per
+   * AVIF variant, uncached) — 18 collection tiles would cost seconds of CPU per
+   * cold page view. The bundled artwork is already an optimised WebP with a
+   * hashed, immutable URL, so it is served as-is. Turn this on for prerendered
+   * pages (or when a CDN fronts `/_image`), where the variants are free.
+   */
+  optimizeAsset?: boolean
+  /** Extra classes on the `<img>` itself. */
+  imgClass?: string
+  /** Accessible name for the placeholder shown when `src` is empty. */
+  placeholderLabel?: string
+}
+
+const {
+  src,
+  alt,
+  width,
+  height,
+  ratio,
+  sizes,
+  widths,
+  formats = ["avif", "webp"],
+  priority = false,
+  loading,
+  decoding = "async",
+  fetchpriority,
+  quality,
+  unoptimized = false,
+  optimizeAsset = false,
+  class: className = "",
+  imgClass = "",
+  placeholderLabel = "Image unavailable",
+  ...rest
+} = Astro.props
+
+const resolved = resolveImageSource(src)
+
+/** Remote images may be sent to Astro's image service when explicitly enabled. */
+const REMOTE_OPTIMIZE = String(
+  import.meta.env.MEDIA_REMOTE_OPTIMIZE ?? process.env.MEDIA_REMOTE_OPTIMIZE ?? "",
+).toLowerCase() === "true"
+
+const intrinsicWidth = Number(width) > 0 ? Number(width) : (resolved.kind === "asset" ? resolved.src.width : 1200)
+const intrinsicHeight =
+  Number(height) > 0
+    ? Number(height)
+    : resolved.kind === "asset" && resolved.src.height
+      ? resolved.src.height
+      : intrinsicWidth
+
+const aspectRatio =
+  ratio !== undefined && ratio !== null
+    ? String(ratio)
+    : `${intrinsicWidth} / ${intrinsicHeight}`
+
+const resolvedWidths = (widths && widths.length
+  ? [...new Set(widths.map((w) => Math.round(Number(w))).filter((w) => w > 0))].sort((a, b) => a - b)
+  : [...new Set([intrinsicWidth, Math.min(intrinsicWidth * 2, 1600)])]
+).filter((w) => w <= Math.max(intrinsicWidth * 2, 1600))
+
+const resolvedSizes = sizes || (resolvedWidths.length > 1 ? `${intrinsicWidth}px` : undefined)
+const resolvedLoading = priority ? "eager" : (loading ?? "lazy")
+const resolvedFetchpriority = priority ? "high" : fetchpriority
+const isDecorative = alt.trim() === ""
+
+/** `public/` paths → the theme's own sharp endpoint, per format. */
+function localVariant(path: string, w: number, format: PictureFormat): string {
+  const fmt = format === "jpeg" || format === "jpg" ? "jpg" : format
+  const clean = path.startsWith("/") ? path : `/${path}`
+  return `/img/w${w}${clean}${fmt === "webp" ? "" : `?fmt=${fmt}`}`
+}
+
+const localSources =
+  resolved.kind === "local" && !unoptimized && !isPreOptimizedUrl(resolved.src as string)
+    ? formats.map((format) => ({
+        type: `image/${format === "jpg" ? "jpeg" : format}`,
+        srcset: resolvedWidths
+          .map((w) => `${localVariant(resolved.src as string, w, format)} ${w}w`)
+          .join(", "),
+      }))
+    : []
+
+const localFallback =
+  resolved.kind === "local" && !unoptimized && !isPreOptimizedUrl(resolved.src as string)
+    ? localVariant(resolved.src as string, Math.min(intrinsicWidth, resolvedWidths[0] ?? 400), "webp")
+    : ""
+---
+
+{resolved.kind === "empty" ? (
+  <div
+    class:list={["media", "media--empty", className]}
+    style={`aspect-ratio:${aspectRatio};`}
+    role={isDecorative ? undefined : "img"}
+    aria-label={isDecorative ? undefined : (alt || placeholderLabel)}
+    aria-hidden={isDecorative ? "true" : undefined}
+    {...rest}
+  >
+    <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <rect x="6" y="10" width="36" height="28" rx="3" />
+      <circle cx="17" cy="20" r="3.2" />
+      <path d="M8 34l10-9 7 6 6-5 9 8" />
+    </svg>
+  </div>
+) : (
+  <div
+    class:list={["media", className]}
+    style={`aspect-ratio:${aspectRatio};`}
+    aria-hidden={isDecorative ? "true" : undefined}
+    {...rest}
+  >
+    {resolved.kind === "asset" && !unoptimized && optimizeAsset ? (
+      <Picture
+        src={resolved.src}
+        alt={alt}
+        width={intrinsicWidth}
+        height={intrinsicHeight}
+        widths={resolvedWidths}
+        sizes={resolvedSizes}
+        formats={formats}
+        fallbackFormat="webp"
+        quality={quality}
+        loading={resolvedLoading}
+        decoding={decoding}
+        fetchpriority={resolvedFetchpriority}
+        class:list={["media__img", imgClass]}
+        draggable="false"
+      />
+    ) : resolved.kind === "asset" ? (
+      /* Pre-built, content-hashed file — served as-is (no `/_image` round trip). */
+      <img
+        src={resolved.src.src}
+        alt={alt}
+        width={intrinsicWidth}
+        height={intrinsicHeight}
+        loading={resolvedLoading}
+        decoding={decoding}
+        fetchpriority={resolvedFetchpriority}
+        class:list={["media__img", imgClass]}
+        draggable="false"
+      />
+    ) : resolved.kind === "remote" ? (
+      REMOTE_OPTIMIZE ? (
+        <Picture
+          src={resolved.src}
+          alt={alt}
+          width={intrinsicWidth}
+          height={intrinsicHeight}
+          widths={resolvedWidths}
+          sizes={resolvedSizes}
+          formats={formats}
+          fallbackFormat="webp"
+          loading={resolvedLoading}
+          decoding={decoding}
+          fetchpriority={resolvedFetchpriority}
+          class:list={["media__img", imgClass]}
+          draggable="false"
+        />
+      ) : (
+        /* Remote CDN artwork: explicit dimensions, never re-encoded here. */
+        <img
+          src={resolved.src}
+          alt={alt}
+          width={intrinsicWidth}
+          height={intrinsicHeight}
+          loading={resolvedLoading}
+          decoding={decoding}
+          fetchpriority={resolvedFetchpriority}
+          class:list={["media__img", imgClass]}
+          draggable="false"
+        />
+      )
+    ) : localSources.length ? (
+      <picture>
+        {localSources.map((source) => (
+          <source type={source.type} srcset={source.srcset} sizes={resolvedSizes} />
+        ))}
+        <img
+          src={localFallback || (resolved.src as string)}
+          alt={alt}
+          width={intrinsicWidth}
+          height={intrinsicHeight}
+          sizes={resolvedSizes}
+          loading={resolvedLoading}
+          decoding={decoding}
+          fetchpriority={resolvedFetchpriority}
+          class:list={["media__img", imgClass]}
+          draggable="false"
+        />
+      </picture>
+    ) : (
+      <img
+        src={resolved.src as string}
+        alt={alt}
+        width={intrinsicWidth}
+        height={intrinsicHeight}
+        loading={resolvedLoading}
+        decoding={decoding}
+        fetchpriority={resolvedFetchpriority}
+        class:list={["media__img", imgClass]}
+        draggable="false"
+      />
+    )}
+  </div>
+)}

@@ -1,0 +1,86 @@
+---
+/**
+ * <Skeleton /> — placeholder shimmer used whenever a grid is populated from
+ * Medusa (SSR fallback *or* client-side hydration).
+ *
+ * Reserving the exact card footprint is what keeps CLS at zero while the data
+ * arrives; `role="status"` + `aria-busy` tells assistive tech the region is a
+ * live loading state instead of empty content.
+ */
+
+export interface Props {
+  /** Shape of each placeholder. `product-card` and `tile` match real layouts. */
+  variant?: "product-card" | "tile" | "block" | "line" | "list"
+  /** How many placeholders to render. */
+  count?: number
+  /** Text lines rendered under a media block (`product-card`, `tile`). */
+  lines?: number
+  /** Aspect ratio of the media block. */
+  ratio?: string
+  /** Layout container: `grid` mirrors `.product-grid`, `row` mirrors the slider. */
+  layout?: "grid" | "row" | "stack" | "none"
+  /** Screen-reader announcement. Pass `""` to silence (e.g. decorative). */
+  label?: string
+  class?: string
+}
+
+const {
+  variant = "product-card",
+  count = 8,
+  lines = variant === "tile" ? 1 : 2,
+  ratio = "1 / 1",
+  layout = variant === "block" || variant === "line" || variant === "list" ? "stack" : "grid",
+  label = "Loading",
+  class: className = "",
+} = Astro.props
+
+const total = Math.max(0, Math.min(Number(count) || 0, 60))
+const containerClass =
+  layout === "grid"
+    ? "product-grid"
+    : layout === "row"
+      ? "skeleton-row"
+      : layout === "stack"
+        ? "skeleton-stack"
+        : ""
+
+const lineCount = Math.max(0, Math.min(Number(lines) || 0, 6))
+---
+
+{total > 0 && (
+  <div
+    class:list={["skeleton-set", containerClass, className]}
+    role={label ? "status" : undefined}
+    aria-busy="true"
+    aria-live={label ? "polite" : undefined}
+  >
+    {label && <span class="sr-only">{label}…</span>}
+    {Array.from({ length: total }).map(() => (
+      <div class:list={["skeleton-item", `skeleton-item--${variant}`]} aria-hidden="true">
+        {(variant === "product-card" || variant === "tile" || variant === "block") && (
+          <div class="skeleton-media shimmer" style={`aspect-ratio:${ratio};`} />
+        )}
+        {variant === "line" && <div class="skeleton-line shimmer" style="width:100%;" />}
+        {variant === "list" && (
+          <>
+            <div class="skeleton-thumb shimmer" />
+            <div class="skeleton-lines">
+              <div class="skeleton-line shimmer" style="width:70%;" />
+              <div class="skeleton-line shimmer" style="width:40%;" />
+            </div>
+          </>
+        )}
+        {lineCount > 0 && variant !== "block" && variant !== "list" && (
+          <div class="skeleton-lines">
+            {Array.from({ length: lineCount }).map((_, i) => (
+              <div
+                class="skeleton-line shimmer"
+                style={`width:${i === lineCount - 1 ? "45%" : "88%"};`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+)}

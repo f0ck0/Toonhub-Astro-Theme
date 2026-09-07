@@ -1,0 +1,261 @@
+---
+/**
+ * <Base /> — the document shell and the theme's SEO interface.
+ *
+ * Pages pass data (`title`, `description`, `image`, `jsonLd`, `robots`, …);
+ * this layout is the only place that knows how to turn it into tags. That keeps
+ * `<head>` consistent across 30+ routes and makes the surface easy to extend
+ * (hreflang, article meta, extra JSON-LD nodes) without touching a page.
+ *
+ * It also owns the *global* client runtime: a single small module (`ui.ts`) for
+ * drawers, focus management and the currency menu. Heavier feature scripts are
+ * imported by the components/pages that actually render the relevant markup, so
+ * a policy page never downloads the catalogue or review hydrators.
+ */
+import { getImage } from "astro:assets"
+import "../styles/global.css"
+import CartDrawer from "../components/CartDrawer.astro"
+import SearchOverlay from "../components/SearchOverlay.astro"
+import QuickView from "../components/QuickView.astro"
+import { SITE } from "../lib/site"
+import { medusaConfig } from "../lib/medusa-config"
+import { directionOf, pageLocale, useTranslations } from "../lib/i18n"
+import {
+  absoluteUrl,
+  imageUrlForMeta,
+  jsonLdGraph,
+  metaDescription,
+  organizationJsonLd,
+  websiteJsonLd,
+  withBrand,
+} from "../lib/seo"
+import { isPreOptimizedUrl, resolveImageSource } from "../lib/images"
+import type { JsonLd, SeoMeta } from "../types"
+
+export interface Props extends SeoMeta {
+  /**
+   * Global overlays this page needs. `quickView` defaults to `false` because it
+   * only makes sense where product cards are rendered — opting in keeps its
+   * markup *and* its script off content pages.
+   */
+  overlays?: {
+    cart?: boolean
+    search?: boolean
+    quickView?: boolean
+  }
+  /** Extra `<body>` classes (e.g. `no-scroll`). */
+  bodyClass?: string
+  /** Extra classes on the page wrapper. */
+  class?: string
+  /** Skip the skip-link (checkout renders its own shell). */
+  skipLink?: boolean
+}
+
+const {
+  title,
+  description,
+  image,
+  ogType = "website",
+  alternates = [],
+  canonical,
+  robots,
+  jsonLd,
+  lang,
+  lcpImage,
+  preconnect = [],
+  overlays = {},
+  bodyClass = "",
+  class: className = "",
+  skipLink = true,
+} = Astro.props
+
+const {
+  cart: showCart = true,
+  search: showSearch = true,
+  quickView: showQuickView = false,
+} = overlays
+
+const locale = pageLocale(Astro, lang)
+const t = useTranslations(locale)
+const dir = directionOf(locale)
+
+const site = Astro.site ?? new URL(SITE.url)
+const origin = String(site).replace(/\/$/, "")
+
+/* ------------------------------- meta ---------------------------------- */
+
+const fullTitle = withBrand(title)
+const metaDesc = metaDescription(description)
+const canonicalHref = canonical
+  ? absoluteUrl(canonical, origin)
+  : absoluteUrl(Astro.url.pathname, origin)
+const ogImageHref = imageUrlForMeta(image ?? null, origin)
+const robotsContent = robots || "index, follow, max-image-preview:large, max-snippet:-1"
+const isPrivate = robotsContent.includes("noindex")
+
+/* ------------------------- LCP preload ---------------------------------- */
+
+const lcp = resolveImageSource(lcpImage)
+let lcpPreload: { href?: string; srcset?: string; sizes?: string } | null = null
+
+if (lcp.kind === "asset") {
+  const direct = lcp.src.src
+  /*
+   * `<Media />` serves bundled artwork straight from `/_astro/…` in SSR mode
+   * (Astro's `/_image` endpoint re-encodes per request — see the
+   * `optimizeAsset` prop). The preload must name the same URL the `<img>` will
+   * use, otherwise the browser fetches a variant nobody renders.
+   */
+  if (isPreOptimizedUrl(direct)) {
+    lcpPreload = { href: direct }
+  } else {
+    try {
+      const optimized = await getImage({
+        src: lcp.src,
+        widths: [260, 400, 780],
+        sizes: "(max-width: 749px) 46vw, (max-width: 1199px) 30vw, 260px",
+        format: "webp",
+        fallbackFormat: "webp",
+      })
+      lcpPreload = {
+        href: optimized.src,
+        srcset: optimized.srcSet?.attribute,
+        sizes: optimized.attributes?.sizes,
+      }
+    } catch {
+      lcpPreload = { href: direct }
+    }
+  }
+} else if (lcp.kind === "remote" || lcp.kind === "local") {
+  lcpPreload = { href: lcp.src }
+}
+
+/* --------------------------- structured data ----------------------------- */
+
+const graph: JsonLd[] = jsonLdGraph([
+  isPrivate ? null : websiteJsonLd(origin),
+  isPrivate ? null : organizationJsonLd(origin),
+  jsonLd,
+])
+
+/* --------------------- runtime config (no inline JS) --------------------- */
+
+const medusa = medusaConfig()
+const runtimeConfig = {
+  baseUrl: medusa.baseUrl,
+  publishableKey: medusa.publishableKey,
+  locale,
+  currency: Astro.cookies.get("toonhub_currency")?.value || "usd",
+  quickView: showQuickView,
+}
+
+const preconnectHosts = [
+  ...new Set(
+    [medusa.baseUrl, ...preconnect]
+      .map((href) => {
+        try {
+          return new URL(String(href)).origin
+        } catch {
+          return ""
+        }
+      })
+      .filter(Boolean),
+  ),
+]
+---
+
+<!DOCTYPE html>
+<html lang={locale} dir={dir} style="background:#000;color-scheme:dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{fullTitle}</title>
+    <meta name="description" content={metaDesc} />
+    <meta name="robots" content={robotsContent} />
+    <link rel="canonical" href={canonicalHref} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    {alternates.map((alt) => (
+      <link rel="alternate" hreflang={alt.hreflang} href={absoluteUrl(alt.href, origin)} media={alt.media} />
+    ))}
+
+    {preconnectHosts.map((href) => (
+      <link rel="preconnect" href={href} crossorigin={href.includes("medusa") || undefined} />
+    ))}
+    <link rel="dns-prefetch" href={medusa.baseUrl} />
+
+    <!--
+      Only the two faces needed for first paint are preloaded; the bold/italic
+      faces fall back to `font-display: swap`. `size-adjust` on the local
+      fallback stack keeps the metrics close enough that text does not reflow.
+    -->
+    <link rel="preload" href="/fonts/asul-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/qs-400.woff2" as="font" type="font/woff2" crossorigin />
+    {lcpPreload && (
+      <link
+        rel="preload"
+        as="image"
+        href={lcpPreload.srcset ? undefined : lcpPreload.href}
+        imagesrcset={lcpPreload.srcset}
+        imagesizes={lcpPreload.sizes}
+        fetchpriority="high"
+      />
+    )}
+    <style is:inline>
+      @font-face{font-family:'Asul';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/asul-400.woff2') format('woff2')}
+      @font-face{font-family:'Asul';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/asul-700.woff2') format('woff2')}
+      @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/qs-400.woff2') format('woff2')}
+      @font-face{font-family:'Quattrocento Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/qs-700.woff2') format('woff2')}
+      @font-face{font-family:'Quattrocento Sans';font-style:italic;font-weight:400;font-display:swap;src:url('/fonts/qs-italic-400.woff2') format('woff2')}
+      /* Metric-matched fallbacks: reserve the same line box before fonts land. */
+      @font-face{font-family:'Asul Fallback';font-style:normal;font-weight:400 700;src:local('Georgia');size-adjust:104%;ascent-override:88%;descent-override:22%;line-gap-override:0%}
+      @font-face{font-family:'QS Fallback';font-style:normal;font-weight:400 700;src:local('Helvetica Neue'),local('Arial');size-adjust:101%;ascent-override:95%;descent-override:25%;line-gap-override:0%}
+    </style>
+
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={metaDesc} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonicalHref} />
+    <meta property="og:image" content={ogImageHref} />
+    <meta property="og:image:alt" content={metaDesc} />
+    <meta property="og:locale" content={locale.replace("-", "_")} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content={`@${SITE.domain.split(".")[0]}`} />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={metaDesc} />
+    <meta name="twitter:image" content={ogImageHref} />
+
+    <slot name="head" />
+
+    {graph.map((block) => (
+      <script type="application/ld+json" is:inline set:html={JSON.stringify(block)} />
+    ))}
+
+    <!-- Data island: read by `scripts/medusa-client.ts`, so no inline JS is needed. -->
+    <script id="toonhub-config" type="application/json" is:inline set:html={JSON.stringify(runtimeConfig)} />
+  </head>
+  <body class:list={[bodyClass, className]}>
+    {skipLink && (
+      <a class="skip-link" href="#MainContent">
+        {t("a11y.skipToContent")}
+      </a>
+    )}
+
+    <slot />
+
+    {showCart && <CartDrawer />}
+    {showSearch && <SearchOverlay />}
+    {showQuickView && <QuickView />}
+
+    <script>
+      import "../scripts/ui"
+    </script>
+  </body>
+</html>

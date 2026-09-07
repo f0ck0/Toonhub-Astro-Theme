@@ -1,0 +1,20 @@
+---
+import PolicyLayout from "../components/PolicyLayout.astro"
+import { pageLocale, useTranslations } from "../lib/i18n"
+
+const t = useTranslations(pageLocale(Astro))
+---
+<PolicyLayout title={t("about.title")} description={t("about.metaDesc")}>
+  <h2>{t("about.storyH")}</h2>
+  <p>{t("about.storyP1")}</p>
+  <p>{t("about.storyP2")}</p>
+  <h2>{t("about.sellH")}</h2>
+  <p>{t("about.sellP")}</p>
+  <h2>{t("about.promiseH")}</h2>
+  <ul>
+    <li>{t("about.promise1")}</li>
+    <li>{t("about.promise2")}</li>
+    <li>{t("about.promise3")}</li>
+    <li>{t("about.promise4")}</li>
+  </ul>
+</PolicyLayout>

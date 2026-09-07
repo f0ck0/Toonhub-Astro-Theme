@@ -1,0 +1,280 @@
+---
+/**
+ * Collection page (a Medusa category, including its children).
+ *
+ * - Unknown handle → real 404 (status code + the shared 404 view), not a
+ *   200 page with an empty grid.
+ * - `?sort=` is applied server-side *and* mirrored into the canonical URL so
+ *   filtered variants don't create duplicate content.
+ * - The grid ships skeletons when SSR has nothing; `catalog.ts` then retries
+ *   from the browser, paginates with IntersectionObserver and announces
+ *   progress through an `aria-live` region.
+ */
+import Base from "../../layouts/Base.astro"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import ProductCard from "../../components/ProductCard.astro"
+import Breadcrumb from "../../components/Breadcrumb.astro"
+import Skeleton from "../../components/Skeleton.astro"
+import EmptyState from "../../components/EmptyState.astro"
+import { getAllCategories, getCategoryByHandle, getProducts, getProductUsdPrice } from "../../lib/medusa"
+import { breadcrumbJsonLd, collectionPageJsonLd, stripHtml } from "../../lib/seo"
+import { pageLocale, useTranslations } from "../../lib/i18n"
+import type { Product, ProductCategory } from "../../types"
+
+const t = useTranslations(pageLocale(Astro))
+
+const { id } = Astro.params
+const handle = String(id || "")
+const sortParam = Astro.url.searchParams.get("sort") || "featured"
+const PAGE_SIZE = 24
+
+const SORTS = [
+  { value: "featured", label: t("sort.featured") },
+  { value: "az", label: t("sort.az") },
+  { value: "za", label: t("sort.za") },
+  { value: "price-asc", label: t("sort.priceAsc") },
+  { value: "price-desc", label: t("sort.priceDesc") },
+] as const
+
+type SortValue = (typeof SORTS)[number]["value"]
+const sort: SortValue = SORTS.some((option) => option.value === sortParam)
+  ? (sortParam as SortValue)
+  : "featured"
+
+if (handle === "all") return Astro.redirect("/collections", 301)
+
+const isNewArrivals = handle === "new-arrivals"
+
+let category: ProductCategory | null = null
+let parentCategory: ProductCategory | null = null
+let childCategories: ProductCategory[] = []
+let siblingCategories: ProductCategory[] = []
+let products: Product[] = []
+let totalCount = 0
+let notFound = false
+
+try {
+  const all = await getAllCategories()
+
+  if (!isNewArrivals) {
+    category = all.find((entry) => entry.handle === handle) || (await getCategoryByHandle(handle))
+    if (!category) notFound = true
+  }
+
+  if (category) {
+    childCategories = all.filter((entry) => entry.parent_category_id === category!.id)
+    if (category.parent_category_id) {
+      parentCategory = all.find((entry) => entry.id === category!.parent_category_id) || null
+      siblingCategories = all.filter(
+        (entry) => entry.parent_category_id === category!.parent_category_id && entry.id !== category!.id,
+      )
+    }
+  }
+
+  if (category || isNewArrivals) {
+    const result = await getProducts(PAGE_SIZE, 0, category?.id)
+    products = result.products
+    totalCount = result.count
+  }
+} catch (error) {
+  console.error("[collection] fetch failed:", error)
+}
+
+/** Unknown collection → 404 rather than an empty 200 page. */
+if (notFound) {
+  Astro.response.status = 404
+  return Astro.rewrite("/404")
+}
+
+function sortProducts(list: Product[]): Product[] {
+  const copy = [...list]
+  const title = (product: Product) => String(product.title || product.handle || "")
+  const price = (product: Product) => getProductUsdPrice(product) || 0
+  switch (sort) {
+    case "az":
+      return copy.sort((a, b) => title(a).localeCompare(title(b)))
+    case "za":
+      return copy.sort((a, b) => title(b).localeCompare(title(a)))
+    case "price-asc":
+      return copy.sort((a, b) => price(a) - price(b))
+    case "price-desc":
+      return copy.sort((a, b) => price(b) - price(a))
+    default:
+      return copy
+  }
+}
+
+products = sortProducts(products)
+
+const title = isNewArrivals ? t("collection.newDesigns") : String(category?.name || t("collection.defaultTitle"))
+const heading = isNewArrivals ? title : t("collection.headingPrefix", { title })
+const rawDescription = String(category?.description || "").trim()
+const description = stripHtml(rawDescription)
+const showDescription = Boolean(description)
+
+const crumbs = [
+  { name: t("nav.home"), href: "/" },
+  ...(parentCategory
+    ? [{ name: String(parentCategory.name), href: `/collections/${parentCategory.handle}` }]
+    : []),
+  { name: title },
+]
+
+const canonicalPath = `/collections/${handle}`
+const hasMore = totalCount > products.length
+---
+
+<Base
+  title={title}
+  description={
+    description ||
+    (isNewArrivals
+      ? "The newest anime figures added to Toonhub — premium sculpts, worldwide shipping."
+      : `Shop ${title} figures at Toonhub. Premium sculpts, free worldwide shipping, buy 1 get the 2nd 50% off.`)
+  }
+  canonical={canonicalPath}
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site), collectionPageJsonLd(category, Astro.site)]}
+  overlays={{ quickView: true }}
+>
+  <Header />
+
+  <main id="MainContent" data-collection-handle={handle}>
+    <section class="page-width collection-head" aria-labelledby="collectionTitle">
+      <Breadcrumb items={crumbs} />
+      <h1 class="section-heading collection-head__title" id="collectionTitle" data-collection-title>
+        {heading}
+      </h1>
+
+      {showDescription && (
+        <div class="rte collection-head__desc" set:html={rawDescription} />
+      )}
+      {isNewArrivals && !showDescription && (
+        <p class="collection-head__intro">The newest figures added to Toonhub.</p>
+      )}
+    </section>
+
+    {childCategories.length > 0 && (
+      <nav class="page-width filter-bar" aria-label={`${title} sub-collections`}>
+        <ul class="filter-list">
+          <li>
+            <a href={`/collections/${handle}`} class="filter-pill is-active" aria-current="true">All</a>
+          </li>
+          {childCategories.map((child) => (
+            <li>
+              <a href={`/collections/${child.handle}`} class="filter-pill truncate">
+                {child.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
+
+    <section class="page-width collection-body" aria-labelledby="collectionTitle">
+      <div class="toolbar">
+        <p class="toolbar__count" data-product-count aria-live="polite">
+          {totalCount ? t("grid.productCount", { count: totalCount }) : t("grid.loadingProducts")}
+        </p>
+
+        <div class="toolbar__sort">
+          <label class="toolbar__label" for="collectionSort">Sort by</label>
+          <select id="collectionSort" name="sort" class="toolbar__select" data-collection-sort>
+            {SORTS.map((option) => (
+              <option value={option.value} selected={option.value === sort}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {products.length ? (
+        <div class="product-grid" data-product-grid data-hydrate-products>
+          {products.map((product, index) => (
+            <ProductCard product={product} headingLevel={2} priority={index < 4} />
+          ))}
+        </div>
+      ) : (
+        <div class="product-grid" data-product-grid data-hydrate-products>
+          <Skeleton variant="product-card" count={8} layout="grid" label={t("grid.loadingProducts")} />
+          <noscript>
+            <EmptyState
+              icon="box"
+              title={t("grid.emptyTitle")}
+              description={t("grid.emptyBody")}
+              action={{ label: t("grid.browseAll"), href: "/collections" }}
+            />
+          </noscript>
+        </div>
+      )}
+
+      {siblingCategories.length > 0 && (
+        <nav class="sibling-nav" aria-label="Related collections">
+          <p class="sibling-nav__label">More like this</p>
+          <ul class="filter-list">
+            {siblingCategories.slice(0, 8).map((sibling) => (
+              <li>
+                <a href={`/collections/${sibling.handle}`} class="filter-pill truncate">{sibling.name}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      <div class="load-more" data-load-more hidden={!hasMore}>
+        <div data-load-more-sentinel aria-hidden="true"></div>
+        <button class="btn btn-outline" type="button" data-load-more-btn>
+          {t("grid.loadMore")}
+        </button>
+        <p class="load-more-status" data-load-more-status role="status" aria-live="polite" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import "../../scripts/catalog"
+  import "../../scripts/reviews"
+</script>
+
+<style>
+  .collection-head { padding: 24px 0 8px; }
+  .collection-head__title { margin-top: 12px; font-size: 2rem; }
+  .collection-head__desc { margin-top: 12px; max-width: 82ch; }
+  .collection-head__intro { margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); max-width: 82ch; }
+  .filter-bar { padding: 12px 0; }
+  .filter-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .filter-list .filter-pill { max-width: 22ch; }
+  .filter-pill.is-active { background: #fff; color: #000; border-color: #fff; }
+  .collection-body { padding: 24px 0 48px; }
+  .toolbar__count { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .toolbar__sort { display: flex; align-items: center; gap: 8px; }
+  .toolbar__label { font-size: 0.8rem; color: var(--text-muted); }
+  .toolbar__select {
+    background: #000;
+    color: #fff;
+    border: 1px solid var(--color-border);
+    padding: 8px 12px;
+    border-radius: 0.3rem;
+    font-size: 0.85rem;
+    min-height: 40px;
+  }
+  .sibling-nav { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+  .sibling-nav__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+</style>
