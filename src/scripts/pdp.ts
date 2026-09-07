@@ -219,14 +219,17 @@ function bindOptions(): void {
   }
 
   if (qtyRow && qtyInput) {
-    const max = Number(qtyRow.getAttribute("data-max")) || 99
+    // `applyQty` is a hoisted declaration, so re-bind the narrowed nodes.
+    const row: HTMLElement = qtyRow
+    const input: HTMLInputElement = qtyInput
+    const max = Number(row.getAttribute("data-max")) || 99
 
     function applyQty(next: number): void {
       selectedQty = Math.max(1, Math.min(max, Math.round(next) || 1))
-      qtyInput.value = String(selectedQty)
+      input.value = String(selectedQty)
       for (const trigger of triggers) trigger.dataset.qty = String(selectedQty)
-      const decrease = $<HTMLButtonElement>("[data-pdp-qty-step='-1']", qtyRow)
-      const increase = $<HTMLButtonElement>("[data-pdp-qty-step='1']", qtyRow)
+      const decrease = $<HTMLButtonElement>("[data-pdp-qty-step='-1']", row)
+      const increase = $<HTMLButtonElement>("[data-pdp-qty-step='1']", row)
       if (decrease) decrease.disabled = selectedQty <= 1
       if (increase) increase.disabled = selectedQty >= max
       const chip = activeChip()

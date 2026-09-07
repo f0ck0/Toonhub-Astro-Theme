@@ -54,6 +54,25 @@ function backendDown(): boolean {
   return Date.now() < medusaDownUntil
 }
 
+/** A hung backend must not stall SSR: give every call a hard deadline. */
+const REQUEST_TIMEOUT_MS = 15_000
+
+function withTimeout<T>(work: Promise<T>, ms: number = REQUEST_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`medusa timeout after ${ms}ms`)), ms)
+    work.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const hit = cache.get(key) as CacheEntry<T> | undefined
   if (hit && Date.now() - hit.t < TTL) return hit.data
@@ -62,7 +81,9 @@ async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
     throw new Error("medusa unavailable")
   }
   try {
-    const data = await fn()
+    // `isConnError` matches "timeout", so a hung backend trips the circuit
+    // breaker and the demo catalogue takes over instead of stalling the page.
+    const data = await withTimeout(fn())
     cache.set(key, { t: Date.now(), data })
     return data
   } catch (error) {

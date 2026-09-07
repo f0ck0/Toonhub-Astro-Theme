@@ -52,7 +52,7 @@ const t = useTranslations(locale)
   </div>
 
   <div class="drawer-body">
-    <div class="offer-note" data-cart-added-note hidden>{SITE.offer}</div>
+    {showOffer && <div class="offer-note" data-cart-added-note hidden>{SITE.offer}</div>}
 
     <div class="empty-state empty-state--compact" data-cart-empty>
       <svg class="empty-state__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">

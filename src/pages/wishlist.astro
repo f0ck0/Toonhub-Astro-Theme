@@ -11,7 +11,6 @@ import Header from "../components/Header.astro"
 import Footer from "../components/Footer.astro"
 import EmptyState from "../components/EmptyState.astro"
 import Breadcrumb from "../components/Breadcrumb.astro"
-import { SITE } from "../lib/site"
 import { breadcrumbJsonLd } from "../lib/seo"
 import { pageLocale, useTranslations } from "../lib/i18n"
 
@@ -20,7 +19,7 @@ const crumbs = [{ name: "Home", href: "/" }, { name: t("nav.wishlist") }]
 ---
 
 <Base
-  title={`${t("nav.wishlist")} — ${SITE.brand}`}
+  title={t("nav.wishlist")}
   description="Your saved anime figures on this device. Open a wishlist item to buy it or add it to your cart."
   canonical="/wishlist"
   robots="noindex,follow"

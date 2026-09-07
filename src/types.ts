@@ -84,7 +84,8 @@ export interface ProductStub {
   id?: string
   title?: string
   handle?: string
-  thumbnail?: string
+  /** Nullable to stay assignable from a full `Product`. */
+  thumbnail?: string | null
 }
 
 export interface Product {
@@ -241,7 +242,7 @@ export interface SeoMeta {
   /** `noindex,nofollow` for cart/checkout/account/search result pages. */
   robots?: string
   /** Structured data blocks appended to the page's JSON-LD graph. */
-  jsonLd?: JsonLd | JsonLd[]
+  jsonLd?: JsonLd | null | (JsonLd | null | undefined)[]
   /** `<html lang>` — BCP-47. */
   lang?: string
   /** LCP candidate: preloaded with `fetchpriority="high"`. */

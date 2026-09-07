@@ -223,7 +223,7 @@ function formatAddr(a: AddressLike | string | null | undefined): string {
   return lines.join("\n")
 }
 
-function renderAddresses(addresses: AddressLike[], email: string) {
+function renderAddresses(addresses: AddressLike[]) {
   const box = document.getElementById("accountAddresses")!
   const list = Array.isArray(addresses) ? addresses.filter(Boolean) : []
   if (list.length) {
@@ -335,7 +335,7 @@ function showGuest() {
 function renderDashboard(opts: { email: string; customer?: any; orders?: any[]; addresses?: any[] }) {
   showHome()
   fillProfile(opts.customer || {}, opts.email)
-  renderAddresses(opts.addresses || opts.customer?.addresses || [], opts.email)
+  renderAddresses(opts.addresses || opts.customer?.addresses || [])
   if (opts.orders && opts.orders.length) {
     try { localStorage.setItem("toonhub_account_orders", JSON.stringify(opts.orders)) } catch {}
   }

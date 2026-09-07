@@ -78,25 +78,6 @@ function addLocal(payload: AddToCartPayload): void {
 /* Medusa sync                                                                */
 /* -------------------------------------------------------------------------- */
 
-async function ensureCartId(): Promise<string | null> {
-  const existing = getCartId()
-  if (existing) return existing
-  try {
-    const res = await fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as { cartId?: string }
-    if (!data.cartId) return null
-    writeStorage(STORAGE_KEYS.cartId, data.cartId)
-    return data.cartId
-  } catch {
-    return null
-  }
-}
-
 async function fetchRemote(): Promise<CartItem[] | null> {
   const cartId = getCartId()
   if (!cartId) return null

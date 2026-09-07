@@ -48,6 +48,11 @@ function shopCategories(categories: ProductCategory[]): ProductCategory[] {
   )
 }
 
+/** First product bucketed under `key`, tolerating an absent id/handle. */
+function firstIn(byCategory: Record<string, Product[]>, key?: string | null): Product | undefined {
+  return key ? byCategory[key]?.[0] : undefined
+}
+
 function imageOf(product: Partial<Product> | undefined): string {
   if (!product) return ""
   const thumb = String(product.thumbnail || "").trim()
@@ -252,7 +257,7 @@ function fillTiles(categories: ProductCategory[], products: Product[]): void {
   }
   const html = shop
     .map((category) =>
-      tileTemplate(category, imageOf(byCategory[category.id]?.[0] || byCategory[category.handle]?.[0])),
+      tileTemplate(category, imageOf(firstIn(byCategory, category.id) || firstIn(byCategory, category.handle))),
     )
     .join("")
 
@@ -312,7 +317,9 @@ function shuffle<T>(list: T[]): T[] {
 function mixAcrossCategories(products: Product[], take = PAGE_SIZE): Product[] {
   const byCategory: Record<string, Product[]> = {}
   for (const product of products) {
-    const keys = (product.categories || []).map((category) => category.id || category.handle).filter(Boolean)
+    const keys = (product.categories || [])
+      .map((category) => category.id || category.handle)
+      .filter((key): key is string => Boolean(key))
     for (const key of keys.length ? keys : ["_"]) (byCategory[key] ||= []).push(product)
   }
   const keys = shuffle(Object.keys(byCategory))
@@ -380,6 +387,9 @@ function bindInfiniteScroll(handle: string): void {
   const sentinel = $<HTMLElement>("[data-load-more-sentinel]") || wrap
   if (!wrap || !button || !grid || wrap.dataset.bound) return
   wrap.dataset.bound = "1"
+  // `next()` below is a hoisted function declaration, so TypeScript will not
+  // carry the narrowing from the guard into it — re-bind to a non-null const.
+  const gridEl: HTMLElement = grid
 
   const state: InfiniteState = { loading: false, done: false, categoryIds: null, regionId: "" }
 
@@ -441,7 +451,7 @@ function bindInfiniteScroll(handle: string): void {
     busy(true)
     try {
       await resolveFilters()
-      const offset = grid.querySelectorAll(".product-card").length
+      const offset = gridEl.querySelectorAll(".product-card").length
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
@@ -453,16 +463,16 @@ function bindInfiniteScroll(handle: string): void {
       const data = await medusaGet<{ products?: Product[]; count?: number }>(`/store/products?${params}`)
       const list = data.products || []
       const have = new Set(
-        $$<HTMLElement>("[data-id]", grid).map((card) => card.getAttribute("data-id") || ""),
+        $$<HTMLElement>("[data-id]", gridEl).map((card) => card.getAttribute("data-id") || ""),
       )
       const fresh = list.filter((product) => product?.id && !have.has(product.id))
 
       if (fresh.length) {
-        grid.insertAdjacentHTML("beforeend", fresh.map(productCardTemplate).join(""))
+        gridEl.insertAdjacentHTML("beforeend", fresh.map(productCardTemplate).join(""))
         document.dispatchEvent(new CustomEvent("toonhub:catalog"))
       }
 
-      const now = grid.querySelectorAll(".product-card").length
+      const now = gridEl.querySelectorAll(".product-card").length
       const total = Number(data.count)
       announceCount(Number.isFinite(total) && total > 0 ? `${total} products` : `${now} products`)
 

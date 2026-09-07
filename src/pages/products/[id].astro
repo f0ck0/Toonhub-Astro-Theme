@@ -32,12 +32,12 @@ import {
   getProductUsdPrice,
   isFallbackProduct,
 } from "../../lib/medusa"
-import { SITE, categoryBlurb, productReviews } from "../../lib/site"
+import { categoryBlurb, productReviews } from "../../lib/site"
 import { productImage } from "../../lib/images"
 import { breadcrumbJsonLd, productJsonLd, stripHtml } from "../../lib/seo"
 import { currencyFromCookies, formatCurrency, formatPriceFrom, salePrice } from "../../lib/currency"
 import { pageLocale, useTranslations } from "../../lib/i18n"
-import type { ImageLike, Product, ProductVariant } from "../../types"
+import type { Product, ProductVariant } from "../../types"
 
 const t = useTranslations(pageLocale(Astro))
 
@@ -50,13 +50,19 @@ if (!product || !(product.title || product.handle)) {
   return Astro.rewrite("/404")
 }
 
-const canonical = `/products/${product.handle}`
+const productHandle = String(product.handle || "")
+const canonical = `/products/${productHandle}`
 const title = String(product.title || product.handle || "Product")
 const subtitle = product.subtitle ? String(product.subtitle) : ""
 const MAX_QTY = 99
 const MAX_GALLERY = 5
 
 /* ---------------------------------------------------------------- gallery --- */
+
+/** Medusa image entries: objects with a `url`, or bare strings on older payloads. */
+interface ImageLike {
+  url: string
+}
 
 function isImageLike(value: unknown): value is ImageLike {
   if (!value || typeof value !== "object") return false
@@ -146,7 +152,7 @@ function buyHref(variant: VariantOption | null, qty = 1): string {
     qty: String(Math.max(1, qty)),
     p: String(variant?.price ?? firstPriceUsd),
     t: title.slice(0, 120),
-    h: String(product.handle || ""),
+    h: productHandle,
     v: String(variant?.title || ""),
     i: primaryImage,
   })

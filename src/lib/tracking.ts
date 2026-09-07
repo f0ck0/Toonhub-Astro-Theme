@@ -4,6 +4,16 @@ export type TrackItem = {
   carrier: string
 }
 
+/** The tracking-bearing fields Medusa puts on a fulfillment (or a legacy shipping method). */
+interface FulfillmentLike {
+  provider_id?: string
+  name?: string
+  tracking_links?: unknown[]
+  labels?: unknown[]
+  tracking_numbers?: unknown[]
+  tracking_number?: string
+}
+
 function carrierOf(num: string, hint = "") {
   const n = num.replace(/\s/g, "").toUpperCase()
   const h = hint.toLowerCase()
@@ -50,12 +60,18 @@ export function extractTracking(order: any): TrackItem[] {
     })
   }
 
-  for (const f of [].concat(order?.fulfillments || []).concat(order?.shipping_methods || [])) {
+  // Medusa exposes tracking data on fulfillments *and* on legacy shipping
+  // methods, with different key names per version — hence the loose shape.
+  const fulfillmentSources: FulfillmentLike[] = [
+    ...(Array.isArray(order?.fulfillments) ? (order.fulfillments as FulfillmentLike[]) : []),
+    ...(Array.isArray(order?.shipping_methods) ? (order.shipping_methods as FulfillmentLike[]) : []),
+  ]
+  for (const f of fulfillmentSources) {
     const hint = f?.provider_id || f?.name || ""
-    for (const t of f.tracking_links || []) push(t, hint)
-    for (const t of f.labels || []) push(t, hint)
-    for (const n of f.tracking_numbers || []) push(n, hint)
-    if (f.tracking_number) push(f.tracking_number, hint)
+    for (const t of f?.tracking_links || []) push(t, hint)
+    for (const t of f?.labels || []) push(t, hint)
+    for (const n of f?.tracking_numbers || []) push(n, hint)
+    if (f?.tracking_number) push(f.tracking_number, hint)
   }
   for (const t of order?.tracking || []) push(t)
   for (const n of order?.tracking_numbers || []) push(n)

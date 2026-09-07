@@ -48,7 +48,7 @@ export interface Props extends Omit<HTMLAttributes<"div">, "slot"> {
   /** CSS `sizes` — required for responsive sources to be useful. */
   sizes?: string
   /** Srcset widths. Defaults to `[width, width * 2]`, clamped to sane values. */
-  widths?: number[]
+  widths?: readonly number[]
   /** Emitted `<source>` types, best first. */
   formats?: PictureFormat[]
   /** Above-the-fold shorthand: eager + `fetchpriority="high"` + no placeholder. */

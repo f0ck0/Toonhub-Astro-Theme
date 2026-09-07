@@ -50,12 +50,10 @@ export function getStoreSdk() {
   const { baseUrl, publishableKey } = medusaConfig()
   const sig = `${baseUrl}::${publishableKey}`
   if (!_sdk || _sig !== sig) {
-    _sdk = new Medusa({
-      baseUrl,
-      publishableKey,
-      fetch: (input: any, init?: any) =>
-        fetch(input, { ...(init || {}), signal: init?.signal || AbortSignal.timeout(15000) }),
-    })
+    // NOTE: @medusajs/js-sdk's `Config` has no `fetch` override — passing one is
+    // silently ignored, so the request timeout lives in `withTimeout()` in
+    // ./medusa.ts instead, where it actually applies to every call.
+    _sdk = new Medusa({ baseUrl, publishableKey })
     _sig = sig
   }
   return _sdk

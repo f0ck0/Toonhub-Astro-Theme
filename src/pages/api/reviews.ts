@@ -3,14 +3,19 @@ import { medusaFetch, json } from "../../lib/server-medusa"
 
 export const prerender = false
 
+/** Review photos arrive as strings or objects depending on the Medusa version. */
+interface ReviewImageLike {
+  url?: string
+  original_url?: string
+  src?: string
+}
+
 function reviewImages(r: any): string[] {
-  const raw = []
-    .concat(r?.images || [])
-    .concat(r?.photos || [])
-    .concat(r?.image ? [r.image] : [])
-    .concat(r?.review_images || [])
+  const lists: unknown[][] = [r?.images, r?.photos, r?.review_images].filter(Array.isArray)
+  const raw: unknown[] = lists.flat()
+  if (r?.image) raw.push(r.image)
   return raw
-    .map((x: any) => (typeof x === "string" ? x : x?.url || x?.original_url || x?.src || ""))
+    .map((x) => (typeof x === "string" ? x : String((x as ReviewImageLike)?.url || (x as ReviewImageLike)?.original_url || (x as ReviewImageLike)?.src || "")))
     .filter(Boolean)
 }
 

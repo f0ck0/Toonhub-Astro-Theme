@@ -1,4 +1,4 @@
 ---
-const { id } = Astro.params
-return Astro.redirect(`/collections/${id}`)
+// Legacy URL shape — category pages live under /collections/<handle>.
+return Astro.redirect(`/collections/${Astro.params.id}`)
 ---

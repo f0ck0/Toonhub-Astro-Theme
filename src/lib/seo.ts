@@ -118,14 +118,20 @@ export function organizationJsonLd(site?: URL | string | null): JsonLd {
 
 export interface BreadcrumbCrumb {
   name: string
-  href: string
+  /**
+   * Omit on the final crumb — it is the current page, and schema.org (and
+   * Google's rich-result validator) expect the last `ListItem` to carry no
+   * `item` URL. Dropping such crumbs instead would silently truncate every
+   * breadcrumb trail by one.
+   */
+  href?: string
 }
 
 export function breadcrumbJsonLd(
   crumbs: BreadcrumbCrumb[],
   site?: URL | string | null,
 ): JsonLd | null {
-  const items = crumbs.filter((c) => c?.name && c?.href)
+  const items = (crumbs || []).filter((c) => c?.name)
   if (!items.length) return null
   return {
     "@context": "https://schema.org",
@@ -134,7 +140,8 @@ export function breadcrumbJsonLd(
       "@type": "ListItem",
       position: index + 1,
       name: stripHtml(crumb.name),
-      item: absoluteUrl(crumb.href, site),
+      // The last crumb is the current page: no `item` URL.
+      ...(crumb.href ? { item: absoluteUrl(crumb.href, site) } : {}),
     })),
   }
 }
@@ -275,12 +282,12 @@ export function blogPostingJsonLd({
 
 /** Merge page-provided JSON-LD with the site-wide graph, dropping nulls. */
 export function jsonLdGraph(
-  blocks: (JsonLd | JsonLd[] | null | undefined)[],
+  blocks: (JsonLd | (JsonLd | null | undefined)[] | null | undefined)[],
 ): JsonLd[] {
   const flat: JsonLd[] = []
   for (const block of blocks) {
     if (!block) continue
-    if (Array.isArray(block)) flat.push(...block.filter(Boolean))
+    if (Array.isArray(block)) flat.push(...block.filter((item): item is JsonLd => Boolean(item)))
     else flat.push(block)
   }
   return flat
