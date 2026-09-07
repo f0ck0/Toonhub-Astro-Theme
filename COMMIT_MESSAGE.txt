@@ -1,0 +1,14 @@
+fix(cart,checkout,home,pdp): restore PDP Buy Now/Add-to-Cart, variant price-mirror bug, cart consent gate, review marquees
+
+Bug fixes:
+- cart.ts: scope [data-qty]/[data-remove] delegation to [data-cart-lines] — PDP add/buy triggers carry data-qty, so clicks were swallowed by the qty branch and did nothing (root cause of dead PDP buttons).
+- pdp.ts: writePrice() no longer sweeps bare [data-price] nodes (it overwritten trigger button labels with the amount after variant switches); sticky-bar slot now uses the data-variant-price contract.
+- dom.ts: toggleHidden syncs the real hidden attribute.
+- checkout.ts + scripts/lib/buy-now.ts: no-JS Buy Now deep link (?buy=…) boots a detached one-line checkout, stored bag/remote cart untouched.
+- cart page: restore checkout + continue-shopping + terms consent checkbox with inline hint (en/zh-Hant/ja), without removing existing info.
+
+Homepage: twin review marquees after New Arrivals (top row L→R, bottom R→L), real Medusa data only — global feed with per-product fan-out; hidden when empty. Shared review lib (src/lib/reviews.ts) consumed by api/reviews.
+
+Tests: 5 jsdom/contract suites added — 87 passing locally; astro check at 0 errors; build clean.
+
+Co-authored-by: Arena Agent Mode <agent@arena.ai>
