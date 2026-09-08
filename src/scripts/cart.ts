@@ -148,15 +148,24 @@ async function applyAutoPromo(cartId: string, code: string) {
 }
 
 async function refresh(): Promise<void> {
-  const info = await promoInfo();
-  promoEnabled = info.active;
-  promoValue = info.value;
-  if (!promoEnabled) autoPromoAttempted = true;
   const remote = await fetchRemote();
   const local = readLocal();
   // Remote wins when it has lines; otherwise keep the offline cart.
   items = remote && (remote.items.length || !local.length) ? remote.items : local;
-  if (remote && promoEnabled && info.code && remote.items.length >= 2 && remote.discountTotal <= 0) {
+  serverDiscount = remote?.discountTotal ?? 0;
+  // 先渲染,不依赖促销查询(离线/测试环境立即可用)
+  render();
+
+  // 促销状态异步应用:不阻塞渲染
+  const info = await promoInfo();
+  promoEnabled = info.active;
+  promoValue = info.value;
+  if (!promoEnabled) {
+    autoPromoAttempted = true;
+    render();
+    return;
+  }
+  if (info.code && remote && remote.items.length >= 2 && remote.discountTotal <= 0) {
     const cartId = getCartId();
     if (cartId) {
       await applyAutoPromo(cartId, info.code);
@@ -166,8 +175,6 @@ async function refresh(): Promise<void> {
         serverDiscount = again.discountTotal;
       }
     }
-  } else {
-    serverDiscount = remote?.discountTotal ?? 0;
   }
   render();
 }

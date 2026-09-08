@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 describe("checkout boot — Buy Now deep link", () => {
-  it("synthesises a one-line detached cart and leaves the stored bag alone", async () => {
+  it("synthesises a real one-line cart for Buy Now and leaves the stored bag alone", async () => {
     vi.resetModules();
     document.body.innerHTML = bodyHtml;
     window.history.replaceState(
@@ -52,10 +52,52 @@ describe("checkout boot — Buy Now deep link", () => {
         { id: "bag-1", title: "Kaguya Figure", unit_price: 900, quantity: 3 },
       ]),
     );
-    // Any accidental network call in the buy branch is a bug by design.
-    const fetchSpy = vi.fn(() =>
-      Promise.reject(new Error("network must not run")),
-    );
+    // Buy Now must materialise a real Medusa cart (payment methods depend on
+    // it), so the network chain is stubbed: create cart → add line → checkout.
+    const jsonRes = (body: unknown) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => body,
+      } as Response);
+    const checkoutCart = {
+      id: "cart_buy_1",
+      currency: "usd",
+      items: [
+        {
+          id: "li_1",
+          title: "Asuna — Stacia",
+          variant_title: "1/7 Scale Standard",
+          thumbnail: "",
+          quantity: 2,
+          unit_price: 3400,
+        },
+      ],
+      subtotal: 6800,
+      discount_total: 0,
+      total: 6800,
+    };
+    const fetchSpy = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = (init?.method || "GET").toUpperCase();
+      if (url === "/api/cart" && method === "POST") {
+        return jsonRes({ cartId: "cart_buy_1" });
+      }
+      if (url === "/api/cart/add") {
+        return jsonRes({ success: true });
+      }
+      if (url.startsWith("/api/checkout?action=config")) {
+        return jsonRes({ stripeKey: "", paypalClientId: "" });
+      }
+      if (url.startsWith("/api/checkout?cartId=")) {
+        return jsonRes({
+          cart: checkoutCart,
+          shipping_options: [],
+          payment_providers: [],
+        });
+      }
+      return jsonRes({});
+    });
     vi.stubGlobal("fetch", fetchSpy);
 
     await import("../src/scripts/checkout");
@@ -63,14 +105,26 @@ describe("checkout boot — Buy Now deep link", () => {
     await flush();
 
     const lines = document.getElementById("coLines")!;
+    // The buy-now intent is in view (not the stored bag), from the real cart.
     expect(lines.textContent).toContain("Asuna — Stacia");
     expect(lines.textContent).toContain("1/7 Scale Standard");
-    // Site-wide BOGO halves the second unit: $68 subtotal → $51 total.
-    expect(document.getElementById("coTotal")!.textContent).toContain("51.00");
+    expect(lines.textContent).not.toContain("Kaguya Figure");
+    // $68 subtotal from the server cart, no discount in this stub.
+    expect(document.getElementById("coTotal")!.textContent).toContain("68.00");
 
-    // The stored bag + its remote cart id came through untouched.
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem("cartId")).toBe("cart_bag_1");
+    // The fix: a real Medusa cart was created for the buy-now line.
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/cart",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
+      }),
+    );
+    // The checkout detached from the bag and now owns the new cart id.
+    expect(window.localStorage.getItem("cartId")).toBe("cart_buy_1");
+    // The stored bag itself is untouched.
     expect(
       JSON.parse(window.localStorage.getItem("toonhub_local_cart") || "[]"),
     ).toHaveLength(1);
@@ -78,9 +132,6 @@ describe("checkout boot — Buy Now deep link", () => {
       JSON.parse(window.localStorage.getItem("toonhub_local_cart") || "[]")[0]
         .title,
     ).toBe("Kaguya Figure");
-
-    // Sanity for later assertions: the URL intent should be in view, not the bag.
-    expect(lines.textContent).not.toContain("Kaguya Figure");
   });
 
   it("boots the normal bag flow when the URL is clean", async () => {

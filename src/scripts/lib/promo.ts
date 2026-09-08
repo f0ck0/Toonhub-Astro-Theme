@@ -16,6 +16,11 @@ let cached: PromoInfo | null = null
 /** 促销信息(缓存,最多一次请求) */
 export async function promoInfo(): Promise<PromoInfo> {
   if (cached) return cached
+  // 测试环境不发网络请求,促销视为停用(测试保持确定性)
+  if (import.meta.env?.MODE === "test") {
+    cached = { active: false, code: null, value: null }
+    return cached
+  }
   try {
     const { baseUrl, publishableKey } = config()
     const res = await fetch(`${baseUrl}/store/promotion-status`, {
