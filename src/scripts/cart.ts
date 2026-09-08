@@ -101,7 +101,7 @@ function addLocal(payload: AddToCartPayload): void {
 /* -------------------------------------------------------------------------- */
 
 /** 促销状态:后台停用后前端自动隐藏活动文案与折扣,不自动应用;code/折扣率动态读取 */
-import { promoInfo, promoActive, promoLabel } from "./lib/promo";
+import { promoInfo } from "./lib/promo";
 
 let autoPromoAttempted = false;
 /** 服务端真实折扣额(有后端购物车时优先使用,避免与本地 bogoDiscount 双重扣减) */
