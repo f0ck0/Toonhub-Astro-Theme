@@ -51,11 +51,11 @@ export function unitCount(items: CartItem[]): number {
 }
 
 /**
- * Buy 1 get 2nd 50% off: pair the most expensive units together and halve the
- * cheaper one of each pair. Mirrors the server summary so the drawer, the cart
- * page and checkout agree.
+ * Buy 1 get 2nd off (percentage from backend config, default 50): pair the
+ * most expensive units together and discount the cheaper one of each pair.
+ * Mirrors the server summary so the drawer, the cart page and checkout agree.
  */
-export function bogoDiscount(items: CartItem[]): number {
+export function bogoDiscount(items: CartItem[], percent = 50): number {
   const units: number[] = []
   for (const item of items) {
     const price = Number(item.unit_price) || 0
@@ -65,7 +65,7 @@ export function bogoDiscount(items: CartItem[]): number {
   units.sort((a, b) => b - a)
   let discount = 0
   for (let i = 0; i + 1 < units.length; i += 2) {
-    discount += Math.round(Math.min(units[i], units[i + 1]) * 0.5)
+    discount += Math.round(Math.min(units[i], units[i + 1]) * (percent / 100))
   }
   return discount
 }

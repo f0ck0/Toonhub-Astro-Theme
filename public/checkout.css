@@ -190,29 +190,6 @@ input, select, textarea {
 .co-btn.pay { background: var(--co-btn); color: #fff; }
 .co-btn.pay:hover { background: var(--co-btn-hover); }
 .co-btn.pay:disabled { opacity: 0.45; cursor: not-allowed; }
-.co-pay-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--co-border);
-  border-radius: 0.5rem;
-  color: #999;
-  font-size: 0.88rem;
-  margin-bottom: 14px;
-}
-.co-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: co-spin 0.7s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes co-spin {
-  to { transform: rotate(360deg); }
-}
 .co-pay-reserved {
   border: 1px dashed #444;
   border-radius: 0.4rem;
@@ -225,51 +202,21 @@ input, select, textarea {
 .co-pay-reserved b { color: #fff; display: block; margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.78rem; }
 .co-method {
   border: 1px solid var(--co-border);
-  border-radius: 0.5rem;
+  border-radius: 0.3rem;
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 .co-method label {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 14px;
   border-bottom: 1px solid var(--co-border);
   cursor: pointer;
-  font-size: 0.95rem;
-  transition: background 0.15s ease;
+  font-size: 0.92rem;
 }
 .co-method label:last-child { border-bottom: 0; }
-.co-method label:hover { background: #141414; }
-.co-method label.is-on {
-  background: #161616;
-  box-shadow: inset 3px 0 0 var(--co-accent, #635bff);
-}
-.co-method label input[type="radio"] {
-  accent-color: var(--co-accent, #635bff);
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  flex-shrink: 0;
-}
-.co-method .co-badge {
-  margin-left: auto;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-}
-.co-method .co-badge span {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 3px 7px;
-  border: 1px solid var(--co-border);
-  border-radius: 4px;
-  color: #bbb;
-  background: #111;
-  white-space: nowrap;
-}
-.co-method .co-badge .pp { color: #4db8ff; font-style: italic; font-weight: 700; }
+.co-method label.is-on { background: #151515; }
 .co-card-box { padding: 12px 14px 16px; background: #111; border: 1px solid var(--co-border); border-radius: 0.3rem; margin-bottom: 16px; }
 .co-line {
   display: flex;

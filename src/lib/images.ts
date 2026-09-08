@@ -140,22 +140,49 @@ export function productHoverImage(product: Product | null | undefined): string {
 }
 
 /**
- * `sizes` presets. Cards render ~46vw on phones, ~22vw on tablets and 200–260px
- * on desktop; the PDP hero is ~92vw / 50vw.
+ * `sizes` presets — these must mirror the real CSS geometry, because the
+ * browser picks a srcset candidate from `sizes` *before* layout. Understating a
+ * slot makes it pick a small file and upscale it: that is exactly what made the
+ * collection grid look soft while the PDP (which declares its true 46vw) stayed
+ * crisp.
+ *
+ * Measured against `global.css`:
+ * - `.product-grid` — 2 cols / 1.35rem gutters / 10px gap below 750px,
+ *   3 cols / 1.5rem / 14px to 989px, 4 cols / 5rem / 20px above, and the whole
+ *   page caps at `--page-width: 100rem` (1600px) → a 345px slot on wide screens.
+ * - `.shopby-grid` — 2 / 3 / 4 / 6 columns with fluid `clamp()` gutters, which
+ *   peaks around 215px per tile.
+ * - `.product-drag-slider` — `min(46vw, 220px)` on phones, `(100vw - 12rem)/6`
+ *   clamped to 180–250px on desktop.
  */
 export const IMAGE_SIZES = {
-  card: "(max-width: 749px) 46vw, (max-width: 1199px) 22vw, 220px",
-  tile: "(max-width: 749px) 46vw, (max-width: 1199px) 30vw, 260px",
+  /** `.product-grid` — 2 cols → 3 @750 → 4 @990, page caps at 1600 (345px slot). */
+  card:
+    "(min-width: 1600px) 345px, (min-width: 990px) calc(25vw - 55px), (min-width: 750px) calc(33.33vw - 25px), calc(50vw - 26px)",
+  /** `.shopby-grid` — 2 → 3 @750 → 4 @990 → 6 @1200, with fluid clamp() gutters. */
+  tile:
+    "(min-width: 1600px) 213px, (min-width: 1200px) calc(14vw - 11px), (min-width: 990px) calc(22vw - 10px), (min-width: 750px) calc(33.33vw - 24px), calc(50vw - 26px)",
+  /** `.product-drag-slider` — min(46vw, 220px), then (100vw - 12rem)/6 clamped 180–250. */
+  rail:
+    "(min-width: 1692px) 250px, (min-width: 1272px) calc(16.67vw - 32px), (min-width: 990px) 180px, (min-width: 750px) 220px, min(46vw, 220px)",
   hero: "(max-width: 989px) 92vw, 48vw",
   thumb: "80px",
   avatar: "64px",
 } as const
 
-/** Default srcset widths per preset — kept small on purpose (SSR sharp cost). */
+/**
+ * Default srcset widths per preset.
+ *
+ * Each list has to reach roughly `2 × the largest slot` so a 2×/3× DPR screen
+ * still gets one device pixel per image pixel — a 345px card needs a ~700px
+ * source. Kept to four steps: every extra width is another sharp encode on the
+ * SSR box (the results are cached, but the first hit pays for it).
+ */
 export const IMAGE_WIDTHS = {
-  card: [220, 400, 660],
-  tile: [260, 400, 780],
-  hero: [480, 720, 1080],
-  thumb: [80, 160],
+  card: [240, 360, 480, 700],
+  tile: [220, 320, 440, 640],
+  rail: [220, 320, 440, 560],
+  hero: [480, 720, 1080, 1440],
+  thumb: [80, 160, 240],
   avatar: [64, 128],
 } as const

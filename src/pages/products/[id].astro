@@ -33,7 +33,7 @@ import {
   isFallbackProduct,
 } from "../../lib/medusa"
 import { categoryBlurb, productReviews } from "../../lib/site"
-import { productImage } from "../../lib/images"
+import { IMAGE_SIZES, IMAGE_WIDTHS, productImage } from "../../lib/images"
 import { breadcrumbJsonLd, productJsonLd, stripHtml } from "../../lib/seo"
 import { currencyFromCookies, formatCurrency, formatPriceFrom, salePrice } from "../../lib/currency"
 import { pageLocale, useTranslations } from "../../lib/i18n"
@@ -179,12 +179,20 @@ let related: Product[] = []
 
 try {
   const all = await getAllCategories()
-  const siblings = firstCategoryId
-    ? all.filter((entry) => entry.parent_category_id === firstCategoryId)
-    : []
-  const pool = siblings.length ? siblings : all
+  const currentCat = all.find((entry) => entry.id === firstCategoryId)
+
+  // 1) 优先取同一分类下的商品(与当前商品同属一个分类)
+  let pool: any[] = currentCat?.products?.length ? currentCat.products : []
+  // 2) 同分类不足 8 个时,扩展到同父分类下的相邻分类(仍是同一系列)
+  if (pool.length < 8 && currentCat?.parent_category_id) {
+    const neighbours = all.filter((entry) => entry.parent_category_id === currentCat.parent_category_id)
+    if (neighbours.length) pool = neighbours.flatMap((entry) => entry.products || [])
+  }
+  // 3) 兜底:全站商品
+  if (!pool.length) pool = all.flatMap((entry) => entry.products || [])
+
   const ids = pool
-    .flatMap((entry) => (entry.products || []).map((stub) => String(stub.id || "")))
+    .map((stub) => String(stub.id || ""))
     .filter((entry) => entry && entry !== product.id)
 
   if (ids.length) {
@@ -265,7 +273,8 @@ const crumbs = [
                     width={900}
                     height={900}
                     priority
-                    sizes="(max-width: 989px) 92vw, 46vw"
+                    sizes={IMAGE_SIZES.hero}
+                    widths={IMAGE_WIDTHS.hero}
                     ratio="1 / 1"
                   />
                 </button>
@@ -282,7 +291,7 @@ const crumbs = [
                       aria-pressed={index === 0 ? "true" : "false"}
                       aria-label={t("pdp.thumbLabel", { index: index + 1, total: images.length })}
                     >
-                      <Media src={source} alt="" width={180} height={180} sizes="18vw" ratio="1 / 1" />
+                      <Media src={source} alt="" width={180} height={180} sizes="(max-width: 989px) 64px, 18vw" widths={IMAGE_WIDTHS.thumb} ratio="1 / 1" />
                     </button>
                   ))}
                 </div>
@@ -521,6 +530,7 @@ const crumbs = [
             name="title"
             maxlength="120"
             autocomplete="off"
+            placeholder="Review title (optional)"
           />
         </div>
 
@@ -529,7 +539,8 @@ const crumbs = [
             {t("pdp.reviewBodyLabel")} <span class="field__req">{t("common.required")}</span>
           </label>
           {/* Single line on purpose: whitespace inside <textarea> becomes its value. */}
-          <textarea class="input" id="reviewBody" name="content" rows="5" maxlength="2000" required></textarea>
+          {/* placeholder 让空必填字段满足 :placeholder-shown,避免 :invalid:not(:placeholder-shown) 红框规则在加载时即生效 */}
+          <textarea class="input" id="reviewBody" name="content" rows="5" maxlength="2000" placeholder="Share your thoughts..." required></textarea>
         </div>
 
         <div class="field">
@@ -543,6 +554,7 @@ const crumbs = [
             name="name"
             maxlength="60"
             autocomplete="name"
+            placeholder="Your name"
             required
           />
         </div>
@@ -579,7 +591,7 @@ const crumbs = [
         <SectionHeading headingId="relatedHeading" title={t("pdp.related")} />
         <div class="product-grid">
           {related.map((entry) => (
-            <ProductCard product={entry} sizes="(max-width: 749px) 46vw, 220px" />
+            <ProductCard product={entry} sizes={IMAGE_SIZES.rail} widths={IMAGE_WIDTHS.rail} />
           ))}
         </div>
       </section>
@@ -588,7 +600,7 @@ const crumbs = [
     <div class="pdp-sticky" data-pdp-sticky>
       <div class="pdp-sticky__text">
         <p class="pdp-sticky-title">{title}</p>
-        <p class="pdp-sticky-price" data-price>
+        <p class="pdp-sticky-price" data-variant-price>
           {hasPrice ? formatCurrency(saleUsd, currency) : ""}
         </p>
       </div>

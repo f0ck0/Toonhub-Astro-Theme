@@ -23,7 +23,7 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("cart.title") }]
 
 <Base
   title={t("cart.title")}
-  description="Review your Toonhub figures, apply the Buy 1 get the 2nd 50% off offer and check out with free worldwide shipping."
+  description="Review your Toonhub figures, apply the Buy 1 get 2nd figure discount and check out with free worldwide shipping."
   canonical="/cart"
   robots="noindex,follow"
   jsonLd={breadcrumbJsonLd(crumbs, Astro.site)}
@@ -76,7 +76,7 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("cart.title") }]
             <dd data-cart-subtotal>$0.00</dd>
           </div>
           <div class="cart-totals__row cart-totals__row--discount" data-cart-discount-row hidden>
-            <dt>{t("cart.discountLabel")}</dt>
+            <dt data-promo-label>{t("cart.discountLabel")}</dt>
             <dd data-cart-discount>−$0.00</dd>
           </div>
           <div class="cart-totals__row">
@@ -92,8 +92,26 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("cart.title") }]
         <p class="cart-summary__note">{t("cart.taxesNote")}</p>
         <p class="offer-note" data-cart-nudge hidden></p>
 
+        {/* Consent gate: checkout stays inert until the shopper opts in. */}
+        <label class="cart-agree" for="cartAgree">
+          <input type="checkbox" id="cartAgree" name="agree" data-cart-agree aria-describedby="cartAgreeHint" />
+          <span>
+            {t("cart.agreePrefix")}
+            <a href="/policies/terms-of-service">{t("footer.terms")}</a>
+            {t("cart.agreeAnd")}
+            <a href="/policies/privacy-policy">{t("footer.privacy")}</a>
+            {t("cart.agreeSuffix")}
+          </span>
+        </label>
+        <p class="cart-agree__hint" id="cartAgreeHint" data-cart-agree-hint role="status" hidden>
+          {t("cart.agreeHint")}
+        </p>
+
         <a class="btn btn-solid btn-block" href="/checkout" data-cart-checkout>
           {t("cart.checkout")}
+        </a>
+        <a class="btn btn-outline btn-block cart-summary__continue" href="/collections">
+          {t("cart.continueShopping")}
         </a>
 
         <p class="cart-summary__legal">
@@ -143,6 +161,26 @@ const crumbs = [{ name: t("nav.home"), href: "/" }, { name: t("cart.title") }]
   .cart-summary__note { font-size: 0.72rem; color: var(--text-faint); }
   .cart-summary__legal { font-size: 0.72rem; color: var(--text-faint); text-align: center; margin-top: 12px; line-height: 1.5; }
   .cart-summary__legal a { text-decoration: underline; }
+  .cart-agree {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 18px 0 12px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    cursor: pointer;
+  }
+  .cart-agree input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; flex: none; accent-color: #B5C771; }
+  .cart-agree a { text-decoration: underline; }
+  .cart-agree__hint {
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    color: #f0b75c;
+  }
+  .cart-summary .btn-block + .btn-block { margin-top: 10px; }
+  /* Gated checkout stays clickable so we can explain WHY it is disabled. */
+  .cart-summary .btn.is-disabled { opacity: 0.55; cursor: not-allowed; filter: grayscale(0.25); }
   @media (max-width: 900px) {
     .cart-layout { grid-template-columns: minmax(0, 1fr); }
     .cart-summary { position: static; }

@@ -18,7 +18,7 @@ export const SITE = {
   locale: "en",
   tagline: "World's Leading Anime Figures Collection",
   description:
-    "Shop premium anime figures, statues and collectibles. Free worldwide shipping. Buy 1 get the 2nd half price.",
+    "Shop premium anime figures, statues and collectibles. Free worldwide shipping. Buy 1 get the 2nd figure discounted.",
   defaultTitle: "TOONHUB — Premium Anime Figures & Collectibles",
   email: "hello@toonhubshop.com",
   instagram: "https://instagram.com/",
@@ -26,13 +26,13 @@ export const SITE = {
   announcements: [
     "World's Leading Anime Figures Collection",
     "Free Shipping Ends Soon",
-    "Buy 1 Get the 2nd Figure 50% Off",
+    "Buy 1 Get the 2nd Figure Discounted",
   ],
-  offer: "Limited Offer: Buy 1 Get 2nd Half Price. World Wide Free Shipping.",
+  offer: "Limited Offer: Buy 1 Get 2nd Figure Discounted. World Wide Free Shipping.",
   offerWarn:
     "Please confirm the figure edition and shipping address before you place the order.",
   marquee:
-    "✅ 30-Day Guarantee   🚚 Free Shipping World Wide   🎁 Buy 1 Get Second 50% Off  •  For all figures",
+    "✅ 30-Day Guarantee   🚚 Free Shipping World Wide   🎁 Buy 1 Get 2nd Figure Discounted  •  For all figures",
 } as const
 
 /** Root Medusa category that holds every IP (series) sub-category. */

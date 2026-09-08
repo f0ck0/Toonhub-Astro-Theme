@@ -118,11 +118,41 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const auth = bearer(request, cookies)
   if (!auth) return json({ error: "Not signed in" }, 401)
   try {
-    const body = (await request.json()) as { action?: string; first_name?: string; last_name?: string; phone?: string }
+    const body = (await request.json()) as {
+      action?: string
+      first_name?: string
+      last_name?: string
+      phone?: string
+      id?: string
+      address?: Record<string, unknown>
+    }
     if (body.action === "logout") {
       cookies.delete("toonhub_token", { path: "/" })
       cookies.delete("toonhub_email", { path: "/" })
       cookies.delete("toonhub_signed_in", { path: "/" })
+      return json({ ok: true })
+    }
+    if (body.action === "address-add" || body.action === "address-update") {
+      const addr = (body.address || {}) as Record<string, unknown>
+      const path =
+        body.action === "address-add"
+          ? "/store/customers/me/addresses"
+          : `/store/customers/me/addresses/${encodeURIComponent(String(body.id || ""))}`
+      const upd = await medusaFetch<{ customer?: MedusaCustomer; addresses?: MedusaAddress[] }>(
+        path,
+        { method: "POST", body: JSON.stringify({ address: addr }) },
+        { Authorization: auth },
+      )
+      if (!upd.ok) return json({ error: medusaErrorMessage(upd.data, "Could not save address") }, 400)
+      return json({ ok: true, addresses: upd.data?.addresses || [] })
+    }
+    if (body.action === "address-delete") {
+      const del = await medusaFetch(
+        `/store/customers/me/addresses/${encodeURIComponent(String(body.id || ""))}`,
+        { method: "DELETE" },
+        { Authorization: auth },
+      )
+      if (!del.ok) return json({ error: medusaErrorMessage(del.data, "Could not delete address") }, 400)
       return json({ ok: true })
     }
     const payload: Record<string, string> = {}

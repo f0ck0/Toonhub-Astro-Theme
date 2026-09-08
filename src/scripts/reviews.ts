@@ -141,7 +141,12 @@ function reviewTemplate(review: Review): string {
     <p class="review__body">${escapeHtml(content)}</p>
     ${photos.length
       ? `<div class="review-photos">${photos
-          .map((src) => `<img src="${escapeHtml(src)}" alt="Customer photo" width="80" height="80" loading="lazy" decoding="async" />`)
+          .map(
+            (src, i) =>
+              `<button type="button" class="review-photo" data-review-photo data-index="${i}" aria-label="View customer photo">
+                <img src="${escapeHtml(src)}" alt="Customer photo" width="80" height="80" loading="lazy" decoding="async" />
+              </button>`,
+          )
           .join("")}</div>`
       : ""}
     ${response
@@ -244,6 +249,100 @@ function fillProductCards(reviews: Review[]): void {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Review photo lightbox                                                      */
+/* -------------------------------------------------------------------------- */
+
+interface LightboxState {
+  photos: string[]
+  index: number
+}
+
+let lightboxEl: HTMLElement | null = null
+
+/** 点击评论图片打开灯箱:大图 + 星星 + 评论人 + 评论内容 + 多图导航 */
+function buildLightbox(article: HTMLElement, startIndex: number): void {
+  const photos = Array.from(
+    article.querySelectorAll<HTMLImageElement>(".review-photo img"),
+  )
+    .map((img) => img.getAttribute("src") || "")
+    .filter(Boolean)
+  if (!photos.length) return
+  const state: LightboxState = {
+    photos,
+    index: Math.max(0, Math.min(startIndex, photos.length - 1)),
+  }
+  const stars = article.querySelector(".review__stars")?.outerHTML || ""
+  const name = article.querySelector(".review__footer")?.textContent?.trim() || ""
+  const content = article.querySelector(".review__body")?.textContent?.trim() || ""
+
+  if (!lightboxEl) {
+    lightboxEl = document.createElement("div")
+    lightboxEl.className = "lb"
+    document.body.appendChild(lightboxEl)
+  }
+  const el = lightboxEl
+
+  const render = () => {
+    const i = state.index
+    el.innerHTML = `
+      <div class="lb-overlay" data-lb-close></div>
+      <div class="lb-dialog" role="dialog" aria-modal="true" aria-label="Customer review photo">
+        <button type="button" class="lb-close" data-lb-close aria-label="Close">&times;</button>
+        ${state.photos.length > 1 ? `<button type="button" class="lb-nav lb-nav--prev" data-lb-prev aria-label="Previous photo">&lsaquo;</button><button type="button" class="lb-nav lb-nav--next" data-lb-next aria-label="Next photo">&rsaquo;</button>` : ""}
+        <figure class="lb-figure">
+          <img class="lb-img" src="${escapeHtml(state.photos[i])}" alt="Customer photo" />
+          <figcaption class="lb-meta">
+            ${stars ? `<span class="lb-stars">${stars}</span>` : ""}
+            ${name ? `<span class="lb-name">${escapeHtml(name)}</span>` : ""}
+            ${content ? `<span class="lb-body">${escapeHtml(content)}</span>` : ""}
+          </figcaption>
+        </figure>
+        ${state.photos.length > 1 ? `<div class="lb-thumbs">${state.photos.map((src, j) => `<button type="button" class="lb-thumb${j === i ? " is-active" : ""}" data-lb-thumb="${j}" aria-label="Photo ${j + 1}"><img src="${escapeHtml(src)}" alt="" width="48" height="48" loading="lazy" decoding="async" /></button>`).join("")}</div>` : ""}
+      </div>`
+  }
+
+  const close = () => {
+    el.hidden = true
+    document.body.style.overflow = ""
+  }
+  const nav = (delta: number) => {
+    state.index = (state.index + delta + state.photos.length) % state.photos.length
+    render()
+  }
+
+  render()
+  el.hidden = false
+  document.body.style.overflow = "hidden"
+  el.onclick = (e) => {
+    const target = e.target as HTMLElement
+    if (target.closest("[data-lb-close]")) {
+      close()
+      return
+    }
+    const thumb = target.closest<HTMLElement>("[data-lb-thumb]")
+    if (thumb) {
+      state.index = Number(thumb.dataset.lbThumb || 0)
+      render()
+      return
+    }
+    if (target.closest("[data-lb-prev]")) {
+      nav(-1)
+      return
+    }
+    if (target.closest("[data-lb-next]")) {
+      nav(1)
+    }
+  }
+  el.onkeydown = (e) => {
+    if (e.key === "Escape") close()
+    if (e.key === "ArrowLeft") nav(-1)
+    if (e.key === "ArrowRight") nav(1)
+  }
+  el.tabIndex = -1
+  el.focus()
+}
+
+/* -------------------------------------------------------------------------- */
 
 async function hydrate(): Promise<void> {
   const productId =
@@ -288,6 +387,14 @@ ready(() => {
   if ($("[data-hydrate-reviews]") || $("[data-reviews-list]") || $("[data-review-product]")) {
     whenIdle(() => void hydrate(), 2500)
   }
+  // 评论图片点击放大(灯箱)
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-review-photo]")
+    if (!btn) return
+    const article = btn.closest<HTMLElement>("[data-review-row]")
+    if (!article) return
+    buildLightbox(article, Number(btn.dataset.index || 0))
+  })
 })
 
 document.addEventListener("toonhub:catalog", () => whenIdle(() => void hydrate(), 1500))

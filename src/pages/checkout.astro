@@ -58,7 +58,7 @@ const scriptMessages = {
         <span aria-current="page">{t("checkout.crumbCurrent")}</span>
       </nav>
       <h1 class="co-sr">{t("checkout.title")}</h1>
-      <div class="co-offer">
+      <div class="co-offer" data-offer-banner>
         <strong>{t("checkout.offerH")}</strong><br />
         {t("checkout.offerBody")}
       </div>
@@ -124,7 +124,11 @@ const scriptMessages = {
         <input type="checkbox" name="newsletter" checked hidden aria-label={t("checkout.newsletterAria")} />
 
         <h2 class="co-h">{t("checkout.payment")}</h2>
-        <div class="co-pay-reserved" id="payReserved">
+        <div class="co-pay-loading" id="payLoading" role="status" aria-live="polite">
+          <span class="co-spinner" aria-hidden="true"></span>
+          <span>Loading payment methods…</span>
+        </div>
+        <div class="co-pay-reserved" id="payReserved" hidden>
           <b>{t("checkout.payReservedH")}</b>
           {t("checkout.payReservedBody")}
         </div>
@@ -145,7 +149,22 @@ const scriptMessages = {
             <b id="coTotalMini">—</b>
           </div>
           <div class="co-aside-body" id="asideBody">
-            <div id="coLines"></div>
+            <div id="coLines">
+              <div class="co-line" aria-hidden="true">
+                <div class="co-thumb skeleton-line shimmer" style="width:64px;height:64px;"></div>
+                <div class="co-title" style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:6px;">
+                  <div class="skeleton-line shimmer" style="height:12px;width:70%;"></div>
+                  <div class="skeleton-line shimmer" style="height:10px;width:40%;"></div>
+                </div>
+              </div>
+              <div class="co-line" aria-hidden="true">
+                <div class="co-thumb skeleton-line shimmer" style="width:64px;height:64px;"></div>
+                <div class="co-title" style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:6px;">
+                  <div class="skeleton-line shimmer" style="height:12px;width:60%;"></div>
+                  <div class="skeleton-line shimmer" style="height:10px;width:35%;"></div>
+                </div>
+              </div>
+            </div>
             <div class="co-discount">
               <input class="co-field" id="discountCode" name="discountCode" placeholder={t("checkout.discountPh")} aria-label={t("checkout.discountPh")} autocomplete="off" />
               <button type="button" id="discountBtn">{t("checkout.apply")}</button>

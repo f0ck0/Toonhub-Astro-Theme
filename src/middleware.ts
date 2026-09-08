@@ -13,6 +13,8 @@ import { localeForCurrency, negotiateLocale } from "./lib/i18n"
  *    be `en` and the `zh-Hant` / `ja` dictionaries would be unreachable.
  * 2. Adds baseline security headers to every response.
  * 3. Gives immutable, content-hashed static assets a one-year cache.
+ * 4. HTML: `no-cache` + `Vary: Accept-Language` — browsers always revalidate,
+ *    so stale pages/bundles never stick (promo %, payment methods, …).
  */
 export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.locale = negotiateLocale(
@@ -37,8 +39,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   } else if ((headers.get("Content-Type") || "").includes("text/html")) {
     // HTML varies by negotiated language; shared caches must not serve one
-    // visitor's locale to another. (`Vary: Cookie` is deliberately omitted —
-    // it would defeat caching for every anonymous hit.)
+    // visitor's locale to another. no-cache forces browsers to revalidate the
+    // HTML so the latest bundle references are always used. (`Vary: Cookie`
+    // is deliberately omitted — it would defeat caching for every anonymous
+    // hit.)
+    headers.set("Cache-Control", "no-cache")
     const vary = headers.get("Vary")
     headers.set("Vary", vary ? `${vary}, Accept-Language` : "Accept-Language")
   }

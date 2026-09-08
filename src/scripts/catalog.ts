@@ -72,11 +72,41 @@ function hoverImageOf(product: Partial<Product> | undefined): string {
   )
 }
 
+/**
+ * Card artwork geometry — mirrors `IMAGE_SIZES`/`IMAGE_WIDTHS` in
+ * `lib/images.ts`. Client-injected cards sit in the same grid as the
+ * server-rendered ones, so they need the same `sizes`/`srcset` or they end up
+ * upscaling a small variant (the collection grid looked soft for exactly this
+ * reason). Kept as literals rather than importing the server module so this
+ * bundle stays free of `astro:assets`.
+ */
+const CARD_SIZES =
+  "(min-width: 1600px) 345px, (min-width: 990px) calc(25vw - 55px), (min-width: 750px) calc(33.33vw - 25px), calc(50vw - 26px)"
+const CARD_WIDTHS = [240, 360, 480, 700]
+const TILE_SIZES =
+  "(min-width: 1600px) 213px, (min-width: 1200px) calc(14vw - 11px), (min-width: 990px) calc(22vw - 10px), (min-width: 750px) calc(33.33vw - 24px), calc(50vw - 26px)"
+const TILE_WIDTHS = [220, 320, 440, 640]
+
 /** Local `public/` artwork goes through the resizer; remote URLs pass through. */
-function cardSrc(src: string, width = 400): string {
+function cardSrc(src: string, width = 480): string {
   if (!src) return ""
   if (!src.startsWith("/")) return src
   return `/img/w${width}${src.startsWith("/") ? src : `/${src}`}`
+}
+
+/** `srcset` for a local source; `""` for remote URLs (served as-is). */
+function cardSrcset(src: string, widths: number[]): string {
+  if (!src || !src.startsWith("/")) return ""
+  return widths.map((width) => `${cardSrc(src, width)} ${width}w`).join(", ")
+}
+
+/** `src`/`srcset`/`sizes` attribute string for a responsive card image. */
+function responsiveAttrs(src: string, widths: number[], sizes: string): string {
+  const srcset = cardSrcset(src, widths)
+  const fallback = cardSrc(src, widths[widths.length - 1])
+  return `src="${escapeHtml(fallback)}"${
+    srcset ? ` srcset="${escapeHtml(srcset)}" sizes="${escapeHtml(sizes)}"` : ""
+  }`
 }
 
 function priceOf(product: Partial<Product>): number {
@@ -132,9 +162,9 @@ export function productCardTemplate(product: Partial<Product>): string {
   const hasOptions = variants.length > 1
 
   const media = image
-    ? `<img class="media__img" src="${escapeHtml(cardSrc(image))}" alt="${escapeHtml(title)}" width="400" height="400" loading="lazy" decoding="async" />${
+    ? `<img class="media__img" ${responsiveAttrs(image, CARD_WIDTHS, CARD_SIZES)} alt="${escapeHtml(title)}" width="400" height="400" loading="lazy" decoding="async" />${
         hover
-          ? `<img class="media__img pc-hover" src="${escapeHtml(cardSrc(hover))}" alt="" width="400" height="400" loading="lazy" decoding="async" />`
+          ? `<img class="media__img pc-hover" ${responsiveAttrs(hover, CARD_WIDTHS, CARD_SIZES)} alt="" width="400" height="400" loading="lazy" decoding="async" />`
           : ""
       }`
     : `<span class="pc-media__placeholder" role="img" aria-label="No image available"></span>`
@@ -176,12 +206,11 @@ export function productCardTemplate(product: Partial<Product>): string {
 function tileTemplate(category: ProductCategory, image: string): string {
   const href = `/collections/${escapePath(category.handle)}`
   const name = escapeHtml(String(category.name || ""))
-  const thumb = image ? cardSrc(image, 400) : ""
   return `<a href="${href}" class="shopby-tile card">
     <span class="shopby-media">
       ${
-        thumb
-          ? `<img class="media__img" src="${escapeHtml(thumb)}" alt="${name}" width="400" height="400" loading="lazy" decoding="async" />`
+        image
+          ? `<img class="media__img" ${responsiveAttrs(image, TILE_WIDTHS, TILE_SIZES)} alt="${name}" width="400" height="400" loading="lazy" decoding="async" />`
           : `<span class="shopby-media__placeholder">${name}</span>`
       }
     </span>

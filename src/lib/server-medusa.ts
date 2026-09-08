@@ -71,10 +71,46 @@ export function medusaErrorMessage(data: MedusaErrorBody | null | undefined, fal
   return fallback
 }
 
+/** Stripe 子支付方式的品牌名称映射(供前端显示官方标识,增强消费者信任) */
+const STRIPE_BRANDS: Record<string, string> = {
+  ideal: "iDEAL",
+  bancontact: "Bancontact",
+  blik: "BLIK",
+  giropay: "giropay",
+  oxxo: "OXXO",
+  promptpay: "PromptPay",
+  przelewy24: "P24",
+  alipay: "Alipay",
+  wechat_pay: "WeChat Pay",
+  klarna: "Klarna",
+  affrim: "Affirm",
+  affirm: "Affirm",
+  afterpay: "Afterpay",
+  clearpay: "Clearpay",
+  sepa_debit: "SEPA Direct Debit",
+  sofort: "SOFORT",
+  eps: "EPS",
+  p24: "P24",
+  acss_debit: "ACSS Debit",
+  boleto: "Boleto",
+  fpx: "FPX",
+  grabpay: "GrabPay",
+  paynow: "PayNow",
+  us_bank_account: "ACH",
+  link: "Link",
+}
+
 export function providerLabel(id = "") {
   const s = id.toLowerCase()
   if (s.includes("paypal")) return "PayPal"
-  if (s.includes("stripe")) return "Credit card"
+  if (s.includes("stripe")) {
+    // ID 形如 pp_stripe-ideal_stripe / pp_stripe_stripe(卡)
+    const m = s.match(/^pp_stripe[-_]([a-z0-9]+)(?:_stripe)?$/)
+    const method = m ? m[1] : ""
+    if (STRIPE_BRANDS[method]) return STRIPE_BRANDS[method]
+    if (!method || method === "stripe" || method === "card") return "Stripe"
+    return method.charAt(0).toUpperCase() + method.slice(1)
+  }
   if (s.includes("system") || s.includes("manual")) return "Manual payment"
   return id.replace(/^pp_/, "").replace(/_/g, " ")
 }

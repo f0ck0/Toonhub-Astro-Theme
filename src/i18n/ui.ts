@@ -8,13 +8,13 @@
  * Keys are grouped by surface so a translator can work top-to-bottom.
  */
 
-export const defaultLocale = "en"
-export const locales = ["en", "zh-Hant", "ja"] as const
+export const defaultLocale = "en";
+export const locales = ["en", "zh-Hant", "ja"] as const;
 
-export type Locale = (typeof locales)[number]
+export type Locale = (typeof locales)[number];
 
 /** Every key that must exist in each locale — `ui.en` is the source of truth. */
-export type UiKey = keyof (typeof ui)["en"]
+export type UiKey = keyof (typeof ui)["en"];
 
 export const ui = {
   en: {
@@ -75,7 +75,8 @@ export const ui = {
     "search.submit": "Search",
     "search.resultsFor": "{count} results for “{query}”",
     "search.emptyTitle": "No results for “{query}”",
-    "search.emptyBody": "Check the spelling, or try a series name like “One Piece”.",
+    "search.emptyBody":
+      "Check the spelling, or try a series name like “One Piece”.",
     "search.filtersSeries": "Series",
     "search.filtersPrice": "Price",
     "search.filtersSort": "Sort",
@@ -91,7 +92,7 @@ export const ui = {
     "cart.viewCart": "View cart",
     "cart.subtotal": "Subtotal",
     "cart.total": "Total",
-    "cart.discount": "Buy 1 get 2nd 50% off",
+    "cart.discount": "Buy 1 get 2nd item off (auto-applied)",
     "cart.remove": "Remove",
     "cart.freeShippingNote": "Free worldwide shipping · 30-day returns",
 
@@ -105,18 +106,21 @@ export const ui = {
 
     /* empty / error states */
     "empty.notFoundTitle": "Page not found",
-    "empty.notFoundBody": "The link may be broken, or the page may have been moved.",
+    "empty.notFoundBody":
+      "The link may be broken, or the page may have been moved.",
     "empty.productNotFoundTitle": "Product not found",
     "empty.productNotFoundBody":
       "This figure is no longer available. Try the full catalogue.",
     "empty.wishlistTitle": "Your wishlist is empty",
-    "empty.wishlistBody": "Tap the heart on any figure to save it on this device.",
+    "empty.wishlistBody":
+      "Tap the heart on any figure to save it on this device.",
     "empty.reviewsTitle": "No reviews yet",
     "empty.reviewsBody": "Be the first to tell collectors what you think.",
 
     /* footer / newsletter */
     "newsletter.heading": "Subscribe to our emails",
-    "newsletter.body": "Subscribe for insider news, product launches and offers.",
+    "newsletter.body":
+      "Subscribe for insider news, product launches and offers.",
     "newsletter.placeholder": "Email",
     "newsletter.submit": "Subscribe",
     "newsletter.success": "Thanks — you're on the list.",
@@ -141,25 +145,34 @@ export const ui = {
 
     /* homepage */
     "site.tagline": "TOONHUB — Premium Anime Figures & Collectibles",
-    "site.desc": "Shop premium anime figures, statues and collectibles. Free worldwide shipping. Buy 1 get the 2nd half price.",
+    "site.desc":
+      "Shop premium anime figures, statues and collectibles. Free worldwide shipping. Buy 1 get the 2nd figure discounted.",
 
     "home.h1": "Anime figures and collectibles — shop by series",
-    "home.seoBody1": "Discover 40+ anime-inspired figure collections at Toonhub, with hundreds of unique designs featuring vibrant, detailed sculpting and dynamic themes loved by anime fans — from action-packed heroes to mystical worlds and intense fantasy battles.",
-    "home.seoBody2": "Our high-quality figures are built for collectors: premium materials, display-ready finishes, bold colour work and eye-catching detail that brings your favourite series to life. Every order ships free worldwide.",
+    "home.seoBody1":
+      "Discover 40+ anime-inspired figure collections at Toonhub, with hundreds of unique designs featuring vibrant, detailed sculpting and dynamic themes loved by anime fans — from action-packed heroes to mystical worlds and intense fantasy battles.",
+    "home.seoBody2":
+      "Our high-quality figures are built for collectors: premium materials, display-ready finishes, bold colour work and eye-catching detail that brings your favourite series to life. Every order ships free worldwide.",
     "home.shopByList": "Shop by List",
-    "home.shopByListDesc": "{count} anime universes, sculpted and painted for display.",
+    "home.shopByListDesc":
+      "{count} anime universes, sculpted and painted for display.",
     "home.clearance": "Seasonal Clearance Sale",
-    "home.clearanceBody": "Buy 1 get the 2nd at half price, on top of free worldwide shipping.",
+    "home.clearanceBody":
+      "Buy 1 get the 2nd figure discounted, on top of free worldwide shipping.",
     "home.offerEnds": "Offer ends in",
     "home.newArrivals": "New Arrived Anime Figures",
     "home.newArrivalsDesc": "{count} figures across every series.",
     "home.railHint": "Drag or use the arrow keys to browse",
+    "home.reviewsMarqueeTitle": "New-arrival anime figures — collector reviews",
+    "home.reviewsMarqueeSub": "{count} real reviews from collectors worldwide",
+    "home.reviewOnProduct": "Review by {name} on {product}",
     "home.viewAll": "View all",
     "home.moreTitle": "400+ More Figures in Collections Below",
     "home.moreDesc": "Every series we stock, grouped alphabetically.",
     "home.seoTitle": "Anime Figures at Toonhub",
     "home.catalogueStatus": "Catalogue status",
-    "home.demoNotice": "The Medusa backend is unreachable, so this page is showing the bundled demo catalogue.",
+    "home.demoNotice":
+      "The Medusa backend is unreachable, so this page is showing the bundled demo catalogue.",
 
     /* product detail */
     "pdp.zoomImage": "Open this image full size",
@@ -188,7 +201,8 @@ export const ui = {
     "pdp.related": "You may also like",
     "pdp.azTitle": "A–Z Anime List",
     "pdp.azDesc": "Jump straight to a series.",
-    "pdp.demoNotice": "Showing bundled demo data — the Medusa backend is unreachable.",
+    "pdp.demoNotice":
+      "Showing bundled demo data — the Medusa backend is unreachable.",
     "pdp.noImageBody": "No artwork has been uploaded for this product yet.",
 
     /* cart page */
@@ -196,29 +210,40 @@ export const ui = {
     "cart.summary": "Summary",
     "cart.shipping": "Shipping",
     "cart.freeShipping": "Free worldwide",
-    "cart.taxesNote": "Taxes included. Discounts and shipping calculated at checkout.",
-    "cart.discountLabel": "Buy 1 get 2nd 50% off",
+    "cart.taxesNote":
+      "Taxes included. Discounts and shipping calculated at checkout.",
+    "cart.discountLabel": "Buy 1 get 2nd item off (auto-applied)",
     "cart.legalPrefix": "By checking out you agree to the",
     "cart.legalAnd": "and",
+    "cart.agreePrefix": "I agree to the ",
+    "cart.agreeAnd": " and the ",
+    "cart.agreeSuffix": ".",
+    "cart.agreeHint":
+      "Please tick the box to agree to the Terms and Privacy Policy before checking out.",
     "cart.jsTitle": "JavaScript is required",
-    "cart.jsBody": "Your cart is stored on this device and rendered in the browser, so this page needs JavaScript enabled.",
+    "cart.jsBody":
+      "Your cart is stored on this device and rendered in the browser, so this page needs JavaScript enabled.",
 
     /* search page */
     "search.title": "Search",
     "search.noResults": "No results for “{query}”",
-    "search.noResultsHint": "Check the spelling, try a shorter term, or browse every collection.",
+    "search.noResultsHint":
+      "Check the spelling, try a shorter term, or browse every collection.",
     "search.resultOne": "{count} result for “{query}”",
     "search.resultMany": "{count} results for “{query}”",
 
     /* wishlist page */
-    "wishlist.intro": "Saved figures on this device. Sign in later to keep them across browsers.",
-    "wishlist.jsBody": "Saved figures live in this browser's storage, so the wishlist needs JavaScript enabled.",
+    "wishlist.intro":
+      "Saved figures on this device. Sign in later to keep them across browsers.",
+    "wishlist.jsBody":
+      "Saved figures live in this browser's storage, so the wishlist needs JavaScript enabled.",
 
     /* 404 */
     "notFound.popular": "Popular collections",
     /* contact page */
     "contact.title": "Contact us",
-    "contact.intro": "Questions about an order, a figure or a pre-order? Email {email} or use the form below — we reply within one business day.",
+    "contact.intro":
+      "Questions about an order, a figure or a pre-order? Email {email} or use the form below — we reply within one business day.",
     "contact.formHeading": "Contact form",
     "contact.name": "Name",
     "contact.email": "Email",
@@ -233,7 +258,8 @@ export const ui = {
 
     /* order tracking */
     "track.title": "Track your order",
-    "track.intro": "Enter the order number from your confirmation email plus the email you ordered with. Once your parcel ships you can also follow it at the carrier.",
+    "track.intro":
+      "Enter the order number from your confirmation email plus the email you ordered with. Once your parcel ships you can also follow it at the carrier.",
     "track.orderNumber": "Order number",
     "track.emailLabel": "Email",
     "track.parcelNote": "Or paste a carrier tracking number below.",
@@ -242,14 +268,17 @@ export const ui = {
     "track.looking": "Looking up your order…",
     "track.needBoth": "Enter an order number and email, or a tracking number.",
     "track.openingCarrier": "Opening carrier tracking for {number}.",
-    "track.notFound": "We could not find that order. Use the exact order number from your confirmation email, or paste a tracking number.",
-    "track.noMatchParcel": "We could not match that order. Opening carrier tracking for {number}…",
+    "track.notFound":
+      "We could not find that order. Use the exact order number from your confirmation email, or paste a tracking number.",
+    "track.noMatchParcel":
+      "We could not match that order. Opening carrier tracking for {number}…",
     "track.orderHeading": "Order {id}",
     "track.statusLabel": "Status",
     "track.placed": "Placed {date}",
     "track.trackingLink": "Tracking",
     "track.openCarrier": "Open carrier",
-    "track.noTracking": "No carrier tracking number yet — it appears here when your order ships.",
+    "track.noTracking":
+      "No carrier tracking number yet — it appears here when your order ships.",
     "track.parcelLabel": "Parcel",
     "track.updatesTo": "Updates will be emailed to {email}.",
     "track.resultHeading": "Tracking result",
@@ -259,7 +288,8 @@ export const ui = {
     "blog.intro": "News, guides and insights from the Toonhub team.",
     "blog.back": "Back to blog",
     "blog.empty": "No posts yet",
-    "blog.emptyHint": "Release news and collecting guides will appear here soon.",
+    "blog.emptyHint":
+      "Release news and collecting guides will appear here soon.",
     "blog.readMore": "Read {title}",
     "blog.postNotFound": "Post not found",
     "blog.postNotFoundHint": "This article may have been renamed or removed.",
@@ -274,7 +304,6 @@ export const ui = {
     "grid.subCollections": "{title} sub-collections",
     "grid.relatedCollections": "Related collections",
 
-
     /* collection sort + headings */
     "sort.featured": "Featured",
     "sort.az": "Alphabetically, A–Z",
@@ -288,7 +317,7 @@ export const ui = {
     "trust.freeShipping": "Free shipping",
     "trust.returns": "30-day returns",
     "trust.ssl": "SSL encrypted",
-    "trust.gift": "2nd figure 50% off",
+    "trust.gift": "2nd figure discounted",
 
     /* policy layout + shared policy link text */
     "policy.lastUpdated": "Last updated",
@@ -298,7 +327,8 @@ export const ui = {
 
     /* about page */
     "about.title": "About Us",
-    "about.metaDesc": "The story of TOONHUB — premium anime figures for collectors worldwide.",
+    "about.metaDesc":
+      "The story of TOONHUB — premium anime figures for collectors worldwide.",
     "about.storyH": "Our Story",
     "about.storyP1":
       "Founded by a group of anime enthusiasts, TOONHUB was born from a shared love for the art, stories, and culture of anime. We saw a need for a dedicated space where fans could find the best anime figures and connect with others who share their passion.",
@@ -309,14 +339,16 @@ export const ui = {
       "Premium anime figures, statues and collectibles — from One Piece, Dragon Ball, Demon Slayer, Jujutsu Kaisen and dozens more universes. Every piece is selected for sculpt quality, paint finish and display presence.",
     "about.promiseH": "Our promise",
     "about.promise1": "Worldwide free shipping on every order",
-    "about.promise2": "Buy 1 get the 2nd half price",
+    "about.promise2": "Buy 1 get the 2nd figure discounted",
     "about.promise3": "30-day guarantee on unused items",
     "about.promise4": "Secure, encrypted checkout",
 
     /* care guide */
     "care.title": "Figure Care Guide",
-    "care.metaDesc": "How to keep your Toonhub anime figures looking their best.",
-    "care.intro": "A little care goes a long way. Follow these guidelines so your collection stays display-ready for years.",
+    "care.metaDesc":
+      "How to keep your Toonhub anime figures looking their best.",
+    "care.intro":
+      "A little care goes a long way. Follow these guidelines so your collection stays display-ready for years.",
     "care.placementH": "Placement",
     "care.placementP":
       "Keep figures out of direct sunlight and away from heat sources. UV and high temperatures can fade paint and warp PVC over time. A closed display case is ideal if you have pets or dust-heavy rooms.",
@@ -337,11 +369,13 @@ export const ui = {
     /* affiliate */
     "affiliate.title": "Affiliate Program",
     "affiliate.metaDesc": "Earn commission sharing TOONHUB anime figures.",
-    "affiliate.intro": "Love Toonhub? Share the collection and earn commission on every referred order.",
+    "affiliate.intro":
+      "Love Toonhub? Share the collection and earn commission on every referred order.",
     "affiliate.howH": "How it works",
     "affiliate.how1": "Apply with your social or site details",
     "affiliate.how2": "Get a unique tracking link",
-    "affiliate.how3": "Earn a percentage of net sales from customers you send our way",
+    "affiliate.how3":
+      "Earn a percentage of net sales from customers you send our way",
     "affiliate.how4": "Payouts monthly once you hit the minimum threshold",
     "affiliate.applyH": "Apply",
     "affiliate.applyP":
@@ -353,23 +387,29 @@ export const ui = {
     "policy.cancel.lead":
       "You may request cancellation within 24 hours of placing an order, provided the order has not yet entered production or been handed to the carrier.",
     "policy.cancel.howH": "How to cancel",
-    "policy.cancel.howP": "Email {email} with your order number and the subject “Cancel order”. We'll confirm by email.",
+    "policy.cancel.howP":
+      "Email {email} with your order number and the subject “Cancel order”. We'll confirm by email.",
     "policy.cancel.afterH": "After shipping",
-    "policy.cancel.afterP1": "Once an order has shipped it cannot be cancelled. You may refuse the delivery or follow our",
+    "policy.cancel.afterP1":
+      "Once an order has shipped it cannot be cancelled. You may refuse the delivery or follow our",
     "policy.cancel.afterP2": "after it arrives.",
     "policy.cancel.customH": "Custom items",
-    "policy.cancel.customP": "Made-to-order or personalized figures cannot be cancelled once production has started.",
+    "policy.cancel.customP":
+      "Made-to-order or personalized figures cannot be cancelled once production has started.",
 
     /* privacy policy */
     "policy.privacy.title": "Privacy policy",
-    "policy.privacy.metaDesc": "How TOONHUB collects and uses your information.",
+    "policy.privacy.metaDesc":
+      "How TOONHUB collects and uses your information.",
     "policy.privacy.lead":
       "TOONHUB (“we”) respects your privacy. This policy describes how we collect, use and share information when you visit {domain} or place an order.",
     "policy.privacy.collectH": "What we collect",
-    "policy.privacy.collect1": "Contact details (name, email, shipping address, phone)",
+    "policy.privacy.collect1":
+      "Contact details (name, email, shipping address, phone)",
     "policy.privacy.collect2": "Order history and cart contents",
     "policy.privacy.collect3": "Device and usage data (browser, pages viewed)",
-    "policy.privacy.collect4": "Currency and language preferences stored in cookies",
+    "policy.privacy.collect4":
+      "Currency and language preferences stored in cookies",
     "policy.privacy.useH": "How we use it",
     "policy.privacy.useP":
       "To process orders, provide customer support, send shipping updates, improve the store, and — if you opt in — email you about launches and offers. We do not sell your personal information.",
@@ -390,7 +430,8 @@ export const ui = {
     "policy.refund.lead":
       "We have a 30-day return policy, which means you have 30 days after receiving your item to request a return.",
     "policy.refund.clearanceStrong": "All clearance items are final sale",
-    "policy.refund.clearanceRest": "unless the item arrives damaged or defective.",
+    "policy.refund.clearanceRest":
+      "unless the item arrives damaged or defective.",
     "policy.refund.eligible":
       "To be eligible for a return, your item must be in the same condition that you received it, unused, with tags, and in its original packaging. You'll also need proof of purchase. Custom items are non-returnable.",
     "policy.refund.startH": "How to start a return",
@@ -411,7 +452,8 @@ export const ui = {
 
     /* shipping policy */
     "policy.shipping.title": "Shipping policy",
-    "policy.shipping.metaDesc": "Free worldwide shipping on Toonhub anime figures.",
+    "policy.shipping.metaDesc":
+      "Free worldwide shipping on Toonhub anime figures.",
     "policy.shipping.procH": "Order processing",
     "policy.shipping.procP1":
       "Please make sure your order details are correct. Customers are liable for wrong information submitted. Check your order before placing it, or contact us within 24 hours if something is wrong.",
@@ -421,12 +463,17 @@ export const ui = {
     "policy.shipping.confP":
       "You will receive an email confirmation when your order is placed, and a second email with tracking once it ships. After shipment, address changes may incur a courier reshipment fee.",
     "policy.shipping.intlH": "International shipping",
-    "policy.shipping.intlP": "We offer free international shipping to selected countries. Typical delivery windows:",
-    "policy.shipping.intl1": "USA, UK, Canada, Australia, Europe — 7–10 business days",
-    "policy.shipping.intl2": "Japan, Korea, China, Singapore — 5–7 business days",
-    "policy.shipping.vatP": "VAT is not included. The buyer is responsible for any applicable VAT or import duties.",
+    "policy.shipping.intlP":
+      "We offer free international shipping to selected countries. Typical delivery windows:",
+    "policy.shipping.intl1":
+      "USA, UK, Canada, Australia, Europe — 7–10 business days",
+    "policy.shipping.intl2":
+      "Japan, Korea, China, Singapore — 5–7 business days",
+    "policy.shipping.vatP":
+      "VAT is not included. The buyer is responsible for any applicable VAT or import duties.",
     "policy.shipping.trackH": "Tracking",
-    "policy.shipping.trackP1": "Use the tracking number in your shipping email, or our",
+    "policy.shipping.trackP1":
+      "Use the tracking number in your shipping email, or our",
     "policy.shipping.trackP2": "page. Questions: {email}.",
     "policy.shipping.issuesH": "Delivery issues",
     "policy.shipping.issuesP":
@@ -450,7 +497,8 @@ export const ui = {
     "policy.terms.pricesP":
       "Prices for our products are subject to change without notice. We may modify or discontinue the Service without notice.",
     "policy.terms.productsH": "Products",
-    "policy.terms.productsP1": "Certain products may be available exclusively online and are subject to our",
+    "policy.terms.productsP1":
+      "Certain products may be available exclusively online and are subject to our",
     "policy.terms.productsP2":
       "We have made every effort to display colors and images accurately, but cannot guarantee your display is exact.",
     "policy.terms.toolsH": "Optional tools & third-party links",
@@ -460,9 +508,11 @@ export const ui = {
     "policy.terms.commentsP":
       "If you post comments or reviews, you grant us a non-exclusive license to use, reproduce and publish them. You agree that your comments will not violate any third-party rights or contain unlawful content.",
     "policy.terms.personalH": "Personal information",
-    "policy.terms.personalP1": "Your submission of personal information is governed by our",
+    "policy.terms.personalP1":
+      "Your submission of personal information is governed by our",
     "policy.terms.contactH": "Contact",
-    "policy.terms.contactP": "Questions about the Terms of Service should be sent to {email}.",
+    "policy.terms.contactP":
+      "Questions about the Terms of Service should be sent to {email}.",
 
     /* account page (static) */
     "account.pageTitle": "My account",
@@ -470,7 +520,8 @@ export const ui = {
     "account.loginTitle": "Login",
     "account.registerTitle": "Create account",
     "account.loginSub": "Sign in to access your orders and member benefits.",
-    "account.registerSub": "Create your Toonhub account to track orders and member benefits.",
+    "account.registerSub":
+      "Create your Toonhub account to track orders and member benefits.",
     "account.firstName": "First name",
     "account.lastName": "Last name",
     "account.emailPh": "Email address",
@@ -490,7 +541,8 @@ export const ui = {
     "account.parcelLabel": "Track a parcel",
     "account.parcelPh": "Tracking number",
     "account.trackBtn": "Track",
-    "account.parcelNote1": "Looks up carrier tracking (17track). You can also use",
+    "account.parcelNote1":
+      "Looks up carrier tracking (17track). You can also use",
     "account.parcelNote2": "with your order number.",
     "account.metaDesc": "Sign in to view orders, addresses and tracking.",
 
@@ -499,7 +551,8 @@ export const ui = {
     "account.msgLoading": "Loading…",
     "account.msgAuthFail": "Could not sign in. Check your email and password.",
     "account.msgSaveFail": "Could not save profile",
-    "account.noAddress": "No saved address yet. Addresses appear after you place an order.",
+    "account.noAddress":
+      "No saved address yet. Addresses appear after you place an order.",
     "account.addressFromCheckout": "From your last checkout.",
     "account.noOrdersPre": "You haven’t placed an order yet.",
     "account.browse": "Browse figures",
@@ -511,12 +564,14 @@ export const ui = {
 
     /* checkout page (static) */
     "checkout.title": "Secure checkout",
-    "checkout.metaDesc": "Secure checkout — free worldwide shipping, 30-day returns.",
+    "checkout.metaDesc":
+      "Secure checkout — free worldwide shipping, 30-day returns.",
     "checkout.crumbCart": "Cart",
     "checkout.crumbCurrent": "Checkout",
     "checkout.progressAria": "Checkout progress",
     "checkout.offerH": "Limited offer",
-    "checkout.offerBody": "Buy 1 get 2nd 50% off · Free worldwide shipping · 30-day returns",
+    "checkout.offerBody":
+      "Buy 1 get 2nd item off — auto-applied at checkout · Free worldwide shipping · 30-day returns",
     "checkout.deliverTo": "Deliver to",
     "checkout.change": "Change",
     "checkout.contact": "Contact",
@@ -567,19 +622,22 @@ export const ui = {
     "checkout.msgPaymentIncomplete": "Payment was not completed",
     "checkout.msgRequestFailed": "Request failed",
     "checkout.qtyEach": "Qty {qty} · {price} each",
-    "checkout.shipLineDefault": "Free worldwide shipping included · 2–3 day processing",
+    "checkout.shipLineDefault":
+      "Free worldwide shipping included · 2–3 day processing",
     "checkout.shippingNameFallback": "Shipping",
     "checkout.provinceSelectFirst": "Select province / state",
     "checkout.countryOtherFallback": "Other",
 
     /* checkout success */
-    "success.metaDesc": "Order confirmed — thank you for shopping with TOONHUB.",
+    "success.metaDesc":
+      "Order confirmed — thank you for shopping with TOONHUB.",
     "success.heading": "Thank you for your order",
     "success.confirmed": "Your order is confirmed.",
     "success.orderConfirmed": "Order {order} is confirmed.",
     "success.receipt": " A receipt will be sent to {email}.",
     "success.nextH": "What happens next",
-    "success.nextBody": "We pack in 2–3 business days · Free worldwide shipping with tracking · 30-day returns",
+    "success.nextBody":
+      "We pack in 2–3 business days · Free worldwide shipping with tracking · 30-day returns",
     "success.trackThis": "Track this order",
   },
 
@@ -650,7 +708,7 @@ export const ui = {
     "cart.viewCart": "檢視購物車",
     "cart.subtotal": "小計",
     "cart.total": "總計",
-    "cart.discount": "第 2 件半價",
+    "cart.discount": "第 2 件折扣(自動套用)",
     "cart.remove": "移除",
     "cart.freeShippingNote": "全球免運 · 30 天退貨",
 
@@ -696,25 +754,31 @@ export const ui = {
 
     /* 首頁 */
     "site.tagline": "TOONHUB — 珍藏級動漫模型與收藏品",
-    "site.desc": "選購優質動漫模型、雕像與收藏品。全球免運，第二件半價。",
+    "site.desc": "選購優質動漫模型、雕像與收藏品。全球免運，第二件折扣。",
 
     "home.h1": "動漫模型與收藏品 — 依系列選購",
-    "home.seoBody1": "Toonhub 收錄 40 多個動漫系列、數百款獨特設計，色彩鮮豔、細節精緻，從熱血英雄到奇幻世界與激烈對戰，滿足每位動漫迷的收藏渴望。",
-    "home.seoBody2": "我們的模型以收藏標準打造：優質素材、可直接展示的完成度、大膽的用色與吸睛細節，讓喜愛的系列栩栩如生。每筆訂單皆享全球免運。",
+    "home.seoBody1":
+      "Toonhub 收錄 40 多個動漫系列、數百款獨特設計，色彩鮮豔、細節精緻，從熱血英雄到奇幻世界與激烈對戰，滿足每位動漫迷的收藏渴望。",
+    "home.seoBody2":
+      "我們的模型以收藏標準打造：優質素材、可直接展示的完成度、大膽的用色與吸睛細節，讓喜愛的系列栩栩如生。每筆訂單皆享全球免運。",
     "home.shopByList": "依系列選購",
     "home.shopByListDesc": "{count} 個動漫世界，精心雕琢與上色，適合收藏展示。",
     "home.clearance": "季節清倉特惠",
-    "home.clearanceBody": "第二件半價，再加全球免運。",
+    "home.clearanceBody": "第二件折扣，再加全球免運。",
     "home.offerEnds": "優惠倒數",
     "home.newArrivals": "新到貨動漫模型",
     "home.newArrivalsDesc": "橫跨各系列共 {count} 款模型。",
     "home.railHint": "拖曳或使用方向鍵瀏覽",
+    "home.reviewsMarqueeTitle": "新到貨動漫模型 · 收藏家評價",
+    "home.reviewsMarqueeSub": "來自全球收藏家的 {count} 則真實評價",
+    "home.reviewOnProduct": "{name} 對 {product} 的評價",
     "home.viewAll": "查看全部",
     "home.moreTitle": "下方系列還有 400+ 款模型",
     "home.moreDesc": "我們販售的每個系列，依字母順序排列。",
     "home.seoTitle": "Toonhub 的動漫模型",
     "home.catalogueStatus": "商品目錄狀態",
-    "home.demoNotice": "目前無法連線至 Medusa 後端，此頁顯示內建的示範商品目錄。",
+    "home.demoNotice":
+      "目前無法連線至 Medusa 後端，此頁顯示內建的示範商品目錄。",
 
     /* 商品詳情 */
     "pdp.zoomImage": "以全尺寸開啟此圖片",
@@ -752,11 +816,16 @@ export const ui = {
     "cart.shipping": "運費",
     "cart.freeShipping": "全球免運",
     "cart.taxesNote": "已含稅。折扣與運費將於結帳時計算。",
-    "cart.discountLabel": "第二件半價",
+    "cart.discountLabel": "第 2 件折扣(自動套用)",
     "cart.legalPrefix": "結帳即表示您同意",
     "cart.legalAnd": "與",
+    "cart.agreePrefix": "我已閱讀並同意",
+    "cart.agreeAnd": "及",
+    "cart.agreeSuffix": "。",
+    "cart.agreeHint": "結帳前請先勾選同意服務條款與隱私權政策。",
     "cart.jsTitle": "需要 JavaScript",
-    "cart.jsBody": "購物車儲存在此裝置並由瀏覽器渲染，因此本頁需要啟用 JavaScript。",
+    "cart.jsBody":
+      "購物車儲存在此裝置並由瀏覽器渲染，因此本頁需要啟用 JavaScript。",
 
     /* 搜尋頁 */
     "search.title": "搜尋",
@@ -767,13 +836,15 @@ export const ui = {
 
     /* 願望清單頁 */
     "wishlist.intro": "儲存在此裝置的模型。日後登入即可在各瀏覽器同步保存。",
-    "wishlist.jsBody": "儲存的模型存在此瀏覽器的儲存空間中，因此願望清單需要啟用 JavaScript。",
+    "wishlist.jsBody":
+      "儲存的模型存在此瀏覽器的儲存空間中，因此願望清單需要啟用 JavaScript。",
 
     /* 404 */
     "notFound.popular": "熱門系列",
     /* 聯絡頁 */
     "contact.title": "聯絡我們",
-    "contact.intro": "對訂單、模型或預購有任何疑問？請寄信至 {email}，或填寫下方表單，我們將於一個工作日內回覆。",
+    "contact.intro":
+      "對訂單、模型或預購有任何疑問？請寄信至 {email}，或填寫下方表單，我們將於一個工作日內回覆。",
     "contact.formHeading": "聯絡表單",
     "contact.name": "姓名",
     "contact.email": "電子郵件",
@@ -788,7 +859,8 @@ export const ui = {
 
     /* 訂單追蹤 */
     "track.title": "追蹤您的訂單",
-    "track.intro": "請輸入確認信中的訂單編號與下單時使用的電子郵件。包裹出貨後，您也可以至物流業者網站查詢。",
+    "track.intro":
+      "請輸入確認信中的訂單編號與下單時使用的電子郵件。包裹出貨後，您也可以至物流業者網站查詢。",
     "track.orderNumber": "訂單編號",
     "track.emailLabel": "電子郵件",
     "track.parcelNote": "或在下方貼上物流追蹤號碼。",
@@ -797,8 +869,10 @@ export const ui = {
     "track.looking": "正在查詢您的訂單…",
     "track.needBoth": "請輸入訂單編號與電子郵件，或填入追蹤號碼。",
     "track.openingCarrier": "正在開啟 {number} 的物流追蹤頁面。",
-    "track.notFound": "找不到該訂單。請使用確認信中的完整訂單編號，或貼上追蹤號碼。",
-    "track.noMatchParcel": "無法比對到該訂單。正在開啟 {number} 的物流追蹤頁面…",
+    "track.notFound":
+      "找不到該訂單。請使用確認信中的完整訂單編號，或貼上追蹤號碼。",
+    "track.noMatchParcel":
+      "無法比對到該訂單。正在開啟 {number} 的物流追蹤頁面…",
     "track.orderHeading": "訂單 {id}",
     "track.statusLabel": "狀態",
     "track.placed": "下單時間 {date}",
@@ -829,7 +903,6 @@ export const ui = {
     "grid.subCollections": "{title} 子系列",
     "grid.relatedCollections": "相關系列",
 
-
     /* 系列排序與標題 */
     "sort.featured": "精選",
     "sort.az": "依名稱 A–Z",
@@ -843,7 +916,7 @@ export const ui = {
     "trust.freeShipping": "全球免運",
     "trust.returns": "30 天退貨",
     "trust.ssl": "SSL 加密",
-    "trust.gift": "第 2 件半價",
+    "trust.gift": "第 2 件折扣",
 
     /* 政策頁面與共用連結文字 */
     "policy.lastUpdated": "最後更新",
@@ -857,20 +930,22 @@ export const ui = {
     "about.storyH": "我們的故事",
     "about.storyP1":
       "TOONHUB 由一群動漫愛好者創立，源自對動漫藝術、故事與文化共同的熱愛。我們看見同好需要一個專屬空間，能找到最優質的動漫模型，並與志趣相投的人交流。",
-    "about.storyP2": "自成立以來，我們致力於為顧客帶來出色的體驗，並凝聚一個充滿活力、包容的收藏家社群。",
+    "about.storyP2":
+      "自成立以來，我們致力於為顧客帶來出色的體驗，並凝聚一個充滿活力、包容的收藏家社群。",
     "about.sellH": "我們販售的商品",
     "about.sellP":
       "精緻動漫模型、雕像與收藏品 — 涵蓋 One Piece、龍珠、鬼滅之刃、咒術迴戰等數十個作品世界。每件商品都經過雕工、塗裝與展示質感的嚴選。",
     "about.promiseH": "我們的承諾",
     "about.promise1": "每筆訂單皆享全球免運",
-    "about.promise2": "第 2 件半價",
+    "about.promise2": "第 2 件折扣",
     "about.promise3": "未使用商品 30 天保證",
     "about.promise4": "安全加密結帳",
 
     /* 模型保養指南 */
     "care.title": "模型保養指南",
     "care.metaDesc": "讓您的 Toonhub 動漫模型歷久彌新的保養方法。",
-    "care.intro": "多一分保養，收藏就能陪伴您更久。遵循以下指引，讓您的收藏多年如新。",
+    "care.intro":
+      "多一分保養，收藏就能陪伴您更久。遵循以下指引，讓您的收藏多年如新。",
     "care.placementH": "擺放位置",
     "care.placementP":
       "請將模型置於陽光直射不到、遠離熱源的地方。紫外線與高溫會使塗裝褪色、PVC 變形。若家中有寵物或灰塵較多，建議使用密閉展示櫃。",
@@ -878,7 +953,8 @@ export const ui = {
     "care.dustingP":
       "每週以乾淨、乾燥的化妝刷或吹塵球除塵。避免使用紙巾與一般抹布 — 它們可能刮傷細緻的塗裝。頑固灰塵可用棉花棒沾少量蒸餾水輕點，切勿擦拭。",
     "care.handlingH": "拿取方式",
-    "care.handlingP": "請握住模型最穩固的部位（軀幹、底座）。大型配件請另外托住。拿取前請先洗淨並擦乾雙手，避免油脂沾附本體。",
+    "care.handlingP":
+      "請握住模型最穩固的部位（軀幹、底座）。大型配件請另外托住。拿取前請先洗淨並擦乾雙手，避免油脂沾附本體。",
     "care.storageH": "收納保存",
     "care.storageP":
       "裝盒收藏時，請以無酸薄紙包覆。勿將模型留在高溫車內或閣樓。原廠外盒適合長期保存，也是 30 天退貨期內需要保留的憑證。",
@@ -890,7 +966,8 @@ export const ui = {
     /* 聯盟計畫 */
     "affiliate.title": "聯盟計畫",
     "affiliate.metaDesc": "分享 TOONHUB 動漫模型，賺取推薦佣金。",
-    "affiliate.intro": "喜歡 Toonhub 嗎？分享我們的收藏，每筆透過您推薦的訂單都能賺取佣金。",
+    "affiliate.intro":
+      "喜歡 Toonhub 嗎？分享我們的收藏，每筆透過您推薦的訂單都能賺取佣金。",
     "affiliate.howH": "運作方式",
     "affiliate.how1": "提供您的社群帳號或網站資訊提出申請",
     "affiliate.how2": "獲得專屬追蹤連結",
@@ -903,11 +980,14 @@ export const ui = {
     /* 取消政策 */
     "policy.cancel.title": "取消政策",
     "policy.cancel.metaDesc": "如何取消 Toonhub 訂單。",
-    "policy.cancel.lead": "您可以在下單後 24 小時內申請取消，前提是訂單尚未進入製作程序或交付物流。",
+    "policy.cancel.lead":
+      "您可以在下單後 24 小時內申請取消，前提是訂單尚未進入製作程序或交付物流。",
     "policy.cancel.howH": "如何取消",
-    "policy.cancel.howP": "請來信 {email}，提供訂單編號並於主旨註明「取消訂單」。我們會以電子郵件確認。",
+    "policy.cancel.howP":
+      "請來信 {email}，提供訂單編號並於主旨註明「取消訂單」。我們會以電子郵件確認。",
     "policy.cancel.afterH": "出貨之後",
-    "policy.cancel.afterP1": "訂單一經出貨即無法取消。您可以拒收包裹，或於送達後依我們的",
+    "policy.cancel.afterP1":
+      "訂單一經出貨即無法取消。您可以拒收包裹，或於送達後依我們的",
     "policy.cancel.afterP2": "辦理退貨。",
     "policy.cancel.customH": "客製商品",
     "policy.cancel.customP": "接單製作或個人化模型在開始生產後即無法取消。",
@@ -939,7 +1019,8 @@ export const ui = {
     /* 退款政策 */
     "policy.refund.title": "退款政策",
     "policy.refund.metaDesc": "未使用的 Toonhub 模型享有 30 天退貨服務。",
-    "policy.refund.lead": "我們提供 30 天退貨政策，即收到商品後 30 天內可申請退貨。",
+    "policy.refund.lead":
+      "我們提供 30 天退貨政策，即收到商品後 30 天內可申請退貨。",
     "policy.refund.clearanceStrong": "所有清倉商品售出後恕不退換",
     "policy.refund.clearanceRest": "除非商品送達時已損壞或有瑕疵。",
     "policy.refund.eligible":
@@ -966,7 +1047,8 @@ export const ui = {
     "policy.shipping.procH": "訂單處理",
     "policy.shipping.procP1":
       "請確認訂單資訊正確無誤。因資料填寫錯誤產生之問題由顧客自行負責。下單前請再次檢查，如有錯誤請於 24 小時內與我們聯絡。",
-    "policy.shipping.procP2": "所有訂單將於 2–3 個工作日內處理。週末與國定假日不出貨、不配送。",
+    "policy.shipping.procP2":
+      "所有訂單將於 2–3 個工作日內處理。週末與國定假日不出貨、不配送。",
     "policy.shipping.confH": "訂單確認",
     "policy.shipping.confP":
       "下單成功後您會收到確認郵件，出貨後會再收到附追蹤號碼的第二封郵件。出貨後變更地址可能需支付物流改寄費用。",
@@ -974,7 +1056,8 @@ export const ui = {
     "policy.shipping.intlP": "我們提供指定國家免費國際運送。一般配送時效：",
     "policy.shipping.intl1": "美國、英國、加拿大、澳洲、歐洲 — 7–10 個工作日",
     "policy.shipping.intl2": "日本、韓國、中國、新加坡 — 5–7 個工作日",
-    "policy.shipping.vatP": "價格未含增值稅。任何適用的增值稅或進口關稅由買方負擔。",
+    "policy.shipping.vatP":
+      "價格未含增值稅。任何適用的增值稅或進口關稅由買方負擔。",
     "policy.shipping.trackH": "包裹追蹤",
     "policy.shipping.trackP1": "您可以使用出貨通知信中的追蹤號碼，或前往",
     "policy.shipping.trackP2": "頁面查詢。如有疑問請來信：{email}。",
@@ -994,12 +1077,15 @@ export const ui = {
     "policy.terms.generalP":
       "我們保留隨時以任何理由拒絕向任何人提供服務的權利。未經明確書面許可，您不得複製、重製、拷貝、販售或轉售本服務的任何部分。",
     "policy.terms.accuracyH": "資訊準確性",
-    "policy.terms.accuracyP": "本網站資訊如有不準確、不完整或未即時更新，我們概不負責。本站內容僅供一般參考。",
+    "policy.terms.accuracyP":
+      "本網站資訊如有不準確、不完整或未即時更新，我們概不負責。本站內容僅供一般參考。",
     "policy.terms.pricesH": "價格異動",
-    "policy.terms.pricesP": "商品價格可能不經通知即調整。我們可能不經通知即修改或終止服務。",
+    "policy.terms.pricesP":
+      "商品價格可能不經通知即調整。我們可能不經通知即修改或終止服務。",
     "policy.terms.productsH": "商品",
     "policy.terms.productsP1": "部分商品可能僅於網路販售，並適用我們的",
-    "policy.terms.productsP2": "我們已盡力準確呈現商品顏色與圖片，但無法保證您的螢幕顯示完全一致。",
+    "policy.terms.productsP2":
+      "我們已盡力準確呈現商品顏色與圖片，但無法保證您的螢幕顯示完全一致。",
     "policy.terms.toolsH": "選用工具與第三方連結",
     "policy.terms.toolsP":
       "我們可能提供第三方工具的使用途徑，對該等工具不具控制力，亦不對其使用負責。第三方網站連結僅為便利而提供。",
@@ -1063,7 +1149,7 @@ export const ui = {
     "checkout.crumbCurrent": "結帳",
     "checkout.progressAria": "結帳進度",
     "checkout.offerH": "限時優惠",
-    "checkout.offerBody": "第 2 件半價 · 全球免運 · 30 天退貨",
+    "checkout.offerBody": "第 2 件折扣 · 結帳自動套用 · 全球免運 · 30 天退貨",
     "checkout.deliverTo": "配送至",
     "checkout.change": "變更",
     "checkout.contact": "聯絡資訊",
@@ -1072,7 +1158,8 @@ export const ui = {
     "checkout.countryAria": "國家 / 地區",
     "checkout.countryOther": "其他 / 未列出",
     "checkout.countryNamePh": "國家名稱",
-    "checkout.countryOtherHint": "我們將以此為配送依據。若非標準國家代碼，我們會以電子郵件與您確認。",
+    "checkout.countryOtherHint":
+      "我們將以此為配送依據。若非標準國家代碼，我們會以電子郵件與您確認。",
     "checkout.fullName": "收件人全名",
     "checkout.address": "地址",
     "checkout.addApt": "+ 公寓、套房",
@@ -1196,7 +1283,7 @@ export const ui = {
     "cart.viewCart": "カートを見る",
     "cart.subtotal": "小計",
     "cart.total": "合計",
-    "cart.discount": "2点目半額",
+    "cart.discount": "2点目割引(自動適用)",
     "cart.remove": "削除",
     "cart.freeShippingNote": "全世界送料無料 · 30日間返品可能",
 
@@ -1208,7 +1295,8 @@ export const ui = {
     "quickView.goingToCheckout": "決済へ移動中…",
 
     "empty.notFoundTitle": "ページが見つかりません",
-    "empty.notFoundBody": "リンクが切れているか、ページが移動した可能性があります。",
+    "empty.notFoundBody":
+      "リンクが切れているか、ページが移動した可能性があります。",
     "empty.productNotFoundTitle": "商品が見つかりません",
     "empty.productNotFoundBody": "このフィギュアは現在取り扱いがありません。",
     "empty.wishlistTitle": "お気に入りは空です",
@@ -1243,24 +1331,33 @@ export const ui = {
     /* トップページ */
     "home.h1": "アニメフィギュア・コレクタブル — シリーズから探す",
     "site.tagline": "TOONHUB — プレミアムアニメフィギュア＆コレクタブル",
-    "site.desc": "プレミアムなアニメフィギュア・スタチュー・コレクタブルをお届け。送料無料・2点目半額。",
+    "site.desc":
+      "プレミアムなアニメフィギュア・スタチュー・コレクタブルをお届け。送料無料・2点目割引。",
 
-    "home.seoBody1": "Toonhub では 40 以上のアニメシリーズ、数百点のオリジナルデザインをご用意。鮮やかで精巧な造形と躍動感あるテーマで、アクションヒーローから幻想世界、激しいバトルシーンまでファンの心を捉えます。",
-    "home.seoBody2": "コレクター基準で仕上げた高品質フィギュア：上質な素材、そのまま飾れる完成度、大胆な彩色と目を引くディテールで、お気に入りのシリーズを生き生きと再現します。すべての注文は全世界送料無料です。",
+    "home.seoBody1":
+      "Toonhub では 40 以上のアニメシリーズ、数百点のオリジナルデザインをご用意。鮮やかで精巧な造形と躍動感あるテーマで、アクションヒーローから幻想世界、激しいバトルシーンまでファンの心を捉えます。",
+    "home.seoBody2":
+      "コレクター基準で仕上げた高品質フィギュア：上質な素材、そのまま飾れる完成度、大胆な彩色と目を引くディテールで、お気に入りのシリーズを生き生きと再現します。すべての注文は全世界送料無料です。",
     "home.shopByList": "シリーズから探す",
-    "home.shopByListDesc": "{count} のアニメの世界を、造形と彩色にこだわってお届けします。",
+    "home.shopByListDesc":
+      "{count} のアニメの世界を、造形と彩色にこだわってお届けします。",
     "home.clearance": "シーズンクリアランスセール",
-    "home.clearanceBody": "2点目半額、さらに全世界送料無料。",
+    "home.clearanceBody": "2点目割引、さらに全世界送料無料。",
     "home.offerEnds": "セール終了まで",
     "home.newArrivals": "新着アニメフィギュア",
     "home.newArrivalsDesc": "全シリーズから {count} 点のフィギュア。",
     "home.railHint": "ドラッグまたは矢印キーで閲覧できます",
+    "home.reviewsMarqueeTitle": "新着アニメフィギュア・コレクターレビュー",
+    "home.reviewsMarqueeSub":
+      "世界中のコレクターからの {count} 件の実際のレビュー",
+    "home.reviewOnProduct": "{name} による {product} のレビュー",
     "home.viewAll": "すべて見る",
     "home.moreTitle": "下記のコレクションに 400 点以上",
     "home.moreDesc": "取り扱いシリーズをアルファベット順に。",
     "home.seoTitle": "Toonhub のアニメフィギュア",
     "home.catalogueStatus": "カタログの状態",
-    "home.demoNotice": "Medusa バックエンドに接続できないため、同梱のデモカタログを表示しています。",
+    "home.demoNotice":
+      "Medusa バックエンドに接続できないため、同梱のデモカタログを表示しています。",
 
     /* 商品詳細 */
     "pdp.zoomImage": "この画像をフルサイズで開く",
@@ -1289,7 +1386,8 @@ export const ui = {
     "pdp.related": "こちらもおすすめ",
     "pdp.azTitle": "A–Z アニメリスト",
     "pdp.azDesc": "シリーズへ直接移動します。",
-    "pdp.demoNotice": "同梱のデモデータを表示中 — Medusa バックエンドに接続できません。",
+    "pdp.demoNotice":
+      "同梱のデモデータを表示中 — Medusa バックエンドに接続できません。",
     "pdp.noImageBody": "この商品の画像はまだ登録されていません。",
 
     /* カートページ */
@@ -1298,28 +1396,39 @@ export const ui = {
     "cart.shipping": "送料",
     "cart.freeShipping": "全世界無料",
     "cart.taxesNote": "税込価格です。割引と送料は購入手続きで計算されます。",
-    "cart.discountLabel": "2点目半額",
-    "cart.legalPrefix": "購入手続きを行うことで、以下に同意したものとみなされます：",
+    "cart.discountLabel": "2点目割引(自動適用)",
+    "cart.legalPrefix":
+      "購入手続きを行うことで、以下に同意したものとみなされます：",
     "cart.legalAnd": "および",
+    "cart.agreePrefix": "これらの",
+    "cart.agreeAnd": "と",
+    "cart.agreeSuffix": "に同意します。",
+    "cart.agreeHint":
+      "チェックアウト前に利用規約とプライバシーポリシーへの同意にチェックを入れてください。",
     "cart.jsTitle": "JavaScript が必要です",
-    "cart.jsBody": "カートはこの端末に保存されブラウザで描画されるため、このページには JavaScript が必要です。",
+    "cart.jsBody":
+      "カートはこの端末に保存されブラウザで描画されるため、このページには JavaScript が必要です。",
 
     /* 検索ページ */
     "search.title": "検索",
     "search.noResults": "「{query}」に一致する結果はありません",
-    "search.noResultsHint": "表記を確認するか、短いキーワードで探すか、全コレクションをご覧ください。",
+    "search.noResultsHint":
+      "表記を確認するか、短いキーワードで探すか、全コレクションをご覧ください。",
     "search.resultOne": "「{query}」の検索結果 {count} 件",
     "search.resultMany": "「{query}」の検索結果 {count} 件",
 
     /* ウィッシュリスト */
-    "wishlist.intro": "この端末に保存したフィギュア。ログインすれば複数のブラウザで保持できます。",
-    "wishlist.jsBody": "保存したフィギュアはこのブラウザのストレージにあるため、ウィッシュリストには JavaScript が必要です。",
+    "wishlist.intro":
+      "この端末に保存したフィギュア。ログインすれば複数のブラウザで保持できます。",
+    "wishlist.jsBody":
+      "保存したフィギュアはこのブラウザのストレージにあるため、ウィッシュリストには JavaScript が必要です。",
 
     /* 404 */
     "notFound.popular": "人気のコレクション",
     /* お問い合わせ */
     "contact.title": "お問い合わせ",
-    "contact.intro": "ご注文・フィギュア・予約販売についてのご質問は {email} まで、または下記のフォームからどうぞ。1 営業日以内にご返信します。",
+    "contact.intro":
+      "ご注文・フィギュア・予約販売についてのご質問は {email} まで、または下記のフォームからどうぞ。1 営業日以内にご返信します。",
     "contact.formHeading": "お問い合わせフォーム",
     "contact.name": "お名前",
     "contact.email": "メールアドレス",
@@ -1334,23 +1443,28 @@ export const ui = {
 
     /* 注文追跡 */
     "track.title": "ご注文の追跡",
-    "track.intro": "確認メールに記載の注文番号と、ご注文時のメールアドレスを入力してください。発送後は配送業者のサイトでも追跡できます。",
+    "track.intro":
+      "確認メールに記載の注文番号と、ご注文時のメールアドレスを入力してください。発送後は配送業者のサイトでも追跡できます。",
     "track.orderNumber": "注文番号",
     "track.emailLabel": "メールアドレス",
     "track.parcelNote": "または下記の追跡番号を貼り付けてください。",
     "track.parcel": "追跡番号（任意）",
     "track.submit": "追跡する",
     "track.looking": "ご注文を確認しています…",
-    "track.needBoth": "注文番号とメールアドレス、または追跡番号を入力してください。",
+    "track.needBoth":
+      "注文番号とメールアドレス、または追跡番号を入力してください。",
     "track.openingCarrier": "{number} の配送業者の追跡ページを開きます。",
-    "track.notFound": "該当する注文が見つかりません。確認メールの注文番号を正確に入力するか、追跡番号を貼り付けてください。",
-    "track.noMatchParcel": "注文を照合できませんでした。{number} の追跡ページを開きます…",
+    "track.notFound":
+      "該当する注文が見つかりません。確認メールの注文番号を正確に入力するか、追跡番号を貼り付けてください。",
+    "track.noMatchParcel":
+      "注文を照合できませんでした。{number} の追跡ページを開きます…",
     "track.orderHeading": "注文 {id}",
     "track.statusLabel": "ステータス",
     "track.placed": "注文日 {date}",
     "track.trackingLink": "追跡番号",
     "track.openCarrier": "配送業者を開く",
-    "track.noTracking": "追跡番号はまだありません。発送後にここに表示されます。",
+    "track.noTracking":
+      "追跡番号はまだありません。発送後にここに表示されます。",
     "track.parcelLabel": "荷物",
     "track.updatesTo": "最新情報は {email} にお送りします。",
     "track.resultHeading": "追跡結果",
@@ -1363,7 +1477,8 @@ export const ui = {
     "blog.emptyHint": "新商品ニュースやコレクションガイドを近日公開します。",
     "blog.readMore": "「{title}」を読む",
     "blog.postNotFound": "記事が見つかりません",
-    "blog.postNotFoundHint": "この記事は名前が変更されたか、削除された可能性があります。",
+    "blog.postNotFoundHint":
+      "この記事は名前が変更されたか、削除された可能性があります。",
     "notFound.shopAll": "すべてのコレクションを見る",
     "notFound.goHome": "ホームへ戻る",
 
@@ -1374,7 +1489,6 @@ export const ui = {
     "grid.moreLikeThis": "関連アイテム",
     "grid.subCollections": "{title} のサブコレクション",
     "grid.relatedCollections": "関連コレクション",
-
 
     /* コレクションの並び替え・見出し */
     "sort.featured": "おすすめ順",
@@ -1389,7 +1503,7 @@ export const ui = {
     "trust.freeShipping": "送料無料",
     "trust.returns": "30日間返品可能",
     "trust.ssl": "SSL 暗号化",
-    "trust.gift": "2点目半額",
+    "trust.gift": "2点目割引",
 
     /* ポリシーページ共通 */
     "policy.lastUpdated": "最終更新日",
@@ -1399,24 +1513,27 @@ export const ui = {
 
     /* About */
     "about.title": "私たちについて",
-    "about.metaDesc": "TOONHUB のストーリー — 世界中のコレクターへ上質なアニメフィギュアを。",
+    "about.metaDesc":
+      "TOONHUB のストーリー — 世界中のコレクターへ上質なアニメフィギュアを。",
     "about.storyH": "私たちの物語",
     "about.storyP1":
       "TOONHUB はアニメを愛する仲間たちによって始まりました。アニメのアート、物語、文化への共通の愛から生まれたこのショップは、ファンが最高のアニメフィギュアと出会い、同じ情熱を持つ仲間とつながれる場所を目指しています。",
-    "about.storyP2": "創業以来、お客様にとって特別な体験を届け、活気あるオープンなコレクターコミュニティを育てることに取り組んできました。",
+    "about.storyP2":
+      "創業以来、お客様にとって特別な体験を届け、活気あるオープンなコレクターコミュニティを育てることに取り組んできました。",
     "about.sellH": "取り扱い商品",
     "about.sellP":
       "プレミアムなアニメフィギュア、スタチュー、コレクタブル。ワンピース、ドラゴンボール、鬼滅の刃、呪術廻戦など、数十の作品世界から厳選。造形の質、彩色の仕上がり、ディスプレイ映えを基準に選んでいます。",
     "about.promiseH": "私たちの約束",
     "about.promise1": "全注文・全世界送料無料",
-    "about.promise2": "2点目半額",
+    "about.promise2": "2点目割引",
     "about.promise3": "未使用品の30日間保証",
     "about.promise4": "安全な暗号化チェックアウト",
 
     /* ケアガイド */
     "care.title": "フィギュアお手入れガイド",
     "care.metaDesc": "Toonhub のフィギュアを長く美しく保つためのケア方法。",
-    "care.intro": "少しのケアで、コレクションは何年も展示に耐える美しさを保てます。次のガイドラインをぜひお試しください。",
+    "care.intro":
+      "少しのケアで、コレクションは何年も展示に耐える美しさを保てます。次のガイドラインをぜひお試しください。",
     "care.placementH": "設置場所",
     "care.placementP":
       "直射日光と熱源を避けてください。紫外線と高温は時間とともに塗装の色褪せや PVC の変形を招きます。ペットがいる家庭やホコリの多い部屋では、密閉できるディスプレイケースが理想的です。",
@@ -1437,7 +1554,8 @@ export const ui = {
     /* アフィリエイト */
     "affiliate.title": "アフィリエイトプログラム",
     "affiliate.metaDesc": "TOONHUB のフィギュアを紹介して報酬を得られます。",
-    "affiliate.intro": "Toonhub がお気に入りですか？コレクションを紹介して、紹介経由の注文ごとに報酬を獲得しましょう。",
+    "affiliate.intro":
+      "Toonhub がお気に入りですか？コレクションを紹介して、紹介経由の注文ごとに報酬を獲得しましょう。",
     "affiliate.howH": "仕組み",
     "affiliate.how1": "SNS やサイトの情報を添えて申請",
     "affiliate.how2": "専用のトラッキングリンクを取得",
@@ -1453,12 +1571,15 @@ export const ui = {
     "policy.cancel.lead":
       "ご注文が製作に入る前、または配送業者に引き渡される前であれば、ご注文後24時間以内にキャンセルをご依頼いただけます。",
     "policy.cancel.howH": "キャンセル方法",
-    "policy.cancel.howP": "件名を「注文キャンセル」としてご注文番号を {email} までお送りください。メールにてご確認をお知らせします。",
+    "policy.cancel.howP":
+      "件名を「注文キャンセル」としてご注文番号を {email} までお送りください。メールにてご確認をお知らせします。",
     "policy.cancel.afterH": "発送後",
-    "policy.cancel.afterP1": "発送後のご注文はキャンセルできません。受け取り拒否をするか、商品到着後に",
+    "policy.cancel.afterP1":
+      "発送後のご注文はキャンセルできません。受け取り拒否をするか、商品到着後に",
     "policy.cancel.afterP2": "に沿って返品ください。",
     "policy.cancel.customH": "オーダーメイド品",
-    "policy.cancel.customP": "受注生産品やパーソナライズされたフィギュアは、製作開始後にキャンセルできません。",
+    "policy.cancel.customP":
+      "受注生産品やパーソナライズされたフィギュアは、製作開始後にキャンセルできません。",
 
     /* プライバシーポリシー */
     "policy.privacy.title": "プライバシーポリシー",
@@ -1466,7 +1587,8 @@ export const ui = {
     "policy.privacy.lead":
       "TOONHUB（以下「当店」）はお客様のプライバシーを尊重します。本ポリシーは、{domain} のご利用やご注文の際に、どのように情報を収集・利用・共有するかを説明するものです。",
     "policy.privacy.collectH": "収集する情報",
-    "policy.privacy.collect1": "連絡先情報（氏名、メールアドレス、配送先住所、電話番号）",
+    "policy.privacy.collect1":
+      "連絡先情報（氏名、メールアドレス、配送先住所、電話番号）",
     "policy.privacy.collect2": "注文履歴とカートの内容",
     "policy.privacy.collect3": "端末と利用状況（ブラウザ、閲覧ページ）",
     "policy.privacy.collect4": "Cookie に保存される通貨と言語の設定",
@@ -1486,10 +1608,13 @@ export const ui = {
 
     /* 返金ポリシー */
     "policy.refund.title": "返金ポリシー",
-    "policy.refund.metaDesc": "未使用の Toonhub フィギュアは30日間返品可能です。",
-    "policy.refund.lead": "当店では30日間の返品ポリシーを設けています。商品到着後30日以内に返品をお申し込みいただけます。",
+    "policy.refund.metaDesc":
+      "未使用の Toonhub フィギュアは30日間返品可能です。",
+    "policy.refund.lead":
+      "当店では30日間の返品ポリシーを設けています。商品到着後30日以内に返品をお申し込みいただけます。",
     "policy.refund.clearanceStrong": "クリアランス品はすべて返品不可です",
-    "policy.refund.clearanceRest": "ただし、到着時に破損・不良があった場合を除きます。",
+    "policy.refund.clearanceRest":
+      "ただし、到着時に破損・不良があった場合を除きます。",
     "policy.refund.eligible":
       "返品対象となるには、商品が到着時と同じ状態（未使用・タグ付き・元のパッケージ）である必要があります。購入証明も必要です。オーダーメイド品は返品できません。",
     "policy.refund.startH": "返品手続き",
@@ -1514,18 +1639,23 @@ export const ui = {
     "policy.shipping.procH": "注文処理",
     "policy.shipping.procP1":
       "ご注文内容が正しいことを必ずご確認ください。誤った情報の送信による責任はお客様に帰属します。ご注文前に内容を確認するか、誤りがある場合は24時間以内にご連絡ください。",
-    "policy.shipping.procP2": "すべてのご注文は2～3営業日以内に処理されます。週末や祝日の発送・配達は行いません。",
+    "policy.shipping.procP2":
+      "すべてのご注文は2～3営業日以内に処理されます。週末や祝日の発送・配達は行いません。",
     "policy.shipping.confH": "確認メール",
     "policy.shipping.confP":
       "ご注文確定時に確認メールを、発送時には追跡番号付きのメールをお送りします。発送後の住所変更には配送業者の再配送料が発生する場合があります。",
     "policy.shipping.intlH": "海外配送",
-    "policy.shipping.intlP": "対象国へ無料の国際配送を行っています。お届けの目安：",
-    "policy.shipping.intl1": "アメリカ・イギリス・カナダ・オーストラリア・ヨーロッパ — 7～10営業日",
+    "policy.shipping.intlP":
+      "対象国へ無料の国際配送を行っています。お届けの目安：",
+    "policy.shipping.intl1":
+      "アメリカ・イギリス・カナダ・オーストラリア・ヨーロッパ — 7～10営業日",
     "policy.shipping.intl2": "日本・韓国・中国・シンガポール — 5～7営業日",
-    "policy.shipping.vatP": "価格に VAT は含まれません。該当する VAT や輸入関税は購入者のご負担となります。",
+    "policy.shipping.vatP":
+      "価格に VAT は含まれません。該当する VAT や輸入関税は購入者のご負担となります。",
     "policy.shipping.trackH": "追跡",
     "policy.shipping.trackP1": "発送メールに記載の追跡番号、または当店の",
-    "policy.shipping.trackP2": "ページをご利用ください。ご不明点は {email} まで。",
+    "policy.shipping.trackP2":
+      "ページをご利用ください。ご不明点は {email} まで。",
     "policy.shipping.issuesH": "配送トラブル",
     "policy.shipping.issuesP":
       "追跡情報が配達済みなのに荷物が届かない場合は、まず配送業者にお問い合わせください。破損して届いた場合は、ご注文番号と写真を添えて {email} までご連絡ください。",
@@ -1545,7 +1675,8 @@ export const ui = {
     "policy.terms.accuracyP":
       "本サイトの情報が正確・完全・最新でない場合、当店は責任を負いません。サイト上の情報は一般的な情報提供のみを目的としています。",
     "policy.terms.pricesH": "価格の変更",
-    "policy.terms.pricesP": "商品価格は予告なく変更される場合があります。また、サービスを予告なく変更・終了する場合があります。",
+    "policy.terms.pricesP":
+      "商品価格は予告なく変更される場合があります。また、サービスを予告なく変更・終了する場合があります。",
     "policy.terms.productsH": "商品について",
     "policy.terms.productsP1": "一部の商品はオンライン限定で販売され、",
     "policy.terms.productsP2":
@@ -1559,7 +1690,8 @@ export const ui = {
     "policy.terms.personalH": "個人情報",
     "policy.terms.personalP1": "個人情報の送信には当店の",
     "policy.terms.contactH": "お問い合わせ",
-    "policy.terms.contactP": "利用規約に関するご質問は {email} までお送りください。",
+    "policy.terms.contactP":
+      "利用規約に関するご質問は {email} までお送りください。",
 
     /* アカウントページ（静的） */
     "account.pageTitle": "マイアカウント",
@@ -1567,7 +1699,8 @@ export const ui = {
     "account.loginTitle": "ログイン",
     "account.registerTitle": "アカウント作成",
     "account.loginSub": "ログインしてご注文や会員特典をご確認ください。",
-    "account.registerSub": "Toonhub アカウントを作成して、ご注文の追跡や会員特典をご利用ください。",
+    "account.registerSub":
+      "Toonhub アカウントを作成して、ご注文の追跡や会員特典をご利用ください。",
     "account.firstName": "名",
     "account.lastName": "姓",
     "account.emailPh": "メールアドレス",
@@ -1587,16 +1720,19 @@ export const ui = {
     "account.parcelLabel": "荷物を追跡",
     "account.parcelPh": "追跡番号",
     "account.trackBtn": "追跡",
-    "account.parcelNote1": "配送業者の追跡情報（17track）を確認できます。注文番号をお持ちの場合は",
+    "account.parcelNote1":
+      "配送業者の追跡情報（17track）を確認できます。注文番号をお持ちの場合は",
     "account.parcelNote2": "もご利用いただけます。",
     "account.metaDesc": "ログインしてご注文、住所、追跡情報を確認。",
 
     /* アカウントページ（スクリプト用） */
     "account.msgPwdMismatch": "パスワードが一致しません",
     "account.msgLoading": "読み込み中…",
-    "account.msgAuthFail": "ログインできません。メールアドレスとパスワードをご確認ください。",
+    "account.msgAuthFail":
+      "ログインできません。メールアドレスとパスワードをご確認ください。",
     "account.msgSaveFail": "プロフィールを保存できませんでした",
-    "account.noAddress": "保存された住所はまだありません。ご注文後にここへ表示されます。",
+    "account.noAddress":
+      "保存された住所はまだありません。ご注文後にここへ表示されます。",
     "account.addressFromCheckout": "前回の購入手続きから",
     "account.noOrdersPre": "まだご注文がありません。",
     "account.browse": "フィギュアを見る",
@@ -1613,7 +1749,7 @@ export const ui = {
     "checkout.crumbCurrent": "購入手続き",
     "checkout.progressAria": "購入手続きの進行状況",
     "checkout.offerH": "期間限定オファー",
-    "checkout.offerBody": "2点目半額 · 全世界送料無料 · 30日間返品可能",
+    "checkout.offerBody": "2点目割引 · チェックアウトで自動適用 · 全世界送料無料 · 30日間返品可能",
     "checkout.deliverTo": "お届け先",
     "checkout.change": "変更",
     "checkout.contact": "連絡先",
@@ -1622,7 +1758,8 @@ export const ui = {
     "checkout.countryAria": "国 / 地域",
     "checkout.countryOther": "その他 / リストにない",
     "checkout.countryNamePh": "国名",
-    "checkout.countryOtherHint": "こちらの情報をもとに発送します。標準の国コードでない場合は、メールでご確認いたします。",
+    "checkout.countryOtherHint":
+      "こちらの情報をもとに発送します。標準の国コードでない場合は、メールでご確認いたします。",
     "checkout.fullName": "お名前（フルネーム）",
     "checkout.address": "住所",
     "checkout.addApt": "+ 建物名・部屋番号",
@@ -1646,7 +1783,8 @@ export const ui = {
     "checkout.placeOrder": "注文を確定する — 送料無料",
     "checkout.backToCart": "‹ カート",
     "checkout.secureNote": "安全な購入手続き",
-    "checkout.legalPrefix": "注文を確定することで、以下に同意したものとみなされます：",
+    "checkout.legalPrefix":
+      "注文を確定することで、以下に同意したものとみなされます：",
     "checkout.terms": "利用規約",
     "checkout.privacy": "プライバシーポリシー",
     "checkout.legalAnd": "および",
@@ -1675,7 +1813,8 @@ export const ui = {
     "success.orderConfirmed": "注文 {order} が確定しました。",
     "success.receipt": " 領収書は {email} 宛にお送りします。",
     "success.nextH": "今後の流れ",
-    "success.nextBody": "2～3営業日で梱包・発送 · 追跡付き全世界送料無料 · 30日間返品可能",
+    "success.nextBody":
+      "2～3営業日で梱包・発送 · 追跡付き全世界送料無料 · 30日間返品可能",
     "success.trackThis": "この注文を追跡",
   },
-} as const satisfies Record<string, Record<string, string>>
+} as const satisfies Record<string, Record<string, string>>;

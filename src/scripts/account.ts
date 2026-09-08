@@ -190,6 +190,51 @@ function displayName(c: any, email: string) {
   return n || email.split("@")[0] || "collector"
 }
 
+const HIDDEN_ORDERS_KEY = "toonhub_hidden_orders";
+
+function hiddenOrderIds(): Set<string> {
+  try {
+    const arr = JSON.parse(localStorage.getItem(HIDDEN_ORDERS_KEY) || "[]");
+    return new Set(Array.isArray(arr) ? arr.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function hideOrderId(id: string) {
+  const set = hiddenOrderIds();
+  set.add(id);
+  try { localStorage.setItem(HIDDEN_ORDERS_KEY, JSON.stringify([...set])); } catch {}
+}
+
+function removeLocalOrder(id: string) {
+  try {
+    const orders = JSON.parse(localStorage.getItem("toonhub_orders") || "[]");
+    localStorage.setItem(
+      "toonhub_orders",
+      JSON.stringify(orders.filter((o: any) => String(o.display_id || o.id) !== id)),
+    );
+  } catch {}
+  try {
+    const cached = JSON.parse(localStorage.getItem("toonhub_account_orders") || "[]");
+    localStorage.setItem(
+      "toonhub_account_orders",
+      JSON.stringify(cached.filter((o: any) => String(o.display_id || o.id) !== id)),
+    );
+  } catch {}
+}
+
+/** 删除订单历史记录(带确认防误删):已付款订单仅从本地历史隐藏,未付款快照真正移除 */
+async function deleteOrderEntry(id: string) {
+  if (!confirm("Delete this order from your history? Your order itself is not affected.")) return;
+  const isRemote = (lastRemote || []).some(
+    (o) => String(o.display_id || o.id) === id,
+  );
+  if (isRemote) hideOrderId(id);
+  else removeLocalOrder(id);
+  renderOrders(lastRemote, lastEmail);
+}
+
 function localOrders(email: string) {
   const out: any[] = []
   try {
@@ -223,59 +268,175 @@ function formatAddr(a: AddressLike | string | null | undefined): string {
   return lines.join("\n")
 }
 
-function renderAddresses(addresses: AddressLike[]) {
-  const box = document.getElementById("accountAddresses")!
-  const list = Array.isArray(addresses) ? addresses.filter(Boolean) : []
-  if (list.length) {
-    box.innerHTML = list
-      .map((a) => `<div class="account-addr">${esc(formatAddr(a)).replace(/\n/g, "<br>")}</div>`)
-      .join("")
-    return
-  }
-  const saved = savedCheckout() as AddressLike & { countryOther?: string } | null
-  if (saved?.address) {
-    const line = [
-      saved.name,
-      saved.address,
-      saved.apartment,
-      [saved.city, saved.province, saved.postal].filter(Boolean).join(", "),
-      saved.country === "OTHER" ? saved.countryOther : saved.country,
-      saved.phone,
-    ].filter(Boolean)
-    box.innerHTML = `<div class="account-addr">${line.map(esc).join("<br>")}</div><p class="account-muted" style="margin-top:10px;">From your last checkout.</p>`
-    return
-  }
-  box.innerHTML = `<p class="account-muted">No saved address yet. Addresses appear after you place an order.</p>`
+function errMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  const text = String(err ?? "").trim()
+  return text || fallback
 }
 
-function renderOrders(remote: OrderLike[], email: string) {
-  const box = document.getElementById("accountOrders")!
-  const local = localOrders(email)
-  const seen = new Set<string>()
-  const rows: OrderLike[] = []
-  for (const o of [...(remote || []), ...local]) {
-    const id = String(o.display_id || o.id || "")
-    if (id && seen.has(id)) continue
-    if (id) seen.add(id)
-    rows.push(o)
+let lastAddresses: AddressLike[] = []
+/** 当前正在编辑的地址 id:""=无,"new"=新增表单,其余=对应地址 */
+let editingAddressId = ""
+
+const INP = "width:100%;padding:9px 11px;border:1px solid var(--co-border,#333);border-radius:6px;background:#141414;color:#eee;font-size:.9rem;box-sizing:border-box;"
+const BTN = "padding:6px 14px;border:1px solid var(--co-border,#333);border-radius:6px;background:#1b1b1b;color:#eee;cursor:pointer;font-size:.82rem;"
+
+function addrFormHtml(a: AddressLike | null): string {
+  const v = (k: string) => esc((a as Record<string, unknown> | null)?.[k] ?? "")
+  return `<form data-addr-form style="display:grid;gap:8px;margin-top:10px;padding:14px;border:1px solid var(--co-border,#333);border-radius:8px;background:#121212;">
+    <div style="display:flex;gap:8px;">
+      <input name="first_name" placeholder="First name" value="${v("first_name")}" style="${INP}">
+      <input name="last_name" placeholder="Last name" value="${v("last_name")}" style="${INP}">
+    </div>
+    <input name="address_1" placeholder="Address" value="${v("address_1")}" style="${INP}" required>
+    <input name="city" placeholder="City" value="${v("city")}" style="${INP}" required>
+    <div style="display:flex;gap:8px;">
+      <input name="province" placeholder="Province / State" value="${v("province")}" style="${INP}">
+      <input name="postal_code" placeholder="Postal / ZIP" value="${v("postal_code")}" style="${INP}" required>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input name="country_code" placeholder="Country code (e.g. US)" value="${v("country_code")}" style="${INP}" required>
+      <input name="phone" placeholder="Phone" value="${v("phone")}" style="${INP}">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" style="${BTN}">Save address</button>
+      <button type="button" data-addr-cancel style="${BTN}">Cancel</button>
+    </div>
+  </form>`
+}
+
+async function refreshDashboard() {
+  const token = sessionToken()
+  const extra = token ? await loadAccount(token).catch(() => null) : null
+  if (extra?.ok && extra.data?.customer) {
+    renderDashboard({
+      email: extra.data.customer.email || sessionEmail(),
+      customer: extra.data.customer,
+      orders: extra.data.orders,
+      addresses: extra.data.addresses,
+    })
+    return true
   }
-  if (!rows.length) {
-    box.innerHTML = `<p class="account-muted">You haven’t placed an order yet. <a href="/collections" style="text-decoration:underline;color:#fff;">Browse figures</a></p>`
+  return false
+}
+
+async function deleteAddress(id: string) {
+  if (!confirm("Delete this address?")) return
+  try {
+    const token = sessionToken()
+    const res = await postJson(
+      "/api/account",
+      { action: "address-delete", id },
+      token ? { Authorization: `Bearer ${token}` } : {},
+    )
+    if (!res.ok) throw new Error(res.data?.error || "Could not delete address")
+    const ok = await refreshDashboard()
+    if (!ok) renderAddresses(lastAddresses.filter((a) => String(a.id) !== id))
+  } catch (e) {
+    showError(errMessage(e, "Could not delete address"))
+  }
+}
+
+async function saveAddressForm(form: HTMLFormElement) {
+  const fd = new FormData(form)
+  const address: Record<string, string> = {}
+  for (const [k, v] of fd.entries()) if (String(v).trim()) address[k] = String(v).trim()
+  if (!address.address_1 || !address.city || !address.postal_code || !address.country_code) {
+    showError("Address, city, postal code and country are required")
     return
   }
-  box.innerHTML = rows.map((o) => {
-    const id = String(o.display_id || o.id || "Order")
-    const when = o.created_at || o.created
-    const date = when ? new Date(when).toLocaleDateString() : ""
-    const status = o.status || o.fulfillment_status || "placed"
-    const total = Number(o.total ?? o.summary?.total ?? 0)
-    const cur = o.currency_code || o.currency || "usd"
-    const items = o.items || o.line_items || []
-    const titles = items.map((i) => i.title).filter(Boolean).slice(0, 3).join(", ")
-    const mail = o.email || email
-    const tracks = ([] as (TrackingLike | string)[])
-      .concat(o.tracking || o.tracking_numbers || [])
-      .map((t): TrackingLike | null => {
+  try {
+    const token = sessionToken()
+    const isNew = editingAddressId === "new"
+    const res = await postJson(
+      "/api/account",
+      { action: isNew ? "address-add" : "address-update", id: isNew ? undefined : editingAddressId, address },
+      token ? { Authorization: `Bearer ${token}` } : {},
+    )
+    if (!res.ok) throw new Error(res.data?.error || "Could not save address")
+    editingAddressId = ""
+    const ok = await refreshDashboard()
+    if (!ok) renderAddresses(lastAddresses)
+  } catch (e) {
+    showError(errMessage(e, "Could not save address"))
+  }
+}
+
+function renderAddresses(addresses: AddressLike[]) {
+  const box = document.getElementById("accountAddresses")!
+  lastAddresses = Array.isArray(addresses) ? addresses.filter(Boolean) : []
+  const cards = lastAddresses.map((a, i) => {
+    const id = String(a.id ?? a.address_id ?? i)
+    const form = editingAddressId === id ? addrFormHtml(a) : ""
+    return `<div class="account-addr" style="border:1px solid var(--co-border,#333);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      ${esc(formatAddr(a)).replace(/\n/g, "<br>")}
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button type="button" data-addr-edit="${esc(id)}" style="${BTN}">Edit</button>
+        <button type="button" data-addr-del="${esc(id)}" style="${BTN}">Delete</button>
+      </div>${form}
+    </div>`
+  })
+  const addArea =
+    editingAddressId === "new"
+      ? addrFormHtml(null)
+      : `<button type="button" data-addr-add style="${BTN}">+ Add address</button>`
+  if (!lastAddresses.length && !editingAddressId) {
+    box.innerHTML = `<p class="account-muted">No saved address yet.</p>${addArea}`
+  } else {
+    box.innerHTML = cards.join("") + addArea
+  }
+  box.querySelectorAll("[data-addr-edit]").forEach((b) => {
+    b.addEventListener("click", () => {
+      editingAddressId = b.getAttribute("data-addr-edit") || ""
+      renderAddresses(lastAddresses)
+    })
+  })
+  box.querySelectorAll("[data-addr-del]").forEach((b) => {
+    b.addEventListener("click", () => void deleteAddress(b.getAttribute("data-addr-del") || ""))
+  })
+  box.querySelectorAll("[data-addr-add]").forEach((b) => {
+    b.addEventListener("click", () => {
+      editingAddressId = "new"
+      renderAddresses(lastAddresses)
+    })
+  })
+  box.querySelectorAll("[data-addr-cancel]").forEach((b) => {
+    b.addEventListener("click", () => {
+      editingAddressId = ""
+      renderAddresses(lastAddresses)
+    })
+  })
+  box.querySelectorAll("[data-addr-form]").forEach((f) => {
+    f.addEventListener("submit", (e) => {
+      e.preventDefault()
+      void saveAddressForm(f as HTMLFormElement)
+    })
+  })
+}
+
+let orderRows: OrderLike[] = []
+let lastRemote: OrderLike[] = []
+let lastEmail = ""
+let orderPage = 1
+const ORDER_PAGE_SIZE = 5
+
+function orderRowHtml(o: OrderLike, email: string, paid: boolean): string {
+  const id = String(o.display_id || o.id || "Order")
+  const when = o.created_at || o.created
+  const date = when ? new Date(when).toLocaleDateString() : ""
+  const status = o.status || o.fulfillment_status || "placed"
+  const total = Number(o.total ?? o.summary?.total ?? 0)
+  const cur = o.currency_code || o.currency || "usd"
+  const items = o.items || o.line_items || []
+  const titles = items.map((i) => i.title).filter(Boolean).slice(0, 3).join(", ")
+  const mail = o.email || email
+  // 点击订单名称:已付款订单 → 订单详情/确认页;未付款(本地快照)订单 → 结账页继续付款
+  const idHref = paid
+    ? `/checkout/success?order=${encodeURIComponent(id)}&email=${encodeURIComponent(mail || "")}`
+    : `/checkout`
+  const tracks = ([] as (TrackingLike | string)[])
+    .concat(o.tracking || o.tracking_numbers || [])
+    .map((t): TrackingLike | null => {
       if (!t) return null
       if (typeof t === "string") return { tracking_number: t, url: `https://t.17track.net/en#nums=${encodeURIComponent(t)}`, carrier: "Carrier" }
       const num = t.tracking_number || t.number || ""
@@ -283,29 +444,76 @@ function renderOrders(remote: OrderLike[], email: string) {
       if (!num && !href) return null
       return { tracking_number: num, url: href, carrier: t.carrier || "Carrier" }
     }).filter(Boolean)
-    const trackBtns = tracks.length
-      ? tracks
-          .map(
-            (t) =>
-              `<a href="${esc(t?.url)}" target="_blank" rel="noopener noreferrer">${esc(t?.carrier)}${
-                t?.tracking_number ? " · " + esc(t.tracking_number) : " track"
-              }</a>`,
-          )
-          .join("")
-      : `<span class="meta">Tracking appears here after the parcel ships.</span>`
-    const lookup = `/track-order?order=${encodeURIComponent(id)}&email=${encodeURIComponent(mail || "")}`
-    return `<div class="account-order">
-      <div>
-        <b>#${esc(id)}</b>
-        <div class="meta">${esc([date, status].filter(Boolean).join(" · "))}${titles ? `<br>${esc(titles)}` : ""}</div>
-        <div class="account-track">
-          ${trackBtns}
-          <a href="${lookup}">Track this order</a>
-        </div>
+  const trackBtns = tracks.length
+    ? tracks
+        .map(
+          (t) =>
+            `<a href="${esc(t?.url)}" target="_blank" rel="noopener noreferrer">${esc(t?.carrier)}${
+              t?.tracking_number ? " · " + esc(t.tracking_number) : " track"
+            }</a>`,
+        )
+        .join("")
+    : `<span class="meta">Tracking appears here after the parcel ships.</span>`
+  const lookup = `/track-order?order=${encodeURIComponent(id)}&email=${encodeURIComponent(mail || "")}`
+  return `<div class="account-order">
+    <div>
+      <b><a href="${idHref}" style="color:#fff;text-decoration:underline;">#${esc(id)}</a></b>${paid ? "" : ` <span class="meta">(unpaid — pay now)</span>`}
+      <div class="meta">${esc([date, status].filter(Boolean).join(" · "))}${titles ? `<br>${esc(titles)}` : ""}</div>
+      <div class="account-track">
+        ${trackBtns}
+        <a href="${lookup}">Track this order</a>
+        <button type="button" data-order-del="${esc(id)}" style="background:none;border:0;color:#888;cursor:pointer;text-decoration:underline;font-size:.78rem;padding:0;margin-left:10px;">Delete</button>
       </div>
-      <div class="amt">${total ? money(total, cur) : ""}</div>
-    </div>`
-  }).join("")
+    </div>
+    <div class="amt">${total ? money(total, cur) : ""}</div>
+  </div>`
+}
+
+function renderOrders(remote: OrderLike[], email: string) {
+  const box = document.getElementById("accountOrders")!
+  const local = localOrders(email)
+  const seen = new Set<string>()
+  const remoteIds = new Set<string>((remote || []).map((o) => String(o.display_id || o.id || "")))
+  const hidden = hiddenOrderIds()
+  orderRows = []
+  for (const o of [...(remote || []), ...local]) {
+    const id = String(o.display_id || o.id || "")
+    if (id && seen.has(id)) continue
+    if (id && hidden.has(id)) continue
+    if (id) seen.add(id)
+    orderRows.push(o)
+  }
+  if (!orderRows.length) {
+    box.innerHTML = `<p class="account-muted">You haven’t placed an order yet. <a href="/collections" style="text-decoration:underline;color:#fff;">Browse figures</a></p>`
+    return
+  }
+  lastRemote = remote || []
+  lastEmail = email
+  const totalPages = Math.max(1, Math.ceil(orderRows.length / ORDER_PAGE_SIZE))
+  if (orderPage > totalPages) orderPage = totalPages
+  const pageRows = orderRows.slice((orderPage - 1) * ORDER_PAGE_SIZE, orderPage * ORDER_PAGE_SIZE)
+  const pager =
+    totalPages > 1
+      ? `<div class="account-pager" style="display:flex;align-items:center;gap:12px;margin-top:14px;justify-content:center;">
+          <button type="button" data-pg="prev" ${orderPage <= 1 ? "disabled" : ""} style="padding:6px 14px;border:1px solid var(--co-border,#333);border-radius:6px;background:#141414;color:#eee;cursor:pointer;">← Prev</button>
+          <span style="color:#999;font-size:.85rem;">${orderPage} / ${totalPages}</span>
+          <button type="button" data-pg="next" ${orderPage >= totalPages ? "disabled" : ""} style="padding:6px 14px;border:1px solid var(--co-border,#333);border-radius:6px;background:#141414;color:#eee;cursor:pointer;">Next →</button>
+        </div>`
+      : ""
+  box.innerHTML = pageRows
+    .map((o) => orderRowHtml(o, email, remoteIds.has(String(o.display_id || o.id || ""))))
+    .join("") + pager
+  box.querySelectorAll("[data-pg]").forEach((b) => {
+    b.addEventListener("click", () => {
+      orderPage += b.getAttribute("data-pg") === "prev" ? -1 : 1
+      renderOrders(lastRemote, lastEmail)
+    })
+  })
+  box.querySelectorAll("[data-order-del]").forEach((b) => {
+    b.addEventListener("click", () => {
+      void deleteOrderEntry(b.getAttribute("data-order-del") || "")
+    })
+  })
 }
 
 function fillProfile(customer: any, email: string) {
